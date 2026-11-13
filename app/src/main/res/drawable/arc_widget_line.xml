@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@android:id/background"
+        android:gravity="center_vertical|fill_horizontal"
+        android:height="1.5dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/arc_widget_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <scale
+            android:drawable="@drawable/arc_widget_line_played"
+            android:scaleGravity="start|fill_vertical"
+            android:scaleWidth="100%" />
+    </item>
+</layer-list>

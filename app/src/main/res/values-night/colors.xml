@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="arc_widget_ground">#1B1416</color>
+    <color name="arc_widget_ink">#EFE6D6</color>
+    <color name="arc_widget_ink_soft">#A6EFE6D6</color>
+    <color name="arc_widget_track">#40EFE6D6</color>
+</resources>

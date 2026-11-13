@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/arc_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/arc_widget_ground"
+    android:clipToOutline="true"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="14dp">
+
+        <ImageView
+            android:id="@+id/arc_cover"
+            android:layout_width="58dp"
+            android:layout_height="58dp"
+            android:contentDescription="@string/album_art"
+            android:scaleType="centerCrop"
+            android:src="@drawable/arc_widget_blank" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/arc_label"
+                    style="@style/ArcWidgetLabel"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/arc_widget_name" />
+
+                <ImageView
+                    android:id="@+id/arc_mic"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="@string/recognize_music"
+                    android:padding="3dp"
+                    android:src="@drawable/arc_widget_mic"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/arc_title"
+                style="@style/ArcWidgetTitle"
+                android:layout_marginTop="2dp"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/arc_artist"
+                style="@style/ArcWidgetArtist"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/arc_line"
+        style="@style/ArcWidgetLine"
+        android:layout_marginTop="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp">
+
+        <Chronometer
+            android:id="@+id/arc_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-thin"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.04"
+            android:maxLines="1"
+            android:textColor="@color/arc_widget_ink"
+            android:textSize="30sp" />
+
+        <ImageView
+            android:id="@+id/arc_prev"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/previous"
+            android:src="@drawable/arc_widget_prev" />
+
+        <FrameLayout
+            android:id="@+id/arc_play"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/arc_widget_disc"
+            android:contentDescription="@string/play_pause">
+
+            <ImageView
+                android:id="@+id/arc_play_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/arc_widget_play" />
+        </FrameLayout>
+
+        <ImageView
+            android:id="@+id/arc_next"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/next"
+            android:src="@drawable/arc_widget_next" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/arc_dial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="14dp"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/ArcWidgetLabel"
+            android:layout_width="match_parent"
+            android:text="@string/speed_dial" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/arc_dial_0"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/arc_dial_0_art"
+                    style="@style/ArcWidgetDialArt" />
+
+                <TextView
+                    android:id="@+id/arc_dial_0_title"
+                    style="@style/ArcWidgetDialTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/arc_dial_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/arc_dial_1_art"
+                    style="@style/ArcWidgetDialArt" />
+
+                <TextView
+                    android:id="@+id/arc_dial_1_title"
+                    style="@style/ArcWidgetDialTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/arc_dial_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/arc_dial_2_art"
+                    style="@style/ArcWidgetDialArt" />
+
+                <TextView
+                    android:id="@+id/arc_dial_2_title"
+                    style="@style/ArcWidgetDialTitle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/arc_dial_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/arc_dial_3_art"
+                    style="@style/ArcWidgetDialArt" />
+
+                <TextView
+                    android:id="@+id/arc_dial_3_title"
+                    style="@style/ArcWidgetDialTitle" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

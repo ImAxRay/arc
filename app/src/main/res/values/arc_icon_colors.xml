@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="arc_icon_ground">#EFE6D6</color>
+    <color name="arc_icon_ink">#1B1416</color>
+    <color name="arc_icon_dynamic_ground">#EFE6D6</color>
+    <color name="arc_icon_dynamic_ink">#1B1416</color>
+</resources>

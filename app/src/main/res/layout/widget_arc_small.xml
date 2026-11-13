@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/arc_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/arc_widget_ground"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/arc_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/album_art"
+        android:scaleType="centerCrop"
+        android:src="@drawable/arc_widget_blank" />
+
+    <FrameLayout
+        android:id="@+id/arc_play"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="8dp"
+        android:background="@drawable/arc_widget_disc"
+        android:contentDescription="@string/play_pause">
+
+        <ImageView
+            android:id="@+id/arc_play_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/arc_widget_play" />
+    </FrameLayout>
+</FrameLayout>

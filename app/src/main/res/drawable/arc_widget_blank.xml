@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path
+        android:fillColor="@color/arc_widget_track"
+        android:pathData="M0,0h120v120h-120z" />
+    <group
+        android:translateX="24"
+        android:translateY="24">
+        <path
+            android:pathData="M24.4,96 L24.4,43.2 Q24.4,21 46,20"
+            android:strokeColor="@color/arc_widget_ink"
+            android:strokeWidth="9" />
+        <path
+            android:fillColor="@color/arc_widget_ink"
+            android:pathData="M41.5,19.9 a7.2,7.2 0 1,0 14.4,0 a7.2,7.2 0 1,0 -14.4,0z" />
+    </group>
+</vector>
