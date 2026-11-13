@@ -107,13 +107,4 @@ app/src/main/java/com/metrolist/music/listentogether/proto/*
 .build-fftw
 app/src/main/cpp/coverart/
 
-# Agents dir
-.claude
-.antigravity*
-.gemini
-.opencode
-.cursor*
-.codeium
-.cortexkit
-.mcp.json
 *.har
