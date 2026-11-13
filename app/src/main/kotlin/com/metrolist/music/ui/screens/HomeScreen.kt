@@ -149,6 +149,8 @@ import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.arc.ARC_HOME_SPEED_DIAL_ONLY
 import com.metrolist.music.arc.SpeedDialShortcut
 import com.metrolist.music.arc.SpeedDialSkeleton
+import com.metrolist.music.arc.SpeedDialRowsKey
+import com.metrolist.music.arc.speedDialCellSize
 import com.metrolist.music.arc.NewReleasesModule
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -1196,6 +1198,7 @@ fun HomeScreen(
         val showHomeLine by rememberPreference(ArcHomeLineKey, true)
         val homeBackground by rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD)
         val listenTogetherInTopBar by rememberPreference(ListenTogetherInTopBarKey, true)
+        val speedDialRows by rememberPreference(SpeedDialRowsKey, 3)
         HomeBackdrop(homeBackground, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.primary)
         BoxWithConstraints(
             modifier =
@@ -1490,7 +1493,7 @@ fun HomeScreen(
                 // Speed dial comes from the library, so it's empty only for a moment at startup. The
                 // skeleton shares the title's key, so the list keeps its place when the real grid arrives.
                 if (ARC_HOME_SPEED_DIAL_ONLY && speedDialItems.isEmpty() && speedDialStarting) {
-                    item(key = "speed_dial_title") { SpeedDialSkeleton() }
+                    item(key = "speed_dial_title") { SpeedDialSkeleton(speedDialRows) }
                 }
                 if (ARC_HOME_SPEED_DIAL_ONLY && homeSections.none { it == HomeSection.SpeedDial }) {
                     item(key = "arc_new_releases") { NewReleasesModule(navController) }
@@ -1515,10 +1518,13 @@ fun HomeScreen(
                                         } else if (columns >= 4) {
                                             2
                                         } else {
-                                            3
+                                            speedDialRows
                                         }
                                     val itemsPerPage = columns * rows
-                                    val itemWidth = availableWidth / columns
+                                    val insets = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+                                    // title above and page dots below stay on screen with the grid
+                                    val gridHeight = maxHeight - insets.calculateTopPadding() - insets.calculateBottomPadding() - 56.dp - 24.dp
+                                    val itemWidth = speedDialCellSize(availableWidth, columns, rows, gridHeight)
 
                                     // The first page gives up slots for its buttons: random in the corner, new playlist above it, moods beside it.
                                     val randomSlot = itemsPerPage - 1
@@ -1547,7 +1553,7 @@ fun HomeScreen(
 
                                             Column(modifier = Modifier.fillMaxSize()) {
                                                 for (row in 0 until rows) {
-                                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
                                                         for (col in 0 until columns) {
                                                             val itemIndex = row * columns + col
 

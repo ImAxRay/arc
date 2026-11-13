@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -56,6 +57,8 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.ArcHomeBackgroundKey
+import com.metrolist.music.arc.SpeedDialRowChoices
+import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.HomeBackgroundPicker
 import com.metrolist.music.arc.ArcAudioDetailsKey
@@ -193,6 +196,21 @@ fun AppearanceSettings(
             onSelect = onHomeBackgroundChange,
             onDismiss = { showHomeBackgroundDialog = false },
             label = homeBackgroundText,
+        )
+    }
+    val (speedDialRows, onSpeedDialRowsChange) = rememberPreference(SpeedDialRowsKey, defaultValue = 3)
+    var showSpeedDialRowsDialog by rememberSaveable { mutableStateOf(false) }
+    if (showSpeedDialRowsDialog) {
+        EnumDialog(
+            onDismiss = { showSpeedDialRowsDialog = false },
+            onSelect = {
+                onSpeedDialRowsChange(it)
+                showSpeedDialRowsDialog = false
+            },
+            title = stringResource(R.string.arc_speed_dial_rows),
+            current = speedDialRows,
+            values = SpeedDialRowChoices,
+            valueText = { pluralStringResource(R.plurals.arc_speed_dial_rows_value, it, it) },
         )
     }
     val (audioDetails, onAudioDetailsChange) = rememberPreference(ArcAudioDetailsKey, defaultValue = true)
@@ -341,6 +359,12 @@ fun AppearanceSettings(
                         title = { Text(stringResource(R.string.arc_home_background)) },
                         description = { Text(homeBackgroundText(homeBackground)) },
                         onClick = { showHomeBackgroundDialog = true },
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.grid_view),
+                        title = { Text(stringResource(R.string.arc_speed_dial_rows)) },
+                        description = { Text(pluralStringResource(R.plurals.arc_speed_dial_rows_value, speedDialRows, speedDialRows)) },
+                        onClick = { showSpeedDialRowsDialog = true },
                     ),
                     switchItem(R.drawable.linear_scale, R.string.arc_home_line, R.string.arc_home_line_desc, homeLine, onHomeLineChange),
                     switchItem(R.drawable.group_outlined, R.string.listen_together_in_top_bar, R.string.listen_together_in_top_bar_desc, listenTogetherInTopBar, onListenTogetherInTopBarChange),

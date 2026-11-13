@@ -193,6 +193,7 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
                 .tapBounce()
                 .fillMaxSize()
                 .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                .dialRim(RoundedCornerShape(ThumbnailCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .clickable(onClick = onClick)
                 .padding(8.dp),
@@ -227,11 +228,11 @@ fun ModuleSkeleton(title: String) {
 }
 
 @Composable
-fun SpeedDialSkeleton() {
+fun SpeedDialSkeleton(rows: Int = 3) {
     Column {
         NavigationTitle(title = stringResource(R.string.speed_dial))
         ShimmerHost(modifier = Modifier.padding(horizontal = 16.dp)) {
-            repeat(3) {
+            repeat(rows) {
                 androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth()) {
                     repeat(3) {
                         androidx.compose.foundation.layout.Box(

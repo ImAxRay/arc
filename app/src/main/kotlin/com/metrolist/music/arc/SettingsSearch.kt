@@ -80,6 +80,7 @@ private val TRACKED_SETTINGS: Map<String, SettingsEntry> =
         SearchMicKey.name to SettingsEntry(R.string.arc_search_mic, "settings/appearance", LOOKS),
         ArcHomeLineKey.name to SettingsEntry(R.string.arc_home_line, "settings/appearance", LOOKS),
         ArcHomeBackgroundKey.name to SettingsEntry(R.string.arc_home_background, "settings/appearance", LOOKS),
+        SpeedDialRowsKey.name to SettingsEntry(R.string.arc_speed_dial_rows, "settings/appearance", LOOKS),
         ArcAudioDetailsKey.name to SettingsEntry(R.string.arc_audio_details, "settings/appearance", LOOKS),
         ArcMotionCoversKey.name to SettingsEntry(R.string.arc_motion_covers, "settings/appearance", LOOKS),
         ArcMotionCoversMobileKey.name to SettingsEntry(R.string.arc_motion_covers_mobile, "settings/appearance", LOOKS),

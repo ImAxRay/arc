@@ -24,6 +24,8 @@ import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.arc.MarqueeText
+import com.metrolist.music.arc.dialRim
+import com.metrolist.music.arc.tapBounce
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.ui.utils.resize
 
@@ -41,9 +43,11 @@ fun SpeedDialGridItem(
     }
     Box(
         modifier = modifier
+            .tapBounce()
             .fillMaxWidth()
-            .aspectRatio(1f) // Square aspect ratio
+            .aspectRatio(1f)
             .clip(RoundedCornerShape(ThumbnailCornerRadius))
+            .dialRim(RoundedCornerShape(ThumbnailCornerRadius))
     ) {
         // Thumbnail
         ItemThumbnail(
@@ -100,6 +104,7 @@ private fun ArtistDialTile(
 ) {
     Box(
         modifier = modifier
+            .tapBounce()
             .fillMaxWidth()
             .aspectRatio(1f)
     ) {
@@ -113,7 +118,7 @@ private fun ArtistDialTile(
                 isActive = isActive,
                 isPlaying = isPlaying,
                 shape = CircleShape,
-                modifier = Modifier.fillMaxWidth(PHOTO_SHARE).aspectRatio(1f),
+                modifier = Modifier.fillMaxWidth(PHOTO_SHARE).aspectRatio(1f).clip(CircleShape).dialRim(CircleShape),
             )
             MarqueeText(
                 text = item.title,
