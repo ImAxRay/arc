@@ -10,6 +10,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -193,7 +194,7 @@ fun YouTubeSongMenu(
         content = {
             Text(
                 text = song.title,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

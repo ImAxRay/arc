@@ -384,12 +384,6 @@ fun NavGraphBuilder.navigationBuilder(
         }
     }
 
-    composable("settings/player") {
-        com.metrolist.music.arc.WithScrollSections {
-            PlayerSettings(navController)
-        }
-    }
-
     composable("arc/triage") {
         com.metrolist.music.arc.SongTriageScreen(navController)
     }

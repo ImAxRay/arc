@@ -90,8 +90,7 @@ class App :
             Timber.e(e, "Failed to ensure DataStore directory")
         }
 
-        // Plant logging before extraction services initialize.
-        Timber.plant(Timber.DebugTree())
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         com.metrolist.music.lyrics.JapaneseDictionary.init(this)
         applicationScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onAppStart(this@App, database) }
         InnerTubeXPlayer.initialize(this)

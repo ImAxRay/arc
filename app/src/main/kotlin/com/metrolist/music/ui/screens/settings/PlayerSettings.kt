@@ -104,7 +104,7 @@ import com.metrolist.music.ui.utils.getLoudnessLevelLabel
 @Composable
 fun PlayerSettings(
     navController: NavController,
-    section: String? = null,
+    section: String,
 ) {
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         AudioQualityKey,
@@ -362,7 +362,7 @@ fun PlayerSettings(
             )
         )
 
-        if (section == null || section == "sound") {
+        if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.player),
                 items = buildList {
@@ -749,7 +749,7 @@ fun PlayerSettings(
             )
         }
 
-        if (section == null || section == "queue") {
+        if (section == "queue") {
             Material3SettingsGroup(
                 title = stringResource(R.string.sleep_timer),
                 items = buildList {
@@ -860,11 +860,11 @@ fun PlayerSettings(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        if (section == null || section == "queue") AlarmSettingsSection()
+        if (section == "queue") AlarmSettingsSection()
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        if (section == null || section == "queue") {
+        if (section == "queue") {
             Material3SettingsGroup(
                 title = stringResource(R.string.queue),
                 items = listOf(
@@ -1111,7 +1111,7 @@ fun PlayerSettings(
             Spacer(modifier = Modifier.height(27.dp))
         }
 
-        if (section == null || section == "sound") {
+        if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.misc),
                 items = listOf(
@@ -1205,11 +1205,7 @@ fun PlayerSettings(
     TopAppBar(
         title = {
             Text(
-                when (section) {
-                    "sound" -> stringResource(R.string.arc_settings_sound)
-                    "queue" -> stringResource(R.string.arc_settings_queue)
-                    else -> stringResource(R.string.player_and_audio)
-                }
+                stringResource(if (section == "sound") R.string.arc_settings_sound else R.string.arc_settings_queue)
             )
         },
         navigationIcon = {

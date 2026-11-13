@@ -21,6 +21,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -1038,7 +1039,7 @@ private fun PlayerQueueButton(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .basicMarquee(),
+                        .basicMarquee(iterations = MARQUEE_LOOPS),
             )
         } else {
             val baseTint =

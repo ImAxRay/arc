@@ -31,31 +31,38 @@ internal val MarqueeSpeed = 30.dp
 internal val MarqueeFade = 18.dp
 internal const val MARQUEE_PAUSE_MS = 2500L
 
-/** How far a name of [loop] (its width plus the gap) has scrolled at [clockMs]: still for a pause, then one full loop. */
+/** Long names scroll this many times after they appear, then stay still. */
+const val MARQUEE_LOOPS = 3
+
+private fun marqueeCycle(loop: Float, speed: Float) = MARQUEE_PAUSE_MS + (loop / speed * 1000f).toLong()
+
+/** How far a name of [loop] (its width plus the gap) has scrolled at [clockMs]: still for a pause, then one full loop, [MARQUEE_LOOPS] times. */
 internal fun marqueeScroll(clockMs: Long, loop: Float, speed: Float): Float {
-    val cycle = MARQUEE_PAUSE_MS + (loop / speed * 1000f).toLong()
+    val cycle = marqueeCycle(loop, speed)
+    if (clockMs >= cycle * MARQUEE_LOOPS) return 0f
     val t = clockMs % cycle
     return if (t < MARQUEE_PAUSE_MS) 0f else (t - MARQUEE_PAUSE_MS) / 1000f * speed
 }
 
-/** How long a name of [loop] still rests before it moves again at [clockMs], or 0 while it's moving. */
-internal fun marqueeRest(clockMs: Long, loop: Float, speed: Float): Long {
-    val cycle = MARQUEE_PAUSE_MS + (loop / speed * 1000f).toLong()
+/** How long a name of [loop] still rests before it moves again at [clockMs], 0 while it's moving, or null once it has finished. */
+private fun marqueeRest(clockMs: Long, loop: Float, speed: Float): Long? {
+    val cycle = marqueeCycle(loop, speed)
+    if (clockMs >= cycle * MARQUEE_LOOPS) return null
     val t = clockMs % cycle
     return if (t < MARQUEE_PAUSE_MS) MARQUEE_PAUSE_MS - t else 0L
 }
 
 /**
- * Drives the marquee clock with [onTime]. While every name in [loops] is resting it sleeps until
- * the first one moves again instead of asking for a new frame each refresh, which keeps the screen
- * from redrawing 120 times a second over still text.
+ * Drives the marquee clock with [onTime] until every name in [loops] has finished. While they all
+ * rest it sleeps until the first one moves again instead of asking for a new frame each refresh,
+ * which keeps the screen from redrawing 120 times a second over still text.
  */
 internal suspend fun runMarqueeClock(loops: () -> List<Float>, speed: Float, onTime: (Long) -> Unit) {
     val start = withFrameMillis { it }
     while (true) {
         val now = withFrameMillis { it } - start
         onTime(now)
-        val rest = loops().minOfOrNull { marqueeRest(now, it, speed) } ?: return
+        val rest = loops().mapNotNull { marqueeRest(now, it, speed) }.minOrNull() ?: return
         if (rest > MIN_SLEEP_MS) delay(rest - FRAME_MS)
     }
 }
@@ -71,7 +78,7 @@ internal fun leadingFade(scroll: Float, loop: Float, fade: Float): Float = (minO
 
 /**
  * One line of text that scrolls when it doesn't fit, the same way as the names on the arc: a
- * pause, one slow loop, soft edges while moving. [onLayout] gets the text layout and how far it has scrolled, for mapping taps.
+ * pause, one slow loop, a few times over, soft edges while moving. [onLayout] gets the text layout and how far it has scrolled, for mapping taps.
  */
 @Composable
 internal fun MarqueeText(
