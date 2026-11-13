@@ -1022,6 +1022,7 @@ class MainActivity : FragmentActivity() {
                     )
                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) navController.navigate("settings/drive")
                 }
+                com.metrolist.music.arc.FirstLookChoice()
                 LaunchedEffect(Unit) {
                     if (!com.metrolist.music.arc.DriveMusic.signInDueSoon(this@MainActivity)) return@LaunchedEffect
                     val result = snackbarHostState.showSnackbar(

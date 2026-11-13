@@ -1043,6 +1043,11 @@
     <string name="arc_menu_album">Album</string>
     <string name="arc_menu_this_song">This song</string>
     <string name="arc_menu_more">More</string>
+    <string name="arc_menu_layout">Player layout</string>
+    <string name="arc_layout_thumb">Thumb arc</string>
+    <string name="arc_layout_thumb_desc">Big controls under your thumb</string>
+    <string name="arc_layout_mini">Mini</string>
+    <string name="arc_layout_mini_desc">Small controls in the corner</string>
     <string name="arc_menu_more_desc">Tempo and pitch, copy link, system equalizer</string>
     <string name="arc_settings_library_search">Library &amp; search</string>
     <string name="arc_home_background_field">Field</string>
@@ -1254,4 +1259,10 @@
     <string name="arc_length_hint">Works on top of any sort and filter.</string>
     <string name="arc_length_off">Off</string>
     <string name="arc_apply">Apply</string>
+    <string name="arc_look_title">Smoother or prettier?</string>
+    <string name="arc_look_desc">Pick how Arc should feel. Every part can be changed later in Appearance.</string>
+    <string name="arc_look_smooth">Smoother</string>
+    <string name="arc_look_smooth_desc">Still backgrounds and covers. Lighter on the battery.</string>
+    <string name="arc_look_pretty">Prettier</string>
+    <string name="arc_look_pretty_desc">Moving Home background, covers that tilt with the phone, animated album covers on Wi-Fi.</string>
 </resources>

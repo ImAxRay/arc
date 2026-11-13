@@ -946,6 +946,8 @@ fun BottomSheetPlayer(
                 onDismiss = menuState::dismiss,
                 onSleepTimer = toggleSleepTimer,
                 onLyrics = openLyricsMenuTaught,
+                playerLayout = playerLayout,
+                onPlayerLayout = onPlayerLayoutChange,
             )
         }
     }

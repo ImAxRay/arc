@@ -117,6 +117,8 @@ fun PlayerMenu(
     onDismiss: () -> Unit,
     onSleepTimer: (() -> Unit)? = null,
     onLyrics: (() -> Unit)? = null,
+    playerLayout: Int? = null,
+    onPlayerLayout: ((Int) -> Unit)? = null,
 ) {
     mediaMetadata ?: return
     val navController = LocalNavController.current
@@ -514,6 +516,27 @@ fun PlayerMenu(
             }
         }
 
+        if (playerLayout != null && onPlayerLayout != null) {
+            item {
+                MenuSectionLabel(stringResource(R.string.arc_menu_layout))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                ) {
+                    listOf(
+                        Triple(R.drawable.swipe, R.string.arc_layout_thumb, R.string.arc_layout_thumb_desc),
+                        Triple(R.drawable.picture_in_picture_alt, R.string.arc_layout_mini, R.string.arc_layout_mini_desc),
+                    ).forEachIndexed { layout, (icon, title, desc) ->
+                        GoToButton(icon, stringResource(title), stringResource(desc), Modifier.weight(1f), selected = layout == playerLayout) {
+                            onPlayerLayout(layout)
+                            onDismiss()
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
         item {
             var showMore by remember { mutableStateOf(false) }
             val rowIcon: @Composable (Int) -> Unit = { icon ->
@@ -670,11 +693,12 @@ private fun MenuSectionLabel(text: String) {
 }
 
 @Composable
-private fun GoToButton(icon: Int, title: String, subtitle: String, modifier: Modifier, onClick: () -> Unit) {
+private fun GoToButton(icon: Int, title: String, subtitle: String, modifier: Modifier, selected: Boolean = false, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         modifier = modifier,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
@@ -685,7 +709,7 @@ private fun GoToButton(icon: Int, title: String, subtitle: String, modifier: Mod
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
