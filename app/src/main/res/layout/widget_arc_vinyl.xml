@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The record hangs off the right edge and takes no taps there; the buttons sit on the left. -->
+<!-- The record hangs off the right edge and takes no taps there; the buttons sit in the middle. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/arc_root"
     android:layout_width="match_parent"
@@ -16,9 +16,7 @@
 
         <ImageView
             android:id="@+id/arc_vinyl_still"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:importantForAccessibility="no"
+            style="@style/ArcWidgetLayer"
             android:src="@drawable/arc_widget_vinyl" />
 
         <ProgressBar
@@ -26,6 +24,10 @@
             style="@style/ArcWidgetSpin"
             android:indeterminateDrawable="@drawable/arc_widget_vinyl_spin"
             android:visibility="gone" />
+
+        <ImageView
+            style="@style/ArcWidgetLayer"
+            android:src="@drawable/arc_widget_vinyl_sheen" />
 
         <ImageView
             android:id="@+id/arc_cover"
@@ -37,9 +39,7 @@
 
         <ImageView
             android:id="@+id/arc_vinyl_label_still"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:importantForAccessibility="no"
+            style="@style/ArcWidgetLayer"
             android:src="@drawable/arc_widget_vinyl_label" />
 
         <ProgressBar
@@ -52,13 +52,11 @@
     <LinearLayout
         android:id="@+id/arc_vinyl_info"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginEnd="130dp"
-        android:gravity="center_vertical"
         android:orientation="vertical"
         android:paddingStart="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="10dp">
+        android:paddingTop="14dp">
 
         <TextView
             android:id="@+id/arc_label"
@@ -81,52 +79,54 @@
             android:id="@+id/arc_time"
             style="@style/ArcWidgetCounter"
             android:layout_width="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:textSize="30sp" />
+    </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="-8dp"
-            android:layout_marginTop="6dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/arc_prev"
-                style="@style/ArcWidgetSkip"
-                android:contentDescription="@string/previous"
-                android:src="@drawable/arc_widget_prev" />
+        <ImageView
+            android:id="@+id/arc_shuffle"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/shuffle"
+            android:src="@drawable/arc_widget_shuffle" />
 
-            <FrameLayout
-                android:id="@+id/arc_play"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/arc_widget_disc"
-                android:contentDescription="@string/play_pause">
+        <ImageView
+            android:id="@+id/arc_prev"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/previous"
+            android:src="@drawable/arc_widget_prev" />
 
-                <ImageView
-                    android:id="@+id/arc_play_icon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/arc_widget_play" />
-            </FrameLayout>
+        <FrameLayout
+            android:id="@+id/arc_play"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginHorizontal="6dp"
+            android:background="@drawable/arc_widget_disc"
+            android:contentDescription="@string/play_pause">
 
             <ImageView
-                android:id="@+id/arc_next"
-                style="@style/ArcWidgetSkip"
-                android:contentDescription="@string/next"
-                android:src="@drawable/arc_widget_next" />
+                android:id="@+id/arc_play_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/arc_widget_play" />
+        </FrameLayout>
 
-            <ImageView
-                android:id="@+id/arc_shuffle"
-                style="@style/ArcWidgetSkip"
-                android:layout_marginStart="6dp"
-                android:contentDescription="@string/shuffle"
-                android:src="@drawable/arc_widget_shuffle" />
-        </LinearLayout>
+        <ImageView
+            android:id="@+id/arc_next"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/next"
+            android:src="@drawable/arc_widget_next" />
+
+        <!-- Balances the shuffle button so play sits in the exact middle. -->
+        <FrameLayout style="@style/ArcWidgetSkip" />
     </LinearLayout>
 </FrameLayout>

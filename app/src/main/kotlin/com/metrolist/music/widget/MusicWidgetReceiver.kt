@@ -50,3 +50,5 @@ open class MusicWidgetReceiver : AppWidgetProvider() {
 }
 
 class VinylWidgetReceiver : MusicWidgetReceiver()
+
+class DialWidgetReceiver : MusicWidgetReceiver()

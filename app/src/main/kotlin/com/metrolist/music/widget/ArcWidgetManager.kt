@@ -24,7 +24,6 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.AutoSpeedDial
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.playback.MusicService
-import com.metrolist.music.recognition.RecognitionLaunchActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -35,8 +34,8 @@ import javax.inject.Singleton
 
 /**
  * Arc's home-screen widgets. The main one follows its size: small is cover and play, a strip
- * adds title and skips, the player adds the counter, and a tall one adds the speed dial.
- * The vinyl one is a record that spins while music plays.
+ * adds title and skips, and the player adds the counter. The vinyl one is a record that spins
+ * while music plays, and the speed dial one is a grid of tiles that grows with the widget.
  */
 @Singleton
 class ArcWidgetManager @Inject constructor(
@@ -62,7 +61,7 @@ class ArcWidgetManager @Inject constructor(
         fun permille() = if (durationMs > 0) (positionNow() * 1000 / durationMs).toInt() else 0
     }
 
-    private enum class Size { Small, Strip, Player, Tall, Vinyl }
+    private enum class Size { Small, Strip, Player, Vinyl, Dial }
 
     private class Dial(val tile: AutoSpeedDial.Tile, val art: Bitmap?)
 
@@ -79,13 +78,15 @@ class ArcWidgetManager @Inject constructor(
     suspend fun update(state: NowPlaying) {
         val trackChanged = state.title != now.title
         now = state
-        render(refreshDial = trackChanged)
+        render(full = trackChanged)
     }
 
-    suspend fun render(refreshDial: Boolean = false) = mutex.withLock {
-        val vinyls = widgets.getAppWidgetIds(ComponentName(context, VinylWidgetReceiver::class.java))
-        sizes = widgets.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java)).associateWith { sizeOf(it) } +
-            vinyls.associateWith { Size.Vinyl }
+    /** Redraws every widget; play and pause alone skip the speed dial, which doesn't show them. */
+    suspend fun render(full: Boolean = true) = mutex.withLock {
+        fun ids(receiver: Class<*>) = widgets.getAppWidgetIds(ComponentName(context, receiver))
+        sizes = ids(MusicWidgetReceiver::class.java).associateWith { sizeOf(it) } +
+            ids(VinylWidgetReceiver::class.java).associateWith { Size.Vinyl } +
+            ids(DialWidgetReceiver::class.java).associateWith { Size.Dial }
         if (sizes.isEmpty()) return@withLock
         val state = now
         if (state.artworkUri != coverUri) {
@@ -94,19 +95,22 @@ class ArcWidgetManager @Inject constructor(
             label = art?.let { shaped(it, round = true) }
             coverUri = state.artworkUri
         }
-        if (Size.Tall in sizes.values && (dial == null || refreshDial)) dial = loadDial()
-        sizes.forEach { (id, size) -> widgets.updateAppWidget(id, views(id, size, state)) }
+        val dialShown = Size.Dial in sizes.values
+        if (dialShown && (dial == null || full)) dial = loadDial()
+        sizes.forEach { (id, size) ->
+            if (size != Size.Dial || full) widgets.updateAppWidget(id, views(id, size, state))
+        }
     }
 
     /** Moves the line and resyncs the counter without resending the covers. */
     fun updateProgress(durationMs: Long, positionMs: Long) {
         val state = now.copy(durationMs = durationMs, positionMs = positionMs, stampedAt = SystemClock.elapsedRealtime())
         now = state
-        val lined = sizes.filterValues { it != Size.Small && it != Size.Vinyl }.keys
+        val lined = sizes.filterValues { it == Size.Strip || it == Size.Player }.keys
         if (lined.isEmpty()) return
         val line = RemoteViews(context.packageName, R.layout.widget_arc_player).apply { setLine(state) }
         widgets.partiallyUpdateAppWidget(lined.toIntArray(), line)
-        val counted = sizes.filterValues { it == Size.Player || it == Size.Tall || it == Size.Vinyl }.keys
+        val counted = sizes.filterValues { it == Size.Player || it == Size.Vinyl }.keys
         if (counted.isEmpty()) return
         val counter = RemoteViews(context.packageName, R.layout.widget_arc_player).apply { setCounter(state) }
         widgets.partiallyUpdateAppWidget(counted.toIntArray(), counter)
@@ -121,8 +125,7 @@ class ArcWidgetManager @Inject constructor(
             width == 0 -> Size.Player
             width < 200 -> Size.Small
             height < 135 -> Size.Strip
-            height < 250 -> Size.Player
-            else -> Size.Tall
+            else -> Size.Player
         }
     }
 
@@ -131,10 +134,12 @@ class ArcWidgetManager @Inject constructor(
             Size.Small -> R.layout.widget_arc_small
             Size.Strip -> R.layout.widget_arc_strip
             Size.Vinyl -> R.layout.widget_arc_vinyl
+            Size.Dial -> R.layout.widget_arc_dial
             else -> R.layout.widget_arc_player
         }
         return RemoteViews(context.packageName, layout).apply {
             setOnClickPendingIntent(R.id.arc_root, openApp())
+            if (size == Size.Dial) return@apply setGrid(id)
             val art = if (size == Size.Vinyl) label else cover
             when {
                 art != null -> setImageViewBitmap(R.id.arc_cover, art)
@@ -163,7 +168,6 @@ class ArcWidgetManager @Inject constructor(
             }
             setTextViewText(R.id.arc_label, context.getString(label))
             setCounter(state)
-            if (size == Size.Tall) setDial()
             if (size == Size.Vinyl) setVinyl(id, state)
         }
     }
@@ -205,32 +209,50 @@ class ArcWidgetManager @Inject constructor(
         setChronometer(R.id.arc_time, SystemClock.elapsedRealtime() - state.positionNow(), null, state.isPlaying)
     }
 
-    private fun RemoteViews.setDial() {
-        setViewVisibility(R.id.arc_mic, View.VISIBLE)
-        setOnClickPendingIntent(
-            R.id.arc_mic,
-            PendingIntent.getActivity(context, 20, Intent(context, RecognitionLaunchActivity::class.java), FLAGS),
-        )
+    // Fills the visible slots row by row: one tile at 1x1, up to three across and four down.
+    private fun RemoteViews.setGrid(id: Int) {
+        val options = widgets.getAppWidgetOptions(id)
+        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+        val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+        val columns = when {
+            width == 0 || width >= 250 -> 3
+            width >= 150 -> 2
+            else -> 1
+        }
+        val rows = if (height == 0) 2 else (height / 90).coerceIn(1, 4)
+        val titled = height == 0 || height / rows >= 100
+        // Full-width widgets keep clear of the edge strips launchers such as Niagara use for their own gestures.
+        val side = dp(if (width >= 300) 40 else 6)
+        setViewPadding(R.id.arc_root, side, dp(6), side, dp(6))
+        TILE_ROWS.forEachIndexed { row, rowId -> setViewVisibility(rowId, if (row < rows) View.VISIBLE else View.GONE) }
         val tiles = dial.orEmpty()
-        setViewVisibility(R.id.arc_dial, if (tiles.isEmpty()) View.GONE else View.VISIBLE)
-        DIAL_SLOTS.forEachIndexed { index, (slot, art, title) ->
-            val item = tiles.getOrNull(index)
+        TILES.forEachIndexed { index, (slot, art, title) ->
+            val row = index / 3
+            val column = index % 3
+            if (row >= rows || column >= columns) {
+                setViewVisibility(slot, View.GONE)
+                return@forEachIndexed
+            }
+            val item = tiles.getOrNull(row * columns + column)
             setViewVisibility(slot, if (item == null) View.INVISIBLE else View.VISIBLE)
             if (item == null) return@forEachIndexed
             item.art?.let { setImageViewBitmap(art, it) } ?: setImageViewResource(art, R.drawable.arc_widget_blank)
+            setViewVisibility(title, if (titled) View.VISIBLE else View.GONE)
             setTextViewText(title, item.tile.title)
             setContentDescription(slot, item.tile.title)
             setOnClickPendingIntent(
                 slot,
-                playback(MusicWidgetReceiver.ACTION_PLAY_TILE, 10 + index) { putExtra(MusicWidgetReceiver.EXTRA_TILE, item.tile.mediaId) },
+                playback(MusicWidgetReceiver.ACTION_PLAY_TILE, 30 + index) { putExtra(MusicWidgetReceiver.EXTRA_TILE, item.tile.mediaId) },
             )
         }
     }
 
+    private fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
+
     private suspend fun loadDial(): List<Dial> =
-        runCatching { AutoSpeedDial.tiles(database).take(DIAL_SLOTS.size) }
+        runCatching { AutoSpeedDial.tiles(database).take(TILES.size) }
             .getOrDefault(emptyList())
-            .map { Dial(it, it.art?.let { url -> loadArt(url, 160)?.let { art -> shaped(art, round = false) } }) }
+            .map { Dial(it, it.art?.let { url -> loadArt(url, 128)?.let { art -> shaped(art, round = false) } }) }
 
     private fun openApp(): PendingIntent =
         PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
@@ -269,11 +291,21 @@ class ArcWidgetManager @Inject constructor(
     private companion object {
         const val FLAGS = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
-        val DIAL_SLOTS = listOf(
-            Triple(R.id.arc_dial_0, R.id.arc_dial_0_art, R.id.arc_dial_0_title),
-            Triple(R.id.arc_dial_1, R.id.arc_dial_1_art, R.id.arc_dial_1_title),
-            Triple(R.id.arc_dial_2, R.id.arc_dial_2_art, R.id.arc_dial_2_title),
-            Triple(R.id.arc_dial_3, R.id.arc_dial_3_art, R.id.arc_dial_3_title),
+        val TILE_ROWS = listOf(R.id.arc_tile_row_0, R.id.arc_tile_row_1, R.id.arc_tile_row_2, R.id.arc_tile_row_3)
+
+        val TILES = listOf(
+            Triple(R.id.arc_tile_0, R.id.arc_tile_0_art, R.id.arc_tile_0_title),
+            Triple(R.id.arc_tile_1, R.id.arc_tile_1_art, R.id.arc_tile_1_title),
+            Triple(R.id.arc_tile_2, R.id.arc_tile_2_art, R.id.arc_tile_2_title),
+            Triple(R.id.arc_tile_3, R.id.arc_tile_3_art, R.id.arc_tile_3_title),
+            Triple(R.id.arc_tile_4, R.id.arc_tile_4_art, R.id.arc_tile_4_title),
+            Triple(R.id.arc_tile_5, R.id.arc_tile_5_art, R.id.arc_tile_5_title),
+            Triple(R.id.arc_tile_6, R.id.arc_tile_6_art, R.id.arc_tile_6_title),
+            Triple(R.id.arc_tile_7, R.id.arc_tile_7_art, R.id.arc_tile_7_title),
+            Triple(R.id.arc_tile_8, R.id.arc_tile_8_art, R.id.arc_tile_8_title),
+            Triple(R.id.arc_tile_9, R.id.arc_tile_9_art, R.id.arc_tile_9_title),
+            Triple(R.id.arc_tile_10, R.id.arc_tile_10_art, R.id.arc_tile_10_title),
+            Triple(R.id.arc_tile_11, R.id.arc_tile_11_art, R.id.arc_tile_11_title),
         )
     }
 }

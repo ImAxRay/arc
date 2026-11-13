@@ -905,8 +905,10 @@ class MusicService :
 
         currentSong.debounce(1000).collect(scope) { song ->
             updateNotification()
-            updateWidgetUI()
         }
+
+        // The player's own metadata is there the moment a track starts, unlike its database row.
+        currentMediaMetadata.collect(scope) { updateWidgetUI() }
 
         combine(
             currentMediaMetadata.distinctUntilChangedBy { it?.id },
@@ -4767,12 +4769,12 @@ class MusicService :
             try {
                 while (widgetUpdatePending) {
                     widgetUpdatePending = false
-                    val songData = currentSong.value
+                    val metadata = currentMediaMetadata.value
                     widgetManager.update(
                         ArcWidgetManager.NowPlaying(
-                            title = songData?.song?.title,
-                            artist = songData?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name },
-                            artworkUri = songData?.song?.thumbnailUrl,
+                            title = metadata?.title,
+                            artist = metadata?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name },
+                            artworkUri = metadata?.thumbnailUrl,
                             isPlaying = player.isPlaying,
                             shuffle = player.shuffleModeEnabled,
                             durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,

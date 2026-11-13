@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Up to four rows of three; the manager hides the rows and columns the widget's size can't fit. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/arc_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/arc_widget_ground"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <LinearLayout
+        android:id="@+id/arc_tile_row_0"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/arc_tile_0"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_0_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_0_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_1"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_1_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_1_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_2"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_2_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_2_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/arc_tile_row_1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/arc_tile_3"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_3_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_3_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_4"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_4_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_4_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_5"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_5_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_5_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/arc_tile_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/arc_tile_6"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_6_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_6_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_7"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_7_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_7_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_8"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_8_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_8_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/arc_tile_row_3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/arc_tile_9"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_9_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_9_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_10"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_10_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_10_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/arc_tile_11"
+            style="@style/ArcWidgetTile">
+
+            <ImageView
+                android:id="@+id/arc_tile_11_art"
+                style="@style/ArcWidgetTileArt" />
+
+            <TextView
+                android:id="@+id/arc_tile_11_title"
+                style="@style/ArcWidgetDialTitle" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

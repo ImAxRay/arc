@@ -328,6 +328,19 @@
                 android:resource="@xml/arc_vinyl_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".widget.DialWidgetReceiver"
+            android:exported="true"
+            android:label="@string/speed_dial">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/arc_dial_widget_info" />
+        </receiver>
+
         <!-- Google Cast Options Provider -->
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"

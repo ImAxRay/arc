@@ -550,6 +550,7 @@
     <string name="arc_widget_playing">Now playing</string>
     <string name="arc_widget_paused">Paused</string>
     <string name="arc_vinyl_widget_name">Arc vinyl</string>
+    <string name="arc_dial_widget_description">Your speed dial on the home screen, from one tile up to twelve</string>
     <string name="arc_vinyl_widget_description">A record that spins while you play, with skips and shuffle</string>
     <string name="previous">Previous</string>
     <string name="play_pause">Play/Pause</string>

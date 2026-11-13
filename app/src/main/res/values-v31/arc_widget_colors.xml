@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="arc_widget_ground">@android:color/system_accent1_50</color>
+    <color name="arc_widget_ink">@android:color/system_accent1_900</color>
+    <color name="arc_widget_ink_soft">@android:color/system_accent1_600</color>
+    <color name="arc_widget_track">@android:color/system_accent1_200</color>
+</resources>
