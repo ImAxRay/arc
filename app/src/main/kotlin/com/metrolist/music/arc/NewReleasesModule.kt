@@ -193,7 +193,6 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
                 .tapBounce()
                 .fillMaxSize()
                 .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                .dialRim(RoundedCornerShape(ThumbnailCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .clickable(onClick = onClick)
                 .padding(8.dp),

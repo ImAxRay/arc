@@ -75,6 +75,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.exoplayer.offline.Download
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.metrolist.music.arc.RecessedCover
+import com.metrolist.music.arc.rememberTiltEye
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
@@ -207,12 +209,14 @@ fun AlbumScreen(
                                 ),
                         shape = RoundedCornerShape(3.dp),
                     ) {
-                        AsyncImage(
-                            model = albumWithSongs.album.thumbnailUrl?.resize(1080, 1080),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                        RecessedCover(rememberTiltEye(), Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = albumWithSongs.album.thumbnailUrl?.resize(1080, 1080),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))

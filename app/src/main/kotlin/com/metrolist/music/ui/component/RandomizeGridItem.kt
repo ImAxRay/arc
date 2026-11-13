@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.metrolist.music.arc.dialRim
 import com.metrolist.music.constants.ThumbnailCornerRadius
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -52,7 +51,6 @@ fun RandomizeGridItem(
                 .tapBounce()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                .dialRim(RoundedCornerShape(ThumbnailCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

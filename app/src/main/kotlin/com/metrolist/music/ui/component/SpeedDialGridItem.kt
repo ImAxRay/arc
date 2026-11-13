@@ -24,7 +24,8 @@ import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.arc.MarqueeText
-import com.metrolist.music.arc.dialRim
+import com.metrolist.music.arc.RecessedCover
+import com.metrolist.music.arc.TiltEye
 import com.metrolist.music.arc.tapBounce
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.ui.utils.resize
@@ -36,6 +37,7 @@ fun SpeedDialGridItem(
     modifier: Modifier = Modifier,
     isActive: Boolean = false,
     isPlaying: Boolean = false,
+    tiltEye: TiltEye? = null,
 ) {
     if (item is ArtistItem) {
         ArtistDialTile(item, isPinned, isActive, isPlaying, modifier)
@@ -47,16 +49,16 @@ fun SpeedDialGridItem(
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(ThumbnailCornerRadius))
-            .dialRim(RoundedCornerShape(ThumbnailCornerRadius))
     ) {
-        // Thumbnail
-        ItemThumbnail(
-            thumbnailUrl = item.thumbnail?.resize(200, 200),
-            isActive = isActive,
-            isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
-            modifier = Modifier.fillMaxSize()
-        )
+        RecessedCover(tiltEye, Modifier.fillMaxSize()) {
+            ItemThumbnail(
+                thumbnailUrl = item.thumbnail?.resize(200, 200),
+                isActive = isActive,
+                isPlaying = isPlaying,
+                shape = RoundedCornerShape(ThumbnailCornerRadius),
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         MarqueeText(
             text = item.title,
@@ -118,7 +120,7 @@ private fun ArtistDialTile(
                 isActive = isActive,
                 isPlaying = isPlaying,
                 shape = CircleShape,
-                modifier = Modifier.fillMaxWidth(PHOTO_SHARE).aspectRatio(1f).clip(CircleShape).dialRim(CircleShape),
+                modifier = Modifier.fillMaxWidth(PHOTO_SHARE).aspectRatio(1f),
             )
             MarqueeText(
                 text = item.title,

@@ -151,6 +151,7 @@ import com.metrolist.music.arc.SpeedDialShortcut
 import com.metrolist.music.arc.SpeedDialSkeleton
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.speedDialCellSize
+import com.metrolist.music.arc.rememberTiltEye
 import com.metrolist.music.arc.NewReleasesModule
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -1525,6 +1526,7 @@ fun HomeScreen(
                                     // title above and page dots below stay on screen with the grid
                                     val gridHeight = maxHeight - insets.calculateTopPadding() - insets.calculateBottomPadding() - 56.dp - 24.dp
                                     val itemWidth = speedDialCellSize(availableWidth, columns, rows, gridHeight)
+                                    val tiltEye = rememberTiltEye()
 
                                     // The first page gives up slots for its buttons: random in the corner, new playlist above it, moods beside it.
                                     val randomSlot = itemsPerPage - 1
@@ -1697,6 +1699,7 @@ fun HomeScreen(
                                                                         isActive =
                                                                             item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
                                                                         isPlaying = isPlaying,
+                                                                        tiltEye = tiltEye,
                                                                         modifier =
                                                                             Modifier
                                                                                 .fillMaxSize()

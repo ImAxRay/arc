@@ -59,6 +59,7 @@ import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.ArcHomeBackgroundKey
 import com.metrolist.music.arc.SpeedDialRowChoices
 import com.metrolist.music.arc.SpeedDialRowsKey
+import com.metrolist.music.arc.ArcTiltCoversKey
 import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.HomeBackgroundPicker
 import com.metrolist.music.arc.ArcAudioDetailsKey
@@ -198,6 +199,7 @@ fun AppearanceSettings(
             label = homeBackgroundText,
         )
     }
+    val (tiltCovers, onTiltCoversChange) = rememberPreference(ArcTiltCoversKey, defaultValue = true)
     val (speedDialRows, onSpeedDialRowsChange) = rememberPreference(SpeedDialRowsKey, defaultValue = 3)
     var showSpeedDialRowsDialog by rememberSaveable { mutableStateOf(false) }
     if (showSpeedDialRowsDialog) {
@@ -345,6 +347,7 @@ fun AppearanceSettings(
                     ),
                     switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange),
                     switchItem(R.drawable.palette, R.string.enable_dynamic_icon, R.string.enable_dynamic_icon_desc, enableDynamicIcon, onEnableDynamicIconChange),
+                    switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCoversChange),
                 ),
         )
 
