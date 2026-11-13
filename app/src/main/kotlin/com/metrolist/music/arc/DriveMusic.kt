@@ -32,19 +32,21 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 /**
- * Music in the user's Google Drive: they sign in once (read-only access), pick folders, and the audio files in
- * those folders become songs with ids "DRIVE_" plus the file id, streamed straight from Drive.
+ * Music in the user's Google Drive: they pick folders or songs in Google's own picker, which gives Arc access to
+ * those and nothing else, and the audio files become songs with ids "DRIVE_" plus the file id, streamed straight from Drive.
  */
 object DriveMusic {
     private const val PREFIX = "DRIVE_"
-    private const val SCOPE = "https://www.googleapis.com/auth/drive.readonly"
+    private const val SCOPE = "https://www.googleapis.com/auth/drive.file"
     private const val FOLDER = "application/vnd.google-apps.folder"
+    private const val PICKABLE = "$FOLDER,audio/flac,audio/x-flac,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/wav,audio/x-wav,audio/aiff,audio/x-aiff"
     private val RefreshKey = stringPreferencesKey("arcDriveRefresh")
     private val FoldersKey = stringPreferencesKey("arcDriveFolders")
     private val AUDIO = setOf("flac", "mp3", "m4a", "aac", "ogg", "opus", "wav", "alac", "aiff", "aif", "wma")
 
+    /** Something picked in Drive: a folder, read with everything under it, or a single song. */
     @Serializable
-    data class Folder(val id: String, val name: String)
+    data class Picked(val id: String, val name: String, val folder: Boolean = true)
 
     @Serializable
     private data class Token(val access_token: String = "", val expires_in: Long = 0, val refresh_token: String? = null)
@@ -65,11 +67,11 @@ object DriveMusic {
 
     fun signedIn(context: Context): Flow<Boolean> = context.dataStore.data.map { it[RefreshKey] != null }
 
-    fun folders(context: Context): Flow<List<Folder>> =
-        context.dataStore.data.map { prefs -> prefs[FoldersKey]?.let { runCatching { json.decodeFromString<List<Folder>>(it) }.getOrNull() }.orEmpty() }
+    fun picked(context: Context): Flow<List<Picked>> =
+        context.dataStore.data.map { prefs -> prefs[FoldersKey]?.let { runCatching { json.decodeFromString<List<Picked>>(it) }.getOrNull() }.orEmpty() }
 
-    suspend fun setFolders(context: Context, folders: List<Folder>) {
-        context.dataStore.edit { it[FoldersKey] = json.encodeToString(folders.distinctBy { f -> f.id }) }
+    suspend fun setPicked(context: Context, picked: List<Picked>) {
+        context.dataStore.edit { it[FoldersKey] = json.encodeToString(picked.distinctBy { p -> p.id }) }
     }
 
     suspend fun signOut(context: Context) {
@@ -81,10 +83,11 @@ object DriveMusic {
     }
 
     /**
-     * Signs in through a browser tab. Google sends the browser back to a one-off address on this phone
-     * (127.0.0.1), where Arc is listening for the answer; nothing passes through any other server.
+     * Opens Google's picker in a browser tab, signing in on the way, and adds what the user picked. Google sends the
+     * browser back to a one-off address on this phone (127.0.0.1), where Arc is listening for the answer; nothing
+     * passes through any other server. Returns how many things were picked.
      */
-    suspend fun signIn(context: Context): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun pick(context: Context): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
             val verifier = randomString()
             val challenge = Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()), Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
@@ -101,12 +104,16 @@ object DriveMusic {
                         .addQueryParameter("code_challenge_method", "S256")
                         .addQueryParameter("access_type", "offline")
                         .addQueryParameter("prompt", "consent")
+                        .addQueryParameter("trigger_onepick", "true")
+                        .addQueryParameter("allow_multiple", "true")
+                        .addQueryParameter("allow_folder_selection", "true")
+                        .addQueryParameter("mimetypes", PICKABLE)
                         .build().toString()
                 withContext(Dispatchers.Main) {
                     CustomTabsIntent.Builder().build().apply { intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
                         .launchUrl(context, Uri.parse(url))
                 }
-                val code =
+                val params =
                     server.accept().use { socket ->
                         val request = socket.getInputStream().bufferedReader().readLine().orEmpty()
                         val query = request.substringAfter("?", "").substringBefore(" ")
@@ -116,8 +123,9 @@ object DriveMusic {
                         socket.getOutputStream().write(
                             "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${page.toByteArray().size}\r\nConnection: close\r\n\r\n$page".toByteArray(),
                         )
-                        params["code"] ?: error(params["error"] ?: "Sign-in was cancelled")
+                        params
                     }
+                val code = params["code"] ?: error(params["error"] ?: "Sign-in was cancelled")
                 val token =
                     post(
                         FormBody.Builder()
@@ -132,9 +140,19 @@ object DriveMusic {
                 val refresh = token.refresh_token ?: error("Google gave no lasting sign-in")
                 access = token.access_token to System.currentTimeMillis() + token.expires_in * 1000
                 context.dataStore.edit { it[RefreshKey] = refresh }
+                val ids = params["picked_file_ids"].orEmpty().split(",").filter { it.isNotBlank() }
+                val items = ids.mapNotNull { id -> runCatching { item(id, token.access_token) }.getOrNull() }
+                setPicked(context, picked(context).first() + items.map { Picked(it.id, it.name, it.mimeType == FOLDER) })
+                items.size
             }
-        }.onFailure { Timber.tag("ArcDrive").w(it, "Sign-in failed") }.map { }
+        }.onFailure { Timber.tag("ArcDrive").w(it, "Picking failed") }
     }
+
+    private fun item(id: String, token: String): Item =
+        http.newCall(authed("https://www.googleapis.com/drive/v3/files/$id?fields=id,name,mimeType&supportsAllDrives=true", token)).execute().use { r ->
+            if (!r.isSuccessful) error("Drive answered ${r.code}")
+            json.decodeFromString<Item>(r.body.string())
+        }
 
     /** A fresh access token, renewed a minute before it runs out; null when not signed in. */
     suspend fun accessToken(context: Context): String? = withContext(Dispatchers.IO) {
@@ -178,11 +196,6 @@ object DriveMusic {
 
     private fun authed(url: String, token: String) = Request.Builder().url(url).header("Authorization", "Bearer $token").build()
 
-    /** The folders inside [parent] ("root" for My Drive, null for folders shared with the user). */
-    suspend fun subfolders(context: Context, parent: String?): List<Item> =
-        list(context, if (parent == null) "sharedWithMe and mimeType='$FOLDER' and trashed=false" else "'$parent' in parents and mimeType='$FOLDER' and trashed=false")
-            .sortedBy { it.name.lowercase() }
-
     private suspend fun list(context: Context, query: String): List<Item> = withContext(Dispatchers.IO) {
         val token = accessToken(context) ?: return@withContext emptyList()
         val all = ArrayList<Item>()
@@ -209,13 +222,17 @@ object DriveMusic {
     }
 
     /**
-     * Adds the audio files in the chosen folders (and their subfolders) to the library and drops the ones that are
-     * gone. Tags and cover are read from the start of each file over the network, once per new file.
+     * Adds the picked songs and the audio files in the picked folders (and their subfolders) to the library and drops
+     * the ones that are gone. Tags and cover are read from the start of each file over the network, once per new file.
+     * Fails without touching the library when the picked folders show nothing, which is also how it looks when
+     * Google gave access to a folder but not to what's inside it.
      */
     suspend fun sync(context: Context, database: MusicDatabase): Int = withContext(Dispatchers.IO) {
         val token = accessToken(context) ?: return@withContext 0
         val found = LinkedHashMap<String, Pair<Item, String>>()
-        val pending = ArrayDeque(folders(context).first().map { it.id to it.name })
+        val picked = picked(context).first()
+        picked.filterNot { it.folder }.forEach { found[PREFIX + it.id] = Item(it.id, it.name) to "" }
+        val pending = ArrayDeque(picked.filter { it.folder }.map { it.id to it.name })
         val seen = HashSet<String>()
         while (pending.isNotEmpty()) {
             val (folder, folderName) = pending.removeFirst()
@@ -228,6 +245,7 @@ object DriveMusic {
                 }
             }
         }
+        if (found.isEmpty() && picked.isNotEmpty()) error(context.getString(com.metrolist.music.R.string.arc_drive_nothing_found))
         val known = database.driveSongIds().toSet()
         val fresh = found.filterKeys { it !in known }
         val gone = known - found.keys
@@ -242,7 +260,7 @@ object DriveMusic {
                         title = tags.title ?: titleFromName(item.name),
                         duration = tags.seconds,
                         thumbnailUrl = tags.art,
-                        albumName = tags.album ?: folderName,
+                        albumName = tags.album ?: folderName.ifEmpty { null },
                         year = tags.year,
                         inLibrary = LocalDateTime.now(),
                         isLocal = true,
