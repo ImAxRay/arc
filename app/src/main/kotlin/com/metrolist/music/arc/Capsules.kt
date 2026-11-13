@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +40,7 @@ class CapsuleButton(
     val tint: Color? = null,
     val iconModifier: Modifier = Modifier,
     val content: (@Composable () -> Unit)? = null,
+    val hint: (@Composable BoxScope.() -> Unit)? = null,
 )
 
 /** The app's button style: a row of bare icons, the active one marked with a dot beneath it. */
@@ -85,6 +87,7 @@ private fun CapsulePiece(button: CapsuleButton, color: Color, sizing: Modifier) 
             custom != null -> custom()
             button.icon != null -> Icon(painterResource(button.icon), null, tint = tint, modifier = button.iconModifier.size(24.dp))
         }
+        button.hint?.invoke(this)
         if (button.active) {
             Box(
                 Modifier
@@ -116,7 +119,7 @@ fun playerExtras(
     listOf(
         CapsuleButton(R.drawable.more_vert, onMenu),
         CapsuleButton(outputIcon, onOutput),
-        CapsuleButton(R.drawable.lyrics, onLyrics, onLongClick = onLyricsMenu, active = lyricsOpen),
+        CapsuleButton(R.drawable.lyrics, onLyrics, onLongClick = onLyricsMenu, active = lyricsOpen, hint = { LyricsHoldHint() }),
         CapsuleButton(
             if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat,
             onRepeat,

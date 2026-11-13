@@ -9,6 +9,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -31,7 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +52,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.metrolist.music.R
+import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -56,6 +62,7 @@ internal val HintTail = 10.dp
 /** Whether the search bar shows a mic for song recognition. Holding Search does the same. */
 val SearchMicKey = booleanPreferencesKey("arcSearchMic")
 private val SearchHoldHintShownKey = booleanPreferencesKey("arcSearchHoldHintShown")
+private val LyricsHoldHintShownKey = booleanPreferencesKey("arcLyricsHoldHintShown")
 
 /** Hints waiting for their moment. Lives outside Compose so a hint survives the screen it was earned on. */
 object ArcHints {
@@ -63,6 +70,9 @@ object ArcHints {
     var recognitionFromMic = false
 
     var searchHold by mutableStateOf(false)
+
+    /** The lyrics menu was opened the long way, so the lyrics button should say holding it is the short one. */
+    var lyricsHold by mutableStateOf(false)
 }
 
 /**
@@ -184,10 +194,12 @@ suspend fun resetHints(context: android.content.Context) {
     rearmPlayHoldHint()
     ArcHints.recognitionFromMic = false
     ArcHints.searchHold = false
+    ArcHints.lyricsHold = false
     context.dataStore.edit {
         it.remove(PlayHoldTriedKey)
         it[PlayerRunsKey] = HINT_FIRST_RUN - 1
         it.remove(SearchHoldHintShownKey)
+        it.remove(LyricsHoldHintShownKey)
         it.remove(PlayHoldActionKey)
         it[SearchMicKey] = true
     }
@@ -200,4 +212,48 @@ suspend fun earnSearchHoldHint(context: android.content.Context): Boolean {
     if (context.dataStore.data.first()[SearchHoldHintShownKey] == true) return false
     ArcHints.searchHold = true
     return true
+}
+
+/** The lyrics menu was opened from the ⋮ menu or a play hold: teach the lyrics button's hold once. */
+suspend fun earnLyricsHoldHint(context: android.content.Context) {
+    if (context.dataStore.data.first()[LyricsHoldHintShownKey] != true) ArcHints.lyricsHold = true
+}
+
+/** The user found the lyrics button's hold on their own, so the hint has nothing left to teach. */
+suspend fun lyricsHoldFound(context: android.content.Context) {
+    // The bubble leaves only after the write, since leaving cancels the scope it was tapped in.
+    context.dataStore.edit { it[LyricsHoldHintShownKey] = true }
+    ArcHints.lyricsHold = false
+}
+
+/**
+ * Over the player's lyrics button, once the lyrics menu has closed: holding the button opens it.
+ * Put inside the button so the bubble anchors to it.
+ */
+@Composable
+fun BoxScope.LyricsHoldHint() {
+    if (!ArcHints.lyricsHold || LocalMenuState.current.isVisible) return
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val windowWidth = LocalWindowInfo.current.containerSize.width
+    var tailAtEnd by remember { mutableStateOf<Boolean?>(null) }
+    Box(Modifier.matchParentSize().onGloballyPositioned { tailAtEnd = it.boundsInWindow().center.x > windowWidth / 2f })
+    val end = tailAtEnd ?: return
+    Popup(
+        popupPositionProvider = rememberHintPosition(end),
+        properties = PopupProperties(focusable = false, clippingEnabled = false),
+    ) {
+        val text = MaterialTheme.colorScheme.surface
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier =
+                Modifier
+                    .widthIn(max = 260.dp)
+                    .hintMotion(true, if (end) 1f else 0f)
+                    .hintBubble(MaterialTheme.colorScheme.onSurface, SearchHintTailInset, end),
+        ) {
+            Text(stringResource(R.string.arc_hint_lyrics_hold), style = MaterialTheme.typography.titleSmall, color = text)
+            HintAction(stringResource(R.string.arc_hint_got_it), text, strong = true) { scope.launch { lyricsHoldFound(context) } }
+        }
+    }
 }

@@ -162,6 +162,7 @@ internal fun FloatingIcon(button: CapsuleButton, content: Color, modifier: Modif
                 .combinedClickable(enabled = button.enabled, onClick = button.onClick, onLongClick = button.onLongClick),
     ) {
         Icon(painterResource(icon), null, tint = tint, modifier = button.iconModifier.size(26.dp))
+        button.hint?.invoke(this)
         if (toggle && button.active) {
             Box(
                 Modifier

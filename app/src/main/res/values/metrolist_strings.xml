@@ -1053,6 +1053,8 @@
     <string name="arc_hint_search_hold">Holding the Search button recognises songs too, so the recognise button in the search bar is optional.</string>
     <string name="arc_hint_remove_mic">Remove it from the search bar</string>
     <string name="arc_hint_keep_mic">Keep it</string>
+    <string name="arc_hint_lyrics_hold">Hold the lyrics button to open this menu straight away.</string>
+    <string name="arc_hint_got_it">Got it</string>
     <string name="arc_recent_settings">RECENTLY CHANGED</string>
     <string name="arc_recognised">Found it</string>
     <string name="arc_eq_label">EQ</string>
@@ -1173,7 +1175,7 @@
     <string name="arc_triage_out">Leave out</string>
     <string name="arc_triage_stamp_in">In</string>
     <string name="arc_hold_snippet">Record a snippet</string>
-    <string name="arc_hold_snippet_desc">Sing or talk over the song while you hold. Slide up to keep recording hands-free</string>
+    <string name="arc_hold_snippet_desc">Beta · Sing or talk over the song while you hold. Slide up to keep recording hands-free</string>
     <string name="arc_snippet">Snippet</string>
     <string name="arc_snippet_lock">Slide up to lock</string>
     <string name="arc_snippet_locked">Tap ■ to stop</string>
@@ -1230,7 +1232,7 @@
     <string name="arc_about_metrolist_credit">Made Metrolist, which Arc is built on</string>
     <string name="arc_about_metrolist_collaborators">Metrolist collaborators</string>
     <string name="arc_spotify_import">Import a Spotify playlist</string>
-    <string name="arc_spotify_import_desc">Paste a playlist link; Arc finds each song on YouTube Music</string>
+    <string name="arc_spotify_import_desc">Beta · Paste a playlist link; Arc finds each song on YouTube Music</string>
     <string name="arc_spotify_reading_playlist">Reading the Spotify playlist…</string>
     <string name="arc_spotify_not_playlist">That link isn\'t a public Spotify playlist</string>
     <string name="arc_spotify_playlist_cap">Spotify only shares the first %d songs of a playlist without signing in</string>

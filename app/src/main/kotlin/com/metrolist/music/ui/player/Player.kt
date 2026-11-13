@@ -916,6 +916,16 @@ fun BottomSheetPlayer(
             )
         }
     }
+    val openLyricsMenuTaught = {
+        openLyricsMenu()
+        scope.launch { com.metrolist.music.arc.earnLyricsHoldHint(context) }
+        Unit
+    }
+    val openLyricsMenuByHold = {
+        openLyricsMenu()
+        scope.launch { com.metrolist.music.arc.lyricsHoldFound(context) }
+        Unit
+    }
     val (playHoldAction, onPlayHoldAction) = rememberEnumPreference(PlayHoldActionKey, PlayHoldAction.ASK)
     val openPlayHoldPicker = {
         menuState.show {
@@ -935,7 +945,7 @@ fun BottomSheetPlayer(
                 },
                 onDismiss = menuState::dismiss,
                 onSleepTimer = toggleSleepTimer,
-                onLyrics = openLyricsMenu,
+                onLyrics = openLyricsMenuTaught,
             )
         }
     }
@@ -950,7 +960,7 @@ fun BottomSheetPlayer(
     val toCorner by animateFloatAsState(if (showInlineLyrics || cornerArc) 1f else 0f, spring(0.72f, 260f), label = "arcToCorner")
     val arcCoverBottom = remember { mutableFloatStateOf(0f) }
     val holdMainControl = {
-        if (showInlineLyrics) openLyricsMenu() else onPlayerLayoutChange((playerLayout + 1) % 2)
+        if (showInlineLyrics) openLyricsMenuTaught() else onPlayerLayoutChange((playerLayout + 1) % 2)
     }
     LaunchedEffect(state.isExpanded) { ArcLineSignals.playerExpanded = state.isExpanded }
     // a snippet is sung along to the lyrics, then the player goes back to how it was
@@ -974,7 +984,7 @@ fun BottomSheetPlayer(
             playerConnection = playerConnection,
             inLyrics = showInlineLyrics,
             expanded = state.isExpanded,
-            onLyricsMenu = openLyricsMenu,
+            onLyricsMenu = openLyricsMenuTaught,
             onSwitchLayout = { onPlayerLayoutChange((playerLayout + 1) % 2) },
             onPick = openPlayHoldPicker,
         )
@@ -1722,7 +1732,7 @@ fun BottomSheetPlayer(
                                             onShuffle = { playerConnection.player.shuffleModeEnabled = !shuffled },
                                             onRepeat = { playerConnection.player.toggleRepeatMode() },
                                             onLyrics = { showInlineLyrics = !showInlineLyrics },
-                                            onLyricsMenu = openLyricsMenu,
+                                            onLyricsMenu = openLyricsMenuByHold,
                                             onMenu = openPlayerMenu,
                                             outputIcon = rememberOutputIcon(),
                                             onOutput = { showOutputSwitcher(context) },
@@ -1894,7 +1904,7 @@ fun BottomSheetPlayer(
                                 onShuffle = { playerConnection.player.shuffleModeEnabled = !shuffled },
                                 onRepeat = { playerConnection.player.toggleRepeatMode() },
                                 onLyrics = { showInlineLyrics = !showInlineLyrics },
-                                onLyricsMenu = openLyricsMenu,
+                                onLyricsMenu = openLyricsMenuByHold,
                                 onMenu = openPlayerMenu,
                                 outputIcon = rememberOutputIcon(),
                                 onOutput = { showOutputSwitcher(context) },
