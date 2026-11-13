@@ -7,7 +7,6 @@ package com.metrolist.music.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +50,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,6 +74,10 @@ import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.component.YouTubeGridItem
 import com.metrolist.music.ui.component.YouTubeListItem
+import com.metrolist.music.arc.SongSelectionBar
+import com.metrolist.music.arc.rememberSongSelection
+import com.metrolist.music.arc.selectableSong
+import com.metrolist.music.ui.menu.YouTubeSelectionSongMenu
 import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
@@ -98,6 +103,8 @@ fun ChartsScreen(
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val selection = rememberSongSelection()
+    val chartSongs = { chartsPage?.sections.orEmpty().flatMap { it.items }.filterIsInstance<SongItem>().distinctBy { it.id } }
 
     LaunchedEffect(Unit) {
         if (chartsPage == null) {
@@ -287,28 +294,19 @@ fun ChartsScreen(
                                             modifier =
                                                 Modifier
                                                     .width(horizontalLazyGridItemWidth)
-                                                    .combinedClickable(
-                                                        onClick = {
-                                                            if (song.id == mediaMetadata?.id) {
-                                                                playerConnection.togglePlayPause()
-                                                            } else {
-                                                                playerConnection.playQueue(
-                                                                    YouTubeQueue(
-                                                                        endpoint = WatchEndpoint(videoId = song.id),
-                                                                        preloadItem = song.toMediaMetadata(),
-                                                                    ),
-                                                                )
-                                                            }
-                                                        },
-                                                        onLongClick = {
-                                                            menuState.show {
-                                                                YouTubeSongMenu(
-                                                                    song = song,
-                                                                    onDismiss = menuState::dismiss,
-                                                                )
-                                                            }
-                                                        },
-                                                    ),
+                                                    .background(if (song.id in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                                                    .selectableSong(song.id, selection) {
+                                                        if (song.id == mediaMetadata?.id) {
+                                                            playerConnection.togglePlayPause()
+                                                        } else {
+                                                            playerConnection.playQueue(
+                                                                YouTubeQueue(
+                                                                    endpoint = WatchEndpoint(videoId = song.id),
+                                                                    preloadItem = song.toMediaMetadata(),
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
                                         )
                                     }
                                 }
@@ -342,28 +340,19 @@ fun ChartsScreen(
                                         coroutineScope = coroutineScope,
                                         modifier =
                                             Modifier
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        if (video.id == mediaMetadata?.id) {
-                                                            playerConnection.togglePlayPause()
-                                                        } else {
-                                                            playerConnection.playQueue(
-                                                                YouTubeQueue(
-                                                                    endpoint = WatchEndpoint(videoId = video.id),
-                                                                    preloadItem = video.toMediaMetadata(),
-                                                                ),
-                                                            )
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        menuState.show {
-                                                            YouTubeSongMenu(
-                                                                song = video,
-                                                                onDismiss = menuState::dismiss,
-                                                            )
-                                                        }
-                                                    },
-                                                ).animateItem(),
+                                                .background(if (video.id in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                                                .selectableSong(video.id, selection) {
+                                                    if (video.id == mediaMetadata?.id) {
+                                                        playerConnection.togglePlayPause()
+                                                    } else {
+                                                        playerConnection.playQueue(
+                                                            YouTubeQueue(
+                                                                endpoint = WatchEndpoint(videoId = video.id),
+                                                                preloadItem = video.toMediaMetadata(),
+                                                            ),
+                                                        )
+                                                    }
+                                                }.animateItem(),
                                     )
                                 }
                             }
@@ -371,6 +360,25 @@ fun ChartsScreen(
                     }
                 }
             }
+            SongSelectionBar(
+                selection = selection,
+                all = { chartSongs().map { it.id } },
+                picked = { chartSongs().filter { it.id in selection.ids }.map { it.toMediaMetadata() } },
+                onMore = {
+                    menuState.show {
+                        YouTubeSelectionSongMenu(
+                            songSelection = chartSongs().filter { it.id in selection.ids },
+                            onDismiss = menuState::dismiss,
+                            clearAction = selection::clear,
+                            compact = true,
+                        )
+                    }
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)),
+            )
         }
     }
 }

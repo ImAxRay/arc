@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -77,7 +78,7 @@ class SongSelection {
     val ids = mutableStateListOf<String>()
     var active by mutableStateOf(false)
         private set
-    internal val rows = HashMap<String, () -> Rect?>()
+    internal val rows = HashMap<Any, Pair<String, () -> Rect?>>()
 
     fun start(id: String) {
         active = true
@@ -121,8 +122,9 @@ fun Modifier.selectableSong(id: String, selection: SongSelection, onClick: () ->
     val service = LocalPlayerConnection.current?.service
     val place = remember { arrayOfNulls<LayoutCoordinates>(1) }
     DisposableEffect(id, selection) {
-        selection.rows[id] = { place[0]?.takeIf { it.isAttached }?.boundsInWindow() }
-        onDispose { selection.rows.remove(id) }
+        val token = Any()
+        selection.rows[token] = id to { place[0]?.takeIf { it.isAttached }?.boundsInWindow() }
+        onDispose { selection.rows.remove(token) }
     }
     return onGloballyPositioned { place[0] = it }
         .pointerInput(id, selection) {
@@ -139,15 +141,15 @@ fun Modifier.selectableSong(id: String, selection: SongSelection, onClick: () ->
             detectDragGesturesAfterLongPress(
                 onDrag = { change, _ ->
                     change.consume()
-                    val y = place[0]?.localToWindow(change.position)?.y ?: return@detectDragGesturesAfterLongPress
-                    pickRowAt(y, selection, haptics)
+                    val at = place[0]?.localToWindow(change.position) ?: return@detectDragGesturesAfterLongPress
+                    pickRowAt(at, selection, haptics)
                 },
             )
         }
 }
 
-private fun pickRowAt(y: Float, selection: SongSelection, haptics: HapticFeedback) {
-    val hit = selection.rows.entries.firstOrNull { (_, bounds) -> bounds()?.let { y >= it.top && y < it.bottom } == true }?.key ?: return
+private fun pickRowAt(at: Offset, selection: SongSelection, haptics: HapticFeedback) {
+    val hit = selection.rows.values.firstOrNull { (_, bounds) -> bounds()?.contains(at) == true }?.first ?: return
     if (hit in selection.ids) return
     selection.ids += hit
     haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)

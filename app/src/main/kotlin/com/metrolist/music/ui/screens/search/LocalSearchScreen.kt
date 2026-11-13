@@ -8,7 +8,7 @@ package com.metrolist.music.ui.screens.search
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +37,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import com.metrolist.music.LocalPlayerAwareWindowInsets
+import com.metrolist.music.arc.SongSelectionBar
+import com.metrolist.music.arc.rememberSongSelection
+import com.metrolist.music.arc.selectableSong
+import com.metrolist.music.models.toMediaMetadata
+import com.metrolist.music.ui.menu.SelectionSongMenu
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -106,6 +113,11 @@ fun LocalSearchScreen(
     val configuration = LocalWindowInfo.current
     val isLandscape = configuration.containerSize.width > configuration.containerSize.height
 
+    val selection = rememberSongSelection()
+    val shownSongs = { result.map.values.flatten().filterIsInstance<Song>().distinctBy { it.id } }
+    LaunchedEffect(selection.active) { if (selection.active) keyboardController?.hide() }
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier =
             Modifier
@@ -213,38 +225,25 @@ fun LocalSearchScreen(
                                 },
                                 modifier =
                                     Modifier
-                                        .combinedClickable(
-                                            onClick = {
-                                                if (item.id == mediaMetadata?.id) {
-                                                    playerConnection.togglePlayPause()
-                                                } else {
-                                                    val songs =
-                                                        result.map
-                                                            .getOrDefault(LocalFilter.SONG, emptyList())
-                                                            .filterIsInstance<Song>()
-                                                            .map { it.toMediaItem() }
-                                                    playerConnection.playQueue(
-                                                        ListQueue(
-                                                            title = queueSearchedSongsStr,
-                                                            items = songs,
-                                                            startIndex = songs.indexOfFirst { it.mediaId == item.id },
-                                                        ),
-                                                    )
-                                                }
-                                            },
-                                            onLongClick = {
-                                                menuState.show {
-                                                    SongMenu(
-                                                        originalSong = item,
-                                                        onDismiss = {
-                                                            onDismiss()
-                                                            menuState.dismiss()
-                                                        },
-                                                        isFromCache = isFromCache,
-                                                    )
-                                                }
-                                            },
-                                        ).animateItem(),
+                                        .background(if (item.id in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                                        .selectableSong(item.id, selection) {
+                                            if (item.id == mediaMetadata?.id) {
+                                                playerConnection.togglePlayPause()
+                                            } else {
+                                                val songs =
+                                                    result.map
+                                                        .getOrDefault(LocalFilter.SONG, emptyList())
+                                                        .filterIsInstance<Song>()
+                                                        .map { it.toMediaItem() }
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = queueSearchedSongsStr,
+                                                        items = songs,
+                                                        startIndex = songs.indexOfFirst { it.mediaId == item.id },
+                                                    ),
+                                                )
+                                            }
+                                        }.animateItem(),
                             )
                         }
 
@@ -255,7 +254,8 @@ fun LocalSearchScreen(
                                 isPlaying = isPlaying,
                                 modifier =
                                     Modifier
-                                        .clickable {
+                                        .alpha(if (selection.active) 0.4f else 1f)
+                                        .clickable(enabled = !selection.active) {
                                             onDismiss()
                                             navController.navigate("album/${item.id}")
                                         }.animateItem(),
@@ -267,7 +267,8 @@ fun LocalSearchScreen(
                                 artist = item,
                                 modifier =
                                     Modifier
-                                        .clickable {
+                                        .alpha(if (selection.active) 0.4f else 1f)
+                                        .clickable(enabled = !selection.active) {
                                             onDismiss()
                                             navController.navigate("artist/${item.id}")
                                         }.animateItem(),
@@ -279,7 +280,8 @@ fun LocalSearchScreen(
                                 playlist = item,
                                 modifier =
                                     Modifier
-                                        .clickable {
+                                        .alpha(if (selection.active) 0.4f else 1f)
+                                        .clickable(enabled = !selection.active) {
                                             onDismiss()
                                             navController.navigate("local_playlist/${item.id}")
                                         }.animateItem(),
@@ -298,5 +300,25 @@ fun LocalSearchScreen(
                 }
             }
         }
+    }
+        SongSelectionBar(
+            selection = selection,
+            all = { shownSongs().map { it.id } },
+            picked = { shownSongs().filter { it.id in selection.ids }.map { it.toMediaMetadata() } },
+            onMore = {
+                menuState.show {
+                    SelectionSongMenu(
+                        songSelection = shownSongs().filter { it.id in selection.ids },
+                        onDismiss = menuState::dismiss,
+                        clearAction = selection::clear,
+                        compact = true,
+                    )
+                }
+            },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)),
+        )
     }
 }

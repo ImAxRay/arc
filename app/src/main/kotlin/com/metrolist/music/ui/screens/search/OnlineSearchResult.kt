@@ -53,6 +53,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
+import com.metrolist.music.LocalPlayerAwareWindowInsets
+import com.metrolist.music.arc.SongSelectionBar
+import com.metrolist.music.arc.rememberSongSelection
+import com.metrolist.music.arc.selectableSong
+import com.metrolist.music.ui.menu.YouTubeSelectionSongMenu
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -234,6 +241,29 @@ fun OnlineSearchResult(
         }
     }
 
+    val selection = rememberSongSelection()
+    val shownSongs = {
+        if (searchFilter == null) {
+            searchSummary?.summaries.orEmpty().flatMap { it.items }
+        } else {
+            itemsPage?.items.orEmpty()
+        }.filterIsInstance<SongItem>().distinctBy { it.id }
+    }
+    val playSong = { item: SongItem ->
+        if (item.id == mediaMetadata?.id) {
+            playerConnection.togglePlayPause()
+        } else {
+            playerConnection.playQueue(
+                if (autoRadioQueue) {
+                    YouTubeQueue(WatchEndpoint(videoId = item.id), item.toMediaMetadata())
+                } else {
+                    ListQueue(title = item.title, items = listOf(item.toMediaItem()))
+                },
+            )
+        }
+    }
+    LaunchedEffect(selection.active) { if (selection.active) focusManager.clearFocus() }
+
     val ytItemContent: @Composable LazyItemScope.(YTItem) -> Unit = { item: YTItem ->
         val longClick = {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -306,29 +336,19 @@ fun OnlineSearchResult(
                 }
             },
             modifier =
+                if (item is SongItem) {
+                    Modifier
+                        .background(if (item.id in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                        .selectableSong(item.id, selection) { playSong(item) }
+                        .animateItem()
+                } else {
                 Modifier
+                    .alpha(if (selection.active) 0.4f else 1f)
                     .combinedClickable(
+                        enabled = !selection.active,
                         onClick = {
                             when (item) {
-                                is SongItem -> {
-                                    if (item.id == mediaMetadata?.id) {
-                                        playerConnection.togglePlayPause()
-                                    } else {
-                                        playerConnection.playQueue(
-                                            if (autoRadioQueue) {
-                                                YouTubeQueue(
-                                                    WatchEndpoint(videoId = item.id),
-                                                    item.toMediaMetadata(),
-                                                )
-                                            } else {
-                                                ListQueue(
-                                                    title = item.title,
-                                                    items = listOf(item.toMediaItem())
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
+                                is SongItem -> playSong(item)
 
                                 is AlbumItem -> {
                                     navController.navigate("album/${item.id}")
@@ -361,7 +381,8 @@ fun OnlineSearchResult(
                             }
                         },
                         onLongClick = longClick,
-                    ).animateItem(),
+                    ).animateItem()
+                },
         )
     }
 
@@ -571,10 +592,31 @@ fun OnlineSearchResult(
                     pureBlack = pureBlack,
                 )
             }
-            HideOnScrollFAB(
-                lazyListState = lazyListState,
-                icon = R.drawable.mic,
-                onClick = { navController.navigate("recognition") },
+            if (!selection.active) {
+                HideOnScrollFAB(
+                    lazyListState = lazyListState,
+                    icon = R.drawable.mic,
+                    onClick = { navController.navigate("recognition") },
+                )
+            }
+            SongSelectionBar(
+                selection = selection,
+                all = { shownSongs().map { it.id } },
+                picked = { shownSongs().filter { it.id in selection.ids }.map { it.toMediaMetadata() } },
+                onMore = {
+                    menuState.show {
+                        YouTubeSelectionSongMenu(
+                            songSelection = shownSongs().filter { it.id in selection.ids },
+                            onDismiss = menuState::dismiss,
+                            clearAction = selection::clear,
+                            compact = true,
+                        )
+                    }
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)),
             )
         }
     }
