@@ -102,7 +102,7 @@ internal fun MarqueeText(
         modifier =
             modifier
                 .clipToBounds()
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .graphicsLayer { compositingStrategy = if (overflows) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
                 .drawWithContent {
                     drawContent()
                     if (!overflows) return@drawWithContent

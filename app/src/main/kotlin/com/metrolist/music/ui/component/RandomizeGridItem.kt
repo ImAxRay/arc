@@ -113,12 +113,14 @@ fun RandomizeGridItem(
                     .background(dotColor),
         )
 
-        // Loading Indicator overlay
-        Box(modifier = Modifier.alpha(loadingAlpha)) {
-            LoadingIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
+        // The spinner animates every frame, so it only exists while it shows.
+        if (loadingAlpha > 0f) {
+            Box(modifier = Modifier.alpha(loadingAlpha)) {
+                LoadingIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
         }
     }
 }

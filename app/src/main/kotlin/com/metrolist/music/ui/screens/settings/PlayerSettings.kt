@@ -860,7 +860,7 @@ fun PlayerSettings(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        AlarmSettingsSection()
+        if (section == null || section == "queue") AlarmSettingsSection()
 
         Spacer(modifier = Modifier.height(27.dp))
 

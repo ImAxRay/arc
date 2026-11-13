@@ -42,7 +42,7 @@ class TiltEye {
     var y by mutableFloatStateOf(0f)
 }
 
-/** Follows the phone's tilt while the caller is on screen and resumed; null when tilt covers are off. */
+/** Follows the phone's tilt while the caller is on screen, resumed and not under the open player; null when tilt covers are off. */
 @Composable
 fun rememberTiltEye(): TiltEye? {
     val enabled by rememberPreference(ArcTiltCoversKey, true)
@@ -50,7 +50,8 @@ fun rememberTiltEye(): TiltEye? {
     if (!enabled) return null
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle, context) {
+    val covered = ArcLineSignals.playerExpanded
+    DisposableEffect(lifecycle, context, covered) {
         val sensors = context.getSystemService(SensorManager::class.java)
         val power = context.getSystemService(PowerManager::class.java)
         val sensor = sensors?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) ?: sensors?.getDefaultSensor(Sensor.TYPE_GRAVITY)
@@ -89,7 +90,7 @@ fun rememberTiltEye(): TiltEye? {
         }
         var listening = false
         fun start() {
-            if (listening || sensor == null || power?.isPowerSaveMode == true) return
+            if (listening || covered || sensor == null || power?.isPowerSaveMode == true) return
             listening = sensors.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
         }
         fun stop() {
@@ -192,10 +193,10 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Compos
 }
 
 private const val REST_DRIFT = 0.012f
-private const val TILT_GAIN = 2.4f
+private const val TILT_GAIN = 1.9f
 private const val MAX_EYE = 0.6f
 private const val EYE_STEP = 0.002f
-private const val DEPTH = 0.16f
+private const val DEPTH = 0.13f
 private const val MAX_SHIFT = 0.08f
 private const val COVER_SCALE = 1f + 2 * MAX_SHIFT + 0.02f
 private const val WALL_WIDTH = 1.8f
