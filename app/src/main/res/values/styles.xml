@@ -51,6 +51,16 @@
         <item name="android:textColor">@color/arc_widget_ink_soft</item>
     </style>
 
+    <style name="ArcWidgetCounter">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">sans-serif-thin</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/arc_widget_ink</item>
+    </style>
+
     <style name="ArcWidgetSkip">
         <item name="android:layout_width">38dp</item>
         <item name="android:layout_height">38dp</item>
@@ -65,6 +75,21 @@
         <item name="android:minHeight">12dp</item>
         <item name="android:maxHeight">12dp</item>
         <item name="android:progressDrawable">@drawable/arc_widget_line</item>
+    </style>
+
+    <!-- An indeterminate bar turns its drawable on the launcher's side: the only spin a widget can have. -->
+    <style name="ArcWidgetSpin">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:indeterminate">true</item>
+        <item name="android:indeterminateOnly">true</item>
+        <item name="android:indeterminateBehavior">repeat</item>
+        <item name="android:indeterminateDuration">1800</item>
+        <item name="android:interpolator">@android:anim/linear_interpolator</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:maxWidth">1000dp</item>
+        <item name="android:maxHeight">1000dp</item>
     </style>
 
     <style name="ArcWidgetDialArt">

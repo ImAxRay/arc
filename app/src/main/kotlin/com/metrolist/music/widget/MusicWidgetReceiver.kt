@@ -19,8 +19,8 @@ interface ArcWidgetEntryPoint {
     fun arcWidget(): ArcWidgetManager
 }
 
-/** Draws the Arc widget when it is added or resized; taps on it go straight to MusicService. */
-class MusicWidgetReceiver : AppWidgetProvider() {
+/** Draws the Arc widgets when they are added or resized; taps on them go straight to MusicService. */
+open class MusicWidgetReceiver : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) = render(context)
 
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) =
@@ -41,9 +41,12 @@ class MusicWidgetReceiver : AppWidgetProvider() {
         const val ACTION_PLAY_PAUSE = "com.metrolist.music.widget.PLAY_PAUSE"
         const val ACTION_NEXT = "com.metrolist.music.widget.NEXT"
         const val ACTION_PREVIOUS = "com.metrolist.music.widget.PREVIOUS"
+        const val ACTION_SHUFFLE = "com.metrolist.music.widget.SHUFFLE"
         const val ACTION_PLAY_TILE = "com.metrolist.music.widget.PLAY_TILE"
         const val EXTRA_TILE = "tile"
 
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 }
+
+class VinylWidgetReceiver : MusicWidgetReceiver()

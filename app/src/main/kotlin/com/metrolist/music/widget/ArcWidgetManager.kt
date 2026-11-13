@@ -10,7 +10,9 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Shader
+import android.os.Build
 import android.os.SystemClock
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import coil3.SingletonImageLoader
@@ -32,8 +34,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The one Arc home-screen widget. Its layout follows its size: small is cover and play, a strip
+ * Arc's home-screen widgets. The main one follows its size: small is cover and play, a strip
  * adds title and skips, the player adds the counter, and a tall one adds the speed dial.
+ * The vinyl one is a record that spins while music plays.
  */
 @Singleton
 class ArcWidgetManager @Inject constructor(
@@ -45,6 +48,7 @@ class ArcWidgetManager @Inject constructor(
         val artist: String? = null,
         val artworkUri: String? = null,
         val isPlaying: Boolean = false,
+        val shuffle: Boolean = false,
         val durationMs: Long = 0,
         val positionMs: Long = 0,
         val stampedAt: Long = SystemClock.elapsedRealtime(),
@@ -58,7 +62,7 @@ class ArcWidgetManager @Inject constructor(
         fun permille() = if (durationMs > 0) (positionNow() * 1000 / durationMs).toInt() else 0
     }
 
-    private enum class Size { Small, Strip, Player, Tall }
+    private enum class Size { Small, Strip, Player, Tall, Vinyl }
 
     private class Dial(val tile: AutoSpeedDial.Tile, val art: Bitmap?)
 
@@ -68,6 +72,7 @@ class ArcWidgetManager @Inject constructor(
     @Volatile private var now = NowPlaying()
     @Volatile private var sizes: Map<Int, Size> = emptyMap()
     private var cover: Bitmap? = null
+    private var label: Bitmap? = null
     private var coverUri: String? = null
     private var dial: List<Dial>? = null
 
@@ -78,27 +83,30 @@ class ArcWidgetManager @Inject constructor(
     }
 
     suspend fun render(refreshDial: Boolean = false) = mutex.withLock {
-        val ids = widgets.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java))
-        sizes = ids.associateWith { sizeOf(it) }
-        if (ids.isEmpty()) return@withLock
+        val vinyls = widgets.getAppWidgetIds(ComponentName(context, VinylWidgetReceiver::class.java))
+        sizes = widgets.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java)).associateWith { sizeOf(it) } +
+            vinyls.associateWith { Size.Vinyl }
+        if (sizes.isEmpty()) return@withLock
         val state = now
         if (state.artworkUri != coverUri) {
-            cover = state.artworkUri?.let { loadArt(it, 320) }
+            val art = state.artworkUri?.let { loadArt(it, 320) }
+            cover = art?.let { shaped(it, round = false) }
+            label = art?.let { shaped(it, round = true) }
             coverUri = state.artworkUri
         }
         if (Size.Tall in sizes.values && (dial == null || refreshDial)) dial = loadDial()
-        ids.forEach { id -> widgets.updateAppWidget(id, views(id, sizes.getValue(id), state)) }
+        sizes.forEach { (id, size) -> widgets.updateAppWidget(id, views(id, size, state)) }
     }
 
     /** Moves the line and resyncs the counter without resending the covers. */
     fun updateProgress(durationMs: Long, positionMs: Long) {
         val state = now.copy(durationMs = durationMs, positionMs = positionMs, stampedAt = SystemClock.elapsedRealtime())
         now = state
-        val lined = sizes.filterValues { it != Size.Small }.keys
+        val lined = sizes.filterValues { it != Size.Small && it != Size.Vinyl }.keys
         if (lined.isEmpty()) return
         val line = RemoteViews(context.packageName, R.layout.widget_arc_player).apply { setLine(state) }
         widgets.partiallyUpdateAppWidget(lined.toIntArray(), line)
-        val counted = sizes.filterValues { it == Size.Player || it == Size.Tall }.keys
+        val counted = sizes.filterValues { it == Size.Player || it == Size.Tall || it == Size.Vinyl }.keys
         if (counted.isEmpty()) return
         val counter = RemoteViews(context.packageName, R.layout.widget_arc_player).apply { setCounter(state) }
         widgets.partiallyUpdateAppWidget(counted.toIntArray(), counter)
@@ -122,11 +130,17 @@ class ArcWidgetManager @Inject constructor(
         val layout = when (size) {
             Size.Small -> R.layout.widget_arc_small
             Size.Strip -> R.layout.widget_arc_strip
+            Size.Vinyl -> R.layout.widget_arc_vinyl
             else -> R.layout.widget_arc_player
         }
         return RemoteViews(context.packageName, layout).apply {
             setOnClickPendingIntent(R.id.arc_root, openApp())
-            cover?.let { setImageViewBitmap(R.id.arc_cover, it) } ?: setImageViewResource(R.id.arc_cover, R.drawable.arc_widget_blank)
+            val art = if (size == Size.Vinyl) label else cover
+            when {
+                art != null -> setImageViewBitmap(R.id.arc_cover, art)
+                size == Size.Vinyl -> setImageViewResource(R.id.arc_cover, 0)
+                else -> setImageViewResource(R.id.arc_cover, R.drawable.arc_widget_blank)
+            }
             setImageViewResource(R.id.arc_play_icon, if (state.isPlaying) R.drawable.arc_widget_pause else R.drawable.arc_widget_play)
             setOnClickPendingIntent(R.id.arc_play, playback(MusicWidgetReceiver.ACTION_PLAY_PAUSE, 1))
             if (size == Size.Small) return@apply
@@ -135,7 +149,7 @@ class ArcWidgetManager @Inject constructor(
             setTextViewText(R.id.arc_artist, state.artist ?: context.getString(R.string.tap_to_open))
             setOnClickPendingIntent(R.id.arc_prev, playback(MusicWidgetReceiver.ACTION_PREVIOUS, 2))
             setOnClickPendingIntent(R.id.arc_next, playback(MusicWidgetReceiver.ACTION_NEXT, 3))
-            setLine(state)
+            if (size != Size.Vinyl) setLine(state)
             if (size == Size.Strip) {
                 val roomy = widgets.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) >= 300
                 setViewVisibility(R.id.arc_prev, if (roomy) View.VISIBLE else View.GONE)
@@ -150,7 +164,36 @@ class ArcWidgetManager @Inject constructor(
             setTextViewText(R.id.arc_label, context.getString(label))
             setCounter(state)
             if (size == Size.Tall) setDial()
+            if (size == Size.Vinyl) setVinyl(id, state)
         }
+    }
+
+    private fun RemoteViews.setVinyl(id: Int, state: NowPlaying) {
+        setOnClickPendingIntent(R.id.arc_shuffle, playback(MusicWidgetReceiver.ACTION_SHUFFLE, 4))
+        setInt(R.id.arc_shuffle, "setImageAlpha", if (state.shuffle) 255 else 90)
+        val spinning = if (state.isPlaying) View.VISIBLE else View.GONE
+        val still = if (state.isPlaying) View.GONE else View.VISIBLE
+        setViewVisibility(R.id.arc_vinyl_spin, spinning)
+        setViewVisibility(R.id.arc_vinyl_label_spin, spinning)
+        setViewVisibility(R.id.arc_vinyl_still, still)
+        setViewVisibility(R.id.arc_vinyl_label_still, still)
+
+        val options = widgets.getAppWidgetOptions(id)
+        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+        val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+        if (width == 0 || height == 0) return
+        setViewVisibility(R.id.arc_time, if (height >= 160) View.VISIBLE else View.GONE)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        // The record fills the height and hangs 28% off the right edge, leaving the buttons room on the left.
+        val disc = minOf(height - 12f, (width - 212f) / 0.72f).coerceIn(96f, 300f)
+        val dip = TypedValue.COMPLEX_UNIT_DIP
+        setViewLayoutWidth(R.id.arc_vinyl, disc, dip)
+        setViewLayoutHeight(R.id.arc_vinyl, disc, dip)
+        setViewLayoutMargin(R.id.arc_vinyl, RemoteViews.MARGIN_END, -disc * 0.28f, dip)
+        listOf(RemoteViews.MARGIN_LEFT, RemoteViews.MARGIN_TOP, RemoteViews.MARGIN_RIGHT, RemoteViews.MARGIN_BOTTOM).forEach {
+            setViewLayoutMargin(R.id.arc_cover, it, disc * 0.31f, dip)
+        }
+        setViewLayoutMargin(R.id.arc_vinyl_info, RemoteViews.MARGIN_END, disc * 0.72f + 8f, dip)
     }
 
     private fun RemoteViews.setLine(state: NowPlaying) {
@@ -187,7 +230,7 @@ class ArcWidgetManager @Inject constructor(
     private suspend fun loadDial(): List<Dial> =
         runCatching { AutoSpeedDial.tiles(database).take(DIAL_SLOTS.size) }
             .getOrDefault(emptyList())
-            .map { Dial(it, it.art?.let { url -> loadArt(url, 160) }) }
+            .map { Dial(it, it.art?.let { url -> loadArt(url, 160)?.let { art -> shaped(art, round = false) } }) }
 
     private fun openApp(): PendingIntent =
         PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), FLAGS)
@@ -205,11 +248,12 @@ class ArcWidgetManager @Inject constructor(
         withContext(Dispatchers.IO) {
             runCatching {
                 val request = ImageRequest.Builder(context).data(url).size(size, size).allowHardware(false).build()
-                SingletonImageLoader.get(context).execute(request).image?.toBitmap()?.let(::rounded)
+                SingletonImageLoader.get(context).execute(request).image?.toBitmap()
             }.getOrNull()
         }
 
-    private fun rounded(source: Bitmap): Bitmap {
+    /** A square crop of [source] with softened corners, or a circle for the record's label. */
+    private fun shaped(source: Bitmap, round: Boolean): Bitmap {
         val side = minOf(source.width, source.height)
         val output = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
@@ -217,7 +261,7 @@ class ArcWidgetManager @Inject constructor(
                 setLocalMatrix(android.graphics.Matrix().apply { setTranslate(-(source.width - side) / 2f, -(source.height - side) / 2f) })
             }
         }
-        val radius = side * 0.08f
+        val radius = side * if (round) 0.5f else 0.08f
         Canvas(output).drawRoundRect(0f, 0f, side.toFloat(), side.toFloat(), radius, radius, paint)
         return output
     }

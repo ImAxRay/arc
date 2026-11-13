@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Buttons stay on the left: launchers such as Niagara keep the right edge for their own slider. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/arc_root"
     android:layout_width="match_parent"
@@ -12,16 +13,46 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="10dp"
-        android:paddingEnd="8dp"
+        android:paddingEnd="14dp"
         android:paddingBottom="4dp">
 
         <ImageView
             android:id="@+id/arc_cover"
             android:layout_width="44dp"
             android:layout_height="44dp"
+            android:layout_marginEnd="4dp"
             android:contentDescription="@string/album_art"
             android:scaleType="centerCrop"
             android:src="@drawable/arc_widget_blank" />
+
+        <ImageView
+            android:id="@+id/arc_prev"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/previous"
+            android:src="@drawable/arc_widget_prev" />
+
+        <FrameLayout
+            android:id="@+id/arc_play"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/arc_widget_disc"
+            android:contentDescription="@string/play_pause">
+
+            <ImageView
+                android:id="@+id/arc_play_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/arc_widget_play" />
+        </FrameLayout>
+
+        <ImageView
+            android:id="@+id/arc_next"
+            style="@style/ArcWidgetSkip"
+            android:contentDescription="@string/next"
+            android:src="@drawable/arc_widget_next" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -40,35 +71,6 @@
                 style="@style/ArcWidgetArtist"
                 android:textSize="12sp" />
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/arc_prev"
-            style="@style/ArcWidgetSkip"
-            android:contentDescription="@string/previous"
-            android:src="@drawable/arc_widget_prev" />
-
-        <FrameLayout
-            android:id="@+id/arc_play"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginHorizontal="2dp"
-            android:background="@drawable/arc_widget_disc"
-            android:contentDescription="@string/play_pause">
-
-            <ImageView
-                android:id="@+id/arc_play_icon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="center"
-                android:importantForAccessibility="no"
-                android:src="@drawable/arc_widget_play" />
-        </FrameLayout>
-
-        <ImageView
-            android:id="@+id/arc_next"
-            style="@style/ArcWidgetSkip"
-            android:contentDescription="@string/next"
-            android:src="@drawable/arc_widget_next" />
     </LinearLayout>
 
     <ProgressBar

@@ -2839,6 +2839,7 @@ class MusicService :
             currentMediaMetadata.value = player.currentMetadata
         }
 
+        if (events.containsAny(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED)) updateWidgetUI()
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
             updateWidgetUI()
             if (player.isPlaying) {
@@ -4614,6 +4615,8 @@ class MusicService :
 
             MusicWidgetReceiver.ACTION_PREVIOUS -> player.seekToPrevious()
 
+            MusicWidgetReceiver.ACTION_SHUFFLE -> player.shuffleModeEnabled = !player.shuffleModeEnabled
+
             MusicWidgetReceiver.ACTION_PLAY_TILE -> playSpeedDialTile(intent)
         }
 
@@ -4771,6 +4774,7 @@ class MusicService :
                             artist = songData?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name },
                             artworkUri = songData?.song?.thumbnailUrl,
                             isPlaying = player.isPlaying,
+                            shuffle = player.shuffleModeEnabled,
                             durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
                             positionMs = player.currentPosition,
                         ),
