@@ -131,7 +131,7 @@ constructor(
 
     fun syncDriveSongs() {
         viewModelScope.launch {
-            com.metrolist.music.arc.DriveMusic.sync(context, database)
+            runCatching { com.metrolist.music.arc.DriveMusic.sync(context, database) }
             DeviceMusic.matchArtists(database)
         }
     }

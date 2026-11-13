@@ -1022,6 +1022,16 @@ class MainActivity : FragmentActivity() {
                     )
                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) navController.navigate("settings/drive")
                 }
+                LaunchedEffect(Unit) {
+                    if (!com.metrolist.music.arc.DriveMusic.signInDueSoon(this@MainActivity)) return@LaunchedEffect
+                    val result = snackbarHostState.showSnackbar(
+                        getString(R.string.arc_drive_due_soon),
+                        getString(R.string.arc_sign_in_again),
+                        withDismissAction = true,
+                        duration = androidx.compose.material3.SnackbarDuration.Indefinite,
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) navController.navigate("settings/drive")
+                }
 
                 LaunchedEffect(Unit) {
                     if (pendingIntent != null) {
