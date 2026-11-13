@@ -45,7 +45,7 @@ class TiltEye {
 /** Follows the phone's tilt while the caller is on screen, resumed and not under the open player; null when tilt covers are off. */
 @Composable
 fun rememberTiltEye(): TiltEye? {
-    val enabled by rememberPreference(ArcTiltCoversKey, true)
+    val enabled by rememberPreference(ArcTiltCoversKey, false)
     val eye = remember { TiltEye() }
     if (!enabled) return null
     val context = LocalContext.current

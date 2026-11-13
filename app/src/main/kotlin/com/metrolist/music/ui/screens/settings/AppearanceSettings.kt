@@ -199,7 +199,7 @@ fun AppearanceSettings(
             label = homeBackgroundText,
         )
     }
-    val (tiltCovers, onTiltCoversChange) = rememberPreference(ArcTiltCoversKey, defaultValue = true)
+    val (tiltCovers, onTiltCoversChange) = rememberPreference(ArcTiltCoversKey, defaultValue = false)
     val (speedDialRows, onSpeedDialRowsChange) = rememberPreference(SpeedDialRowsKey, defaultValue = 3)
     var showSpeedDialRowsDialog by rememberSaveable { mutableStateOf(false) }
     if (showSpeedDialRowsDialog) {
