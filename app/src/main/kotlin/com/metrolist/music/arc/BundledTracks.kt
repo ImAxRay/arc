@@ -35,7 +35,7 @@ object BundledTracks {
     private val tracks = listOf(Track("lynxi_inro", "Inro", "Lynxi", 114, lyricsVersion = 5))
 
     /** The first bundled song's id: a fresh install's Continue tile until something else was played. */
-    val firstSongId get() = PREFIX + tracks.first().key
+    val firstSongId get() = tracks.firstOrNull()?.let { PREFIX + it.key }
 
     fun isBundled(mediaId: String?) = mediaId?.startsWith(PREFIX) == true
 
@@ -43,22 +43,29 @@ object BundledTracks {
 
     private fun savedAudio(context: Context, key: String) = File(context.filesDir, "bundled/$key.ogg")
 
+    private fun savedAudioOf(context: Context, mediaId: String) = savedAudio(context, mediaId.removePrefix(PREFIX)).takeIf { it.length() > 0 }
+
     fun audioUri(context: Context, mediaId: String): Uri =
-        savedAudio(context, mediaId.removePrefix(PREFIX)).takeIf { it.exists() }?.let(Uri::fromFile)
-            ?: "asset:///${audioPath(mediaId)}".toUri()
+        savedAudioOf(context, mediaId)?.let(Uri::fromFile) ?: "asset:///${audioPath(mediaId)}".toUri()
 
     fun openAudio(context: Context, mediaId: String) =
-        savedAudio(context, mediaId.removePrefix(PREFIX)).takeIf { it.exists() }?.inputStream()
-            ?: context.assets.open(audioPath(mediaId))
+        savedAudioOf(context, mediaId)?.inputStream() ?: context.assets.open(audioPath(mediaId))
 
     private fun shipped(context: Context) = context.assets.list("bundled").orEmpty().toSet()
 
+    /** Copies a track's audio out of the APK, synced to disk before it takes its name, so a power cut never leaves half a file. */
     private fun saveAudio(context: Context, key: String) {
         val target = savedAudio(context, key)
-        if (target.exists()) return
+        val size = runCatching { context.assets.openFd("bundled/$key.ogg").use { it.length } }.getOrNull()
+        if (target.length() > 0 && (size == null || target.length() == size)) return
         target.parentFile?.mkdirs()
         val part = File(target.path + ".part")
-        context.assets.open("bundled/$key.ogg").use { input -> part.outputStream().use { input.copyTo(it) } }
+        context.assets.open("bundled/$key.ogg").use { input ->
+            part.outputStream().use { output ->
+                input.copyTo(output)
+                output.fd.sync()
+            }
+        }
         part.renameTo(target)
     }
 

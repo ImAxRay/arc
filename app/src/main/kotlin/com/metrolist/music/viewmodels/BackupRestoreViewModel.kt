@@ -706,6 +706,7 @@ class BackupRestoreViewModel @Inject constructor(
             "untitled-tracks.json",
             "motion-covers.json",
             "snippets",
+            "bundled",
             "sync_snapshot_liked_songs",
             "sync_snapshot_library_songs",
             "sync_snapshot_liked_albums",

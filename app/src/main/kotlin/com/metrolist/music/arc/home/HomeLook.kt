@@ -21,6 +21,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -42,11 +44,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.metrolist.music.R
 import com.metrolist.music.arc.ArcMotion
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
 /** Height of [ModuleHeader], so modules that fit themselves to the screen can leave room for it. */
@@ -229,7 +234,11 @@ internal val DayHeaderHeight = 84.dp
 /** "SATURDAY · 14 NOV" in small caps over a thin greeting for the time of day; the top of Home. */
 @Composable
 fun HomeDayHeader() {
-    val now = remember { LocalDateTime.now() }
+    // Home stays composed in the background, so the day and greeting are read again whenever the app comes back
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val now by produceState(LocalDateTime.now().truncatedTo(ChronoUnit.HOURS), lifecycle) {
+        lifecycle.currentStateFlow.collect { if (it == Lifecycle.State.RESUMED) value = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS) }
+    }
     val greeting =
         when (now.hour) {
             in 5..11 -> R.string.arc_home_morning
