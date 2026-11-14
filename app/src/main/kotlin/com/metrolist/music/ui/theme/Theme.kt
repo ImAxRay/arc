@@ -14,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +29,9 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.score.Score
 
 val DefaultThemeColor = Color(0xFFED5564)
+
+/** The seed the app's theme was built from, so the player can build the dark version of the same theme. */
+val LocalThemeColor = staticCompositionLocalOf { DefaultThemeColor }
 
 @Composable
 fun MetrolistTheme(
@@ -63,10 +68,9 @@ fun MetrolistTheme(
     }
 
     // Use standard MaterialTheme instead of MaterialExpressiveTheme
-    MaterialTheme(
-        colorScheme = colorScheme.animated(),
-        content = content,
-    )
+    MaterialTheme(colorScheme = colorScheme.animated()) {
+        CompositionLocalProvider(LocalThemeColor provides themeColor, content = content)
+    }
 }
 
 /** The seed for a cover with no colour to speak of; the theme then goes greyscale to match it. */

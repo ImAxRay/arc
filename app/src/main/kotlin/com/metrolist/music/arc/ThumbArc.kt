@@ -54,6 +54,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -163,6 +164,7 @@ fun ThumbArcControls(
     coverShown: Boolean = glowArtwork != null,
     cornerArc: Boolean,
     ground: Color,
+    groundNear: Color = ground,
     topLimit: () -> Float,
     swipeShift: Animatable<Float, AnimationVector1D>,
     positionMs: () -> Long,
@@ -323,6 +325,11 @@ fun ThumbArcControls(
 
         // Both layouts keep the cover, its glow and the status line. The glow's cut-out inside the arc shrinks as the line moves to the corner.
         val chromeShown = glowShown
+        // Below the cover the ground deepens from the cover's edge colour towards the buttons.
+        val groundBrush = Brush.verticalGradient(listOf(groundNear, ground), startY = limit, endY = constraints.maxHeight.toFloat())
+        if (groundNear != ground) {
+            Canvas(Modifier.fillMaxSize()) { drawRect(groundBrush, topLeft = Offset(0f, limit), size = Size(size.width, size.height - limit)) }
+        }
         CoverGlow(art, limit, arc.pivot, trackRadius * (1f - toCorner.coerceIn(0f, 1f)), chromeShown, shift = { swipeShift.value })
         if (statusShown > 0.01f) StatusLine(dark = glowArtwork != null && art?.statusBright == true, modifier = Modifier.graphicsLayer { alpha = statusShown })
         if (limit > 0f) {
@@ -339,7 +346,7 @@ fun ThumbArcControls(
 
         Canvas(Modifier.fillMaxSize()) {
             // Inside the arc is plain ground, so where the line runs over the cover it cuts the corner off.
-            if (trackShown > 0.01f) drawCircle(ground.copy(alpha = ground.alpha * trackShown), trackRadius, arc.pivot)
+            if (trackShown > 0.01f) drawCircle(groundBrush, trackRadius, arc.pivot, alpha = trackShown)
             val duration = currentDuration().coerceAtLeast(1L)
             val progress = (currentPosition().toFloat() / duration).coerceIn(0f, 1f)
             val end =

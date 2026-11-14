@@ -110,6 +110,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.material3.ColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -191,6 +195,10 @@ import com.metrolist.music.arc.NextUp
 import com.metrolist.music.arc.ArcTimeLine
 import com.metrolist.music.arc.CornerBoxHeight
 import com.metrolist.music.arc.ThumbArcControls
+import com.metrolist.music.ui.theme.LocalThemeColor
+import com.metrolist.music.ui.theme.MetrolistTheme
+import com.metrolist.music.arc.coverGround
+import com.metrolist.music.arc.rememberCoverArt
 import com.metrolist.music.arc.CornerExtras
 import com.metrolist.music.arc.playerExtras
 import com.metrolist.music.arc.animatedPanelSide
@@ -268,6 +276,31 @@ fun BottomSheetPlayer(
     modifier: Modifier = Modifier,
     pureBlack: Boolean,
 ) {
+    val systemDark = isSystemInDarkTheme()
+    val darkMode by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
+    val appDark = if (darkMode == DarkMode.AUTO) systemDark else darkMode == DarkMode.ON
+    val appScheme = MaterialTheme.colorScheme
+    val player = @Composable {
+        CompositionLocalProvider(LocalAppColorScheme provides appScheme) {
+            PlayerSheet(state, navController, modifier, pureBlack, appDark)
+        }
+    }
+    // The open player is always dark, in the cover's colours, whatever the app's theme.
+    if (appDark) player() else MetrolistTheme(darkTheme = true, themeColor = LocalThemeColor.current, content = player)
+}
+
+/** The app's own colours, for the mini player, which stays in the app's theme while the open player is always dark. */
+private val LocalAppColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerSheet(
+    state: BottomSheetState,
+    navController: NavController,
+    modifier: Modifier,
+    pureBlack: Boolean,
+    appDark: Boolean,
+) {
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val menuState = LocalMenuState.current
@@ -291,12 +324,7 @@ fun BottomSheetPlayer(
     val playerBackground = PlayerBackgroundStyle.DEFAULT
     val playerButtonsStyle = PlayerButtonsStyle.DEFAULT
 
-    val isSystemInDarkTheme = isSystemInDarkTheme()
-    val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val useDarkTheme =
-        remember(darkTheme, isSystemInDarkTheme) {
-            if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-        }
+    val useDarkTheme = true
 
     val shouldUseDarkButtonColors =
         remember(playerBackground, useDarkTheme) {
@@ -331,7 +359,7 @@ fun BottomSheetPlayer(
     // The line bends around the corner controls, with the title beside it, in lyrics mode and in the corner layout.
     val lyricsLine = (showInlineLyrics || cornerArc) && !isFullScreen
 
-    DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, keepScreenOn, isFullScreen, bareCover) {
+    DisposableEffect(playerBackground, state.isExpanded, appDark, keepScreenOn, isFullScreen, bareCover) {
         val window = (context as? android.app.Activity)?.window
         if (window != null && state.isExpanded) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -364,7 +392,7 @@ fun BottomSheetPlayer(
         onDispose {
             if (window != null) {
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-                insetsController.isAppearanceLightStatusBars = !useDarkTheme
+                insetsController.isAppearanceLightStatusBars = !appDark
                 insetsController.show(WindowInsetsCompat.Type.statusBars())
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
@@ -380,12 +408,7 @@ fun BottomSheetPlayer(
             PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
             else -> MaterialTheme.colorScheme.onSurface
         }
-    val useBlackBackground =
-        remember(isSystemInDarkTheme, darkTheme, pureBlack) {
-            val useDarkTheme =
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            useDarkTheme && pureBlack
-        }
+    val useBlackBackground = pureBlack
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -1009,6 +1032,14 @@ fun BottomSheetPlayer(
 
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
 
+    val vinylPlayerEnabled by rememberPreference(ArcVinylPlayerKey, true)
+    // The cover and arc layouts sit on a ground in the cover's own colour, so the screen carries on from the cover.
+    val coverGroundOn = !vinylPlayerEnabled && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+    val groundArt = rememberCoverArt(mediaMetadata?.thumbnailUrl.takeIf { coverGroundOn }, upcoming = null, titleOnLeft = panelOnLeft)
+    val coverGroundTarget = remember(groundArt?.edge) { groundArt?.let { coverGround(it.edge) } }
+    val groundNear by animateColorAsState(coverGroundTarget?.near ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundNear")
+    val groundDeep by animateColorAsState(coverGroundTarget?.deep ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundDeep")
+
     val volumeKnob = remember { VolumeKnobState() }
     val knobHaptics = LocalHapticFeedback.current
     val castDeviceName by castHandler?.castDeviceName?.collectAsStateWithLifecycle() ?: remember { mutableStateOf<String?>(null) }
@@ -1037,7 +1068,8 @@ fun BottomSheetPlayer(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(bottomSheetBackgroundColor),
+                        .background(bottomSheetBackgroundColor)
+                        .drawBehind { if (coverGroundOn) drawRect(groundNear, alpha = backgroundAlpha) },
             ) {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLUR -> {
@@ -1127,11 +1159,13 @@ fun BottomSheetPlayer(
                 null
             },
         collapsedContent = {
-            MiniPlayer(
-                positionState = positionState,
-                durationState = durationState,
-                onClick = { state.expandSoft() },
-            )
+            MaterialTheme(colorScheme = LocalAppColorScheme.current ?: MaterialTheme.colorScheme) {
+                MiniPlayer(
+                    positionState = positionState,
+                    durationState = durationState,
+                    onClick = { state.expandSoft() },
+                )
+            }
         },
     ) {
         val controlsContent: @Composable ColumnScope.(MediaMetadata) -> Unit = { mediaMetadata ->
@@ -1603,7 +1637,6 @@ fun BottomSheetPlayer(
             }
         }
 
-        val vinylPlayerEnabled by rememberPreference(ArcVinylPlayerKey, true)
         val lyingFlat =
             rememberPhoneLyingFlat(vinylPlayerEnabled && state.isExpanded && !showInlineLyrics && queueSheetState.isCollapsed)
         // Back leaves turntable mode until the phone has been picked up again.
@@ -1920,7 +1953,8 @@ fun BottomSheetPlayer(
                         glowArtwork = if (bareCover) arcMetadata.thumbnailUrl else null,
                         coverShown = bareCover,
                         cornerArc = cornerArc,
-                        ground = bottomSheetBackgroundColor,
+                        ground = groundDeep,
+                        groundNear = groundNear,
                         labels =
                             ArcLabels(
                                 title = arcMetadata.title,
@@ -2213,3 +2247,5 @@ private fun BoxScope.CoverPeeks(shift: Animatable<Float, *>, songId: String?) {
 }
 
 internal const val LYRICS_FADE_MS = 250
+
+private const val GROUND_FADE_MS = 500

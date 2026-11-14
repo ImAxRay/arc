@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
+import com.materialkolor.hct.Hct
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -50,7 +52,7 @@ private const val ART_SIZE = 96
  * to turn dark. [statusBright] is the patch behind the time and battery, [titleBright] the corner
  * the curved title runs over.
  */
-internal class CoverArt(val image: ImageBitmap, val statusBright: Boolean, val titleBright: Boolean)
+internal class CoverArt(val image: ImageBitmap, val statusBright: Boolean, val titleBright: Boolean, val edge: Int)
 
 /** The last few songs' art, so skipping back and forth swaps the glow in the same frame as the cover. */
 private object CoverArtCache {
@@ -102,7 +104,41 @@ private suspend fun loadCoverArt(context: Context, url: String, titleOnLeft: Boo
         image = bitmap.asImageBitmap(),
         statusBright = bright(0f, 0.45f, 0f, 0.1f, threshold = 0.5f),
         titleBright = if (titleOnLeft) bright(0f, 0.45f, 0.7f, 1f, threshold = 0.55f) else bright(0.55f, 1f, 0.7f, 1f, threshold = 0.55f),
+        edge = edgeColor(bitmap, left, top + side * 2 / 3, left + side, top + side),
     )
+}
+
+/**
+ * The colour the player's ground carries on from: the main colour of the cover's bottom third, or of
+ * the whole cover when that edge is close to grey, so a dark band along the bottom doesn't wash it out.
+ */
+private fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
+    fun dominant(region: Boolean): Int? {
+        val builder = Palette.from(bitmap).maximumColorCount(8).clearFilters()
+        if (region) builder.setRegion(x0, y0, x1, y1)
+        return builder.generate().dominantSwatch?.rgb
+    }
+    val edge = dominant(region = true) ?: bitmap.getPixel((x0 + x1) / 2, (y0 + y1) / 2)
+    if (Hct.fromInt(edge).chroma >= GREY_CHROMA) return edge
+    return dominant(region = false)?.takeIf { Hct.fromInt(it).chroma >= GREY_CHROMA } ?: edge
+}
+
+private const val GREY_CHROMA = 8.0
+
+/**
+ * The ground under the player: [near] meets the cover's bottom edge, [deep] sits behind the
+ * buttons. Both keep the cover's hue, made stronger, and stay dark so the hue holds to the bottom.
+ */
+internal class CoverGround(val near: Color, val deep: Color)
+
+internal fun coverGround(edge: Int): CoverGround {
+    val hct = Hct.fromInt(edge)
+    val grey = hct.chroma < GREY_CHROMA
+    fun tone(tone: Double, minChroma: Double, maxChroma: Double): Color {
+        val chroma = if (grey) hct.chroma else hct.chroma.coerceIn(minChroma, maxChroma)
+        return Color(Hct.from(hct.hue, chroma, tone).toInt())
+    }
+    return CoverGround(near = tone(24.0, 30.0, 52.0), deep = tone(13.0, 26.0, 44.0))
 }
 
 private fun luminance(bitmap: Bitmap, x0: Int, x1: Int, y0: Int, y1: Int): Float {
