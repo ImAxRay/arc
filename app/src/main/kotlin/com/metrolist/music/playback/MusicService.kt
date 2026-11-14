@@ -1422,7 +1422,7 @@ class MusicService :
             thresholdMs = { historyDurationMs },
             isEnabled = { !historyPaused && !YouTube.cookie.isNullOrBlank() },
             createReport = report@{ videoId ->
-                if (DeviceMusic.isDeviceSong(videoId) || DriveMusic.isDriveSong(videoId)) return@report suspend { true }
+                if (com.metrolist.music.arc.isOwnFile(videoId)) return@report suspend { true }
                 val account = Triple(YouTube.cookie, YouTube.dataSyncId, YouTube.authUser)
                 val nonce = com.metrolist.innertubex.extraction.generateClientPlaybackNonce()
                 suspend {
@@ -3948,7 +3948,7 @@ class MusicService :
 
     fun warmStreams(mediaIds: List<String>, why: String = "queue") {
         if (getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
-        @Suppress("NAME_SHADOWING") val mediaIds = mediaIds.filterNot { DeviceMusic.isDeviceSong(it) || com.metrolist.music.arc.UntitledMusic.isUntitledSong(it) }
+        @Suppress("NAME_SHADOWING") val mediaIds = mediaIds.filterNot { DeviceMusic.isDeviceSong(it) || com.metrolist.music.arc.UntitledMusic.isUntitledSong(it) || com.metrolist.music.arc.BundledTracks.isBundled(it) }
         val metered = connectivityManager.isActiveNetworkMetered
         val limit = when {
             metered -> WARM_SONGS_METERED

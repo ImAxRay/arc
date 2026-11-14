@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +57,7 @@ import com.metrolist.music.R
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 internal val HintTail = 10.dp
@@ -63,6 +66,7 @@ internal val HintTail = 10.dp
 val SearchMicKey = booleanPreferencesKey("arcSearchMic")
 private val SearchHoldHintShownKey = booleanPreferencesKey("arcSearchHoldHintShown")
 private val LyricsHoldHintShownKey = booleanPreferencesKey("arcLyricsHoldHintShown")
+private val BundledLyricsSeenKey = androidx.datastore.preferences.core.stringSetPreferencesKey("arcBundledLyricsSeen")
 
 /** Hints waiting for their moment. Lives outside Compose so a hint survives the screen it was earned on. */
 object ArcHints {
@@ -255,5 +259,43 @@ fun BoxScope.LyricsHoldHint() {
             Text(stringResource(R.string.arc_hint_lyrics_hold), style = MaterialTheme.typography.titleSmall, color = text)
             HintAction(stringResource(R.string.arc_hint_got_it), text, strong = true) { scope.launch { lyricsHoldFound(context) } }
         }
+    }
+}
+
+/**
+ * Over the player's lyrics button while a song bundled with Arc plays and its lyrics were never opened: stays until
+ * they are, and tapping it opens them.
+ */
+@Composable
+fun BoxScope.BundledLyricsHint(lyricsOpen: Boolean, onLyrics: () -> Unit) {
+    val context = LocalContext.current
+    val metadata by (com.metrolist.music.LocalPlayerConnection.current ?: return).mediaMetadata
+        .collectAsState()
+    val id = metadata?.id?.takeIf { BundledTracks.isBundled(it) } ?: return
+    val seen by remember { context.dataStore.data.map { it[BundledLyricsSeenKey].orEmpty() } }.collectAsState(null)
+    val seenIds = seen ?: return
+    LaunchedEffect(lyricsOpen, id) {
+        if (lyricsOpen && id !in seenIds) context.dataStore.edit { it[BundledLyricsSeenKey] = it[BundledLyricsSeenKey].orEmpty() + id }
+    }
+    if (lyricsOpen || id in seenIds || LocalMenuState.current.isVisible) return
+    val windowWidth = LocalWindowInfo.current.containerSize.width
+    var tailAtEnd by remember { mutableStateOf<Boolean?>(null) }
+    Box(Modifier.matchParentSize().onGloballyPositioned { tailAtEnd = it.boundsInWindow().center.x > windowWidth / 2f })
+    val end = tailAtEnd ?: return
+    Popup(
+        popupPositionProvider = rememberHintPosition(end),
+        properties = PopupProperties(focusable = false, clippingEnabled = false),
+    ) {
+        Text(
+            stringResource(R.string.arc_hint_bundled_lyrics),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.surface,
+            modifier =
+                Modifier
+                    .widthIn(max = 260.dp)
+                    .hintMotion(true, if (end) 1f else 0f)
+                    .clickable(onClick = onLyrics)
+                    .hintBubble(MaterialTheme.colorScheme.onSurface, SearchHintTailInset, end),
+        )
     }
 }

@@ -37,6 +37,7 @@ import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.Album
 import com.metrolist.music.db.entities.LocalItem
 import com.metrolist.music.db.entities.Song
+import com.metrolist.music.arc.BundledTracks
 import com.metrolist.music.db.entities.SpeedDialItem
 import com.metrolist.music.extensions.filterVideoSongs
 import com.metrolist.music.extensions.toEnum
@@ -83,10 +84,12 @@ internal fun buildSpeedDialItems(
     keepListening: List<YTItem>,
     quickPicks: List<YTItem>,
     home: List<YTItem>,
-): List<YTItem> =
-    (pinned + keepListening + quickPicks + home)
-        .distinctBy { it.id }
-        .take(27)
+): List<YTItem> {
+    val items = (pinned + keepListening + quickPicks + home).distinctBy { it.id }.take(27).toMutableList()
+    val bundled = items.indexOfFirst { item -> BundledTracks.isBundled(item.id) && pinned.any { it.id == item.id } }
+    if (bundled >= 0) items.add(minOf(BundledTracks.DIAL_SLOT, items.size - 1), items.removeAt(bundled))
+    return items
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(

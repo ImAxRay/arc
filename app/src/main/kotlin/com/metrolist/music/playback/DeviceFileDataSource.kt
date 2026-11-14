@@ -7,6 +7,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
+import com.metrolist.music.arc.BundledTracks
 import com.metrolist.music.arc.DeviceMusic
 import com.metrolist.music.arc.UntitledMusic
 
@@ -31,11 +32,16 @@ class DeviceFileDataSource(
             open = untitled
             return untitled.open(dataSpec)
         }
-        val local = DeviceMusic.isDeviceSong(dataSpec.key) || DeviceMusic.isDeviceSong(dataSpec.uri.toString())
         val id = dataSpec.key ?: dataSpec.uri.toString()
+        val bundled = BundledTracks.isBundled(id)
+        val local = bundled || DeviceMusic.isDeviceSong(dataSpec.key) || DeviceMusic.isDeviceSong(dataSpec.uri.toString())
         val target = if (local) file else stream
         open = target
-        val spec = if (local) dataSpec.withUri(DeviceMusic.fileUri(id) ?: error("Bad device song id $id")) else dataSpec
+        val spec = when {
+            bundled -> dataSpec.withUri(BundledTracks.audioUri(id))
+            local -> dataSpec.withUri(DeviceMusic.fileUri(id) ?: error("Bad device song id $id"))
+            else -> dataSpec
+        }
         return target.open(spec)
     }
 

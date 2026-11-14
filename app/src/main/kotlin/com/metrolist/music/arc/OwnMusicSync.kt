@@ -33,6 +33,7 @@ object OwnMusicSync {
     }
 
     suspend fun onAppStart(context: Context, database: MusicDatabase) {
+        runCatching { BundledTracks.addNew(context, database) }.onFailure { Timber.tag("ArcOwnMusic").w(it) }
         delay(8_000)
         if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
         runCatching { DeviceMusic.sync(context, database) }.onFailure { Timber.tag("ArcOwnMusic").w(it) }

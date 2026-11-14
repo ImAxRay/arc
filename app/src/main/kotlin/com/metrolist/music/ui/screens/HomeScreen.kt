@@ -941,7 +941,7 @@ fun HomeScreen(
             is SongItem -> {
                 if (!isListenTogetherGuest) {
                     playerConnection.playQueue(
-                        if (autoRadioQueue) {
+                        if (autoRadioQueue && !com.metrolist.music.arc.isOwnFile(item.id)) {
                             YouTubeQueue(item.endpoint ?: WatchEndpoint(videoId = item.id), item.toMediaMetadata())
                         } else {
                             ListQueue(title = item.title, items = listOf(item.toMediaItem()))

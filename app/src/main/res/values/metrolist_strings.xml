@@ -1060,6 +1060,7 @@
     <string name="arc_hint_keep_mic">Keep it</string>
     <string name="arc_hint_lyrics_hold">Hold the lyrics button to open this menu straight away.</string>
     <string name="arc_hint_got_it">Got it</string>
+    <string name="arc_hint_bundled_lyrics">To read lyrics, tap here</string>
     <string name="arc_recent_settings">RECENTLY CHANGED</string>
     <string name="arc_recognised">Found it</string>
     <string name="arc_eq_label">EQ</string>

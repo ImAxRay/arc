@@ -119,7 +119,11 @@ fun playerExtras(
     listOf(
         CapsuleButton(R.drawable.more_vert, onMenu),
         CapsuleButton(outputIcon, onOutput),
-        CapsuleButton(R.drawable.lyrics, onLyrics, onLongClick = onLyricsMenu, active = lyricsOpen, hint = { LyricsHoldHint() }),
+        CapsuleButton(R.drawable.lyrics, onLyrics, onLongClick = onLyricsMenu, active = lyricsOpen, hint = {
+                LyricsHoldHint()
+                BundledLyricsHint(lyricsOpen, onLyrics)
+            },
+        ),
         CapsuleButton(
             if (repeatMode == Player.REPEAT_MODE_ONE) R.drawable.repeat_one else R.drawable.repeat,
             onRepeat,

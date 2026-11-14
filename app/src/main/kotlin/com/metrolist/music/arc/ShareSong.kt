@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Songs that are the user's own files (on the phone or in their Drive), which can be sent as the file itself. */
-fun isOwnFile(mediaId: String?) = DeviceMusic.isDeviceSong(mediaId) || DriveMusic.isDriveSong(mediaId)
+fun isOwnFile(mediaId: String?) = DeviceMusic.isDeviceSong(mediaId) || DriveMusic.isDriveSong(mediaId) || BundledTracks.isBundled(mediaId)
 
 /** Shares a song: the file itself for the user's own songs, the YouTube Music link for everything else. */
 fun shareSong(context: Context, mediaId: String, title: String?, artist: String?) {
@@ -38,11 +38,15 @@ suspend fun shareSongFile(context: Context, mediaId: String, name: String? = nul
         val dir = File(context.cacheDir, "shared_song")
         dir.listFiles()?.forEach(File::delete)
         dir.mkdirs()
-        if (DeviceMusic.isDeviceSong(mediaId)) {
+        val base = name?.replace(Regex("[\\\\/:*?\"<>|]"), " ")?.trim()?.takeIf { it.isNotEmpty() } ?: mediaId
+        if (BundledTracks.isBundled(mediaId)) {
+            val target = File(dir, "$base.ogg")
+            context.assets.open(BundledTracks.audioPath(mediaId)).use { input -> target.outputStream().use { input.copyTo(it) } }
+            target
+        } else if (DeviceMusic.isDeviceSong(mediaId)) {
             // a MediaStore link can't be handed on to another app, so the file itself goes through Arc's provider
             val source = DeviceMusic.fileUri(mediaId) ?: error("File not found")
             val (_, format) = DeviceMusic.fileInfo(context, mediaId)
-            val base = name?.replace(Regex("[\\\\/:*?\"<>|]"), " ")?.trim()?.takeIf { it.isNotEmpty() } ?: mediaId
             val target = File(dir, "$base.${format?.lowercase() ?: "audio"}")
             context.contentResolver.openInputStream(source)?.use { input -> target.outputStream().use { input.copyTo(it) } }
                 ?: error("File not found")

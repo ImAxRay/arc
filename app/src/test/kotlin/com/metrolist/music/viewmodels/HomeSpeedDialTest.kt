@@ -21,6 +21,17 @@ class HomeSpeedDialTest {
         assertEquals(listOf(pinned, home), result)
     }
 
+    @Test
+    fun `a pinned bundled song sits in the middle tile`() {
+        val bundled = song("BUNDLED_x")
+        val others = (1..6).map { song("s$it") }
+
+        val result = buildSpeedDialItems(listOf(others[0], bundled), emptyList(), others.drop(1), emptyList())
+
+        assertEquals(bundled, result[4])
+        assertEquals(others, result - bundled)
+    }
+
     private fun song(id: String) =
         SongItem(
             id = id,
