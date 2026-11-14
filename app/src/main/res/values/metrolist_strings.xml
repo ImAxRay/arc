@@ -1289,7 +1289,6 @@
     <string name="arc_radio_songs_only_desc">Radio and autoplay add songs only, never video clips with skits or noise</string>
     <string name="arc_search_videos">Videos in search</string>
     <string name="arc_search_videos_desc">Off: search shows songs, and the Videos filter shows videos</string>
-    <string name="arc_home_top_picks">Top picks</string>
     <string name="arc_home_morning">Good morning</string>
     <string name="arc_home_afternoon">Good afternoon</string>
     <string name="arc_home_evening">Good evening</string>
@@ -1297,6 +1296,6 @@
     <string name="arc_home_continue">Continue</string>
     <string name="arc_home_now_playing">Now playing</string>
     <string name="arc_home_time_left">%s left</string>
-    <string name="arc_home_rediscover">Rediscover</string>
-    <string name="arc_home_for_you">For you</string>
+    <string name="arc_home_recents">Recents</string>
+    <string name="arc_home_your_playlists">Your playlists</string>
 </resources>

@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -149,12 +151,12 @@ fun Modifier.homeTile(onClick: () -> Unit, onLongClick: (() -> Unit)? = null): M
     )
 }
 
-/** A Home module's title: small caps name, an optional big thin number beside it, and a chevron when it opens a page. */
+/** A Home module's title: small caps name, a play button when the module can play as a queue, a chevron when it opens a page. */
 @Composable
 fun ModuleHeader(
     title: String,
     modifier: Modifier = Modifier,
-    numeral: String? = null,
+    onPlay: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -178,8 +180,10 @@ fun ModuleHeader(
             modifier = Modifier.weight(1f, fill = false),
         )
         Spacer(Modifier.weight(1f))
-        if (numeral != null) {
-            Text(numeral, fontSize = 24.sp, fontWeight = FontWeight.ExtraLight, color = colors.onSurfaceVariant, maxLines = 1)
+        if (onPlay != null) {
+            IconButton(onClick = onPlay) {
+                Icon(painterResource(R.drawable.play), contentDescription = stringResource(R.string.play_all), tint = colors.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            }
         }
         if (onClick != null) {
             Icon(
@@ -231,9 +235,12 @@ private val PageDotGap = 6.dp
 /** Height of [HomeDayHeader], kept fixed so the dial under it can fit the rest of the screen. */
 internal val DayHeaderHeight = 84.dp
 
-/** "SATURDAY · 14 NOV" in small caps over a thin greeting for the time of day; the top of Home. */
+/**
+ * "SATURDAY · 14 NOV" in small caps over a thin greeting for the time of day; the top of Home. It fades out as Home
+ * scrolls up, read while drawing so scrolling never recomposes it.
+ */
 @Composable
-fun HomeDayHeader() {
+fun HomeDayHeader(listState: LazyListState) {
     // Home stays composed in the background, so the day and greeting are read again whenever the app comes back
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val now by produceState(LocalDateTime.now().truncatedTo(ChronoUnit.HOURS), lifecycle) {
@@ -248,7 +255,18 @@ fun HomeDayHeader() {
         }
     Column(
         verticalArrangement = Arrangement.Bottom,
-        modifier = Modifier.fillMaxWidth().height(DayHeaderHeight).padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(DayHeaderHeight)
+                .graphicsLayer {
+                    alpha =
+                        if (listState.firstVisibleItemIndex > 0) {
+                            0f
+                        } else {
+                            1f - (listState.firstVisibleItemScrollOffset / (DayHeaderHeight.toPx() * 0.7f)).coerceIn(0f, 1f)
+                        }
+                }.padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
     ) {
         Text(
             now.format(DateTimeFormatter.ofPattern("EEEE · d MMM")).uppercase(),

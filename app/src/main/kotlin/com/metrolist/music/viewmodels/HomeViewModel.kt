@@ -164,6 +164,13 @@ class HomeViewModel @Inject constructor(
             .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
+    /** What the speed dial shows right now, so the modules under it skip those. */
+    val dialShownIds = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Recently played songs for Home's Recents; more than it shows, since the ones on the dial are skipped. */
+    val recentSongs: StateFlow<List<Song>> =
+        database.recentSongs(40).distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

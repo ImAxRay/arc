@@ -212,7 +212,7 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
-                item(key = "day", contentType = "day") { HomeDayHeader() }
+                item(key = "day", contentType = "day") { HomeDayHeader(lazylistState) }
                 shown.forEach { module ->
                     item(key = module.id.key, contentType = module.id.key) { module.content(env) }
                 }

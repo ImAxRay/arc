@@ -13,7 +13,7 @@ enum class HomeModuleId(val key: String) {
     WRAPPED("wrapped"),
     SPEED_DIAL("speed_dial"),
     NEW_RELEASES("new_releases"),
-    TOP_PICKS("top_picks"),
+    RECENTS("recents"),
     QUICK_PICKS("quick_picks"),
     COMMUNITY("community"),
     DAILY_DISCOVER("daily_discover"),
@@ -38,13 +38,13 @@ val HomeModules: Map<HomeModuleId, HomeModule> =
         HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
         HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, { env -> speedDialAvailable(env) }) { SpeedDialModule(it) },
         HomeModule(HomeModuleId.NEW_RELEASES, R.string.release_radar, { true }) { NewReleasesModule(it.navController) },
-        HomeModule(HomeModuleId.TOP_PICKS, R.string.arc_home_top_picks, { env -> topPicksAvailable(env) }) { TopPicksModule(it) },
-        HomeModule(HomeModuleId.QUICK_PICKS, R.string.quick_picks, { env -> env.viewModel.quickPicks.notEmpty() }) { QuickPicksModule(it) },
+        HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, { env -> recentsShown(env).isNotEmpty() }) { RecentsModule(it) },
+        HomeModule(HomeModuleId.QUICK_PICKS, R.string.quick_picks, { env -> quickPicksShown(env).isNotEmpty() }) { QuickPicksModule(it) },
         HomeModule(HomeModuleId.COMMUNITY, R.string.from_the_community, { env -> env.viewModel.communityPlaylists.notEmpty() }) { CommunityModule(it) },
         HomeModule(HomeModuleId.DAILY_DISCOVER, R.string.your_daily_discover, { env -> env.viewModel.dailyDiscover.notEmpty() }) { DailyDiscoverModule(it) },
         HomeModule(HomeModuleId.KEEP_LISTENING, R.string.keep_listening, { env -> env.viewModel.keepListening.notEmpty() }) { KeepListeningModule(it) },
-        HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.mixes, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
-        HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, { env -> env.viewModel.forgottenFavorites.notEmpty() }) { ForgottenFavoritesModule(it) },
+        HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.arc_home_your_playlists, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
+        HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, { env -> forgottenShown(env).isNotEmpty() }) { ForgottenFavoritesModule(it) },
         HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, { env -> env.viewModel.similarRecommendations.notEmpty() }) { SimilarToModule(it) },
         HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.home, { true }) { YouTubeHomeModule(it) },
         HomeModule(HomeModuleId.MOODS, R.string.mood_and_genres, { env -> moodsAvailable(env) }) { MoodsModule(it) },
@@ -52,7 +52,18 @@ val HomeModules: Map<HomeModuleId, HomeModule> =
 
 /** The modules Home shows, in order. Chat 2 makes this the user's own list. */
 val HomeModuleOrder: List<HomeModuleId> =
-    if (ARC_HOME_SPEED_DIAL_ONLY) listOf(HomeModuleId.SPEED_DIAL, HomeModuleId.NEW_RELEASES, HomeModuleId.TOP_PICKS) else HomeModuleId.entries
+    if (ARC_HOME_SPEED_DIAL_ONLY) {
+        listOf(
+            HomeModuleId.SPEED_DIAL,
+            HomeModuleId.NEW_RELEASES,
+            HomeModuleId.RECENTS,
+            HomeModuleId.QUICK_PICKS,
+            HomeModuleId.FORGOTTEN_FAVORITES,
+            HomeModuleId.ACCOUNT_PLAYLISTS,
+        )
+    } else {
+        HomeModuleId.entries
+    }
 
 @Composable
 private fun kotlinx.coroutines.flow.StateFlow<List<*>?>.notEmpty(): Boolean {

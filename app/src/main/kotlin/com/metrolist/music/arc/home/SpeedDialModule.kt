@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -97,6 +98,8 @@ fun SpeedDialModule(env: HomeEnv) {
     while (pageCount < pages.size && capacities.take(pageCount + 1).sum() <= allItems.size) pageCount++
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
     val pagerState = rememberPagerState(pageCount = { pageCount })
+    val shownIds = remember(allItems, pageCount, continueId) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + listOfNotNull(continueId) }
+    SideEffect { env.viewModel.dialShownIds.value = shownIds }
 
     Column(Modifier.fillMaxWidth()) {
         HorizontalPager(

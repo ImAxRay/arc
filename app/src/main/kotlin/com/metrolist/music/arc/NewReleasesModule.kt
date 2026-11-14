@@ -76,7 +76,6 @@ fun NewReleasesModule(navController: NavController) {
     Column {
         ModuleHeader(
             title = stringResource(R.string.release_radar),
-            numeral = albums.size.toString(),
             onClick = { navController.navigate("release_radar") },
         )
         LazyRow(contentPadding = PaddingValues(horizontal = 6.dp)) {
