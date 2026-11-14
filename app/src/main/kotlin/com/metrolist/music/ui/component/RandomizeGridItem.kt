@@ -1,10 +1,8 @@
 package com.metrolist.music.ui.component
 
-import com.metrolist.music.arc.tapBounce
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.offset
@@ -22,6 +20,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.metrolist.music.arc.home.homeTile
 import com.metrolist.music.constants.ThumbnailCornerRadius
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -48,11 +47,10 @@ fun RandomizeGridItem(
     Box(
         modifier =
             modifier
-                .tapBounce()
+                .homeTile(onClick = onClick)
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .clickable(onClick = onClick),
+                .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         // Die Dots (5-pattern)

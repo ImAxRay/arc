@@ -1,5 +1,6 @@
 package com.metrolist.music.ui.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +27,6 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.MarqueeText
 import com.metrolist.music.arc.RecessedCover
 import com.metrolist.music.arc.TiltEye
-import com.metrolist.music.arc.tapBounce
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.ui.utils.resize
 
@@ -38,21 +38,23 @@ fun SpeedDialGridItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     tiltEye: TiltEye? = null,
+    thumbnailSize: Int = 200,
 ) {
     if (item is ArtistItem) {
-        ArtistDialTile(item, isPinned, isActive, isPlaying, modifier)
+        ArtistDialTile(item, isPinned, isActive, isPlaying, modifier, thumbnailSize)
         return
     }
     Box(
         modifier = modifier
-            .tapBounce()
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(ThumbnailCornerRadius))
+            // a flat square the cover fades in over, so a tile never pops in from nothing
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         RecessedCover(tiltEye, Modifier.fillMaxSize()) {
             ItemThumbnail(
-                thumbnailUrl = item.thumbnail?.resize(200, 200),
+                thumbnailUrl = item.thumbnail?.resize(thumbnailSize, thumbnailSize),
                 isActive = isActive,
                 isPlaying = isPlaying,
                 shape = RoundedCornerShape(ThumbnailCornerRadius),
@@ -103,10 +105,10 @@ private fun ArtistDialTile(
     isActive: Boolean,
     isPlaying: Boolean,
     modifier: Modifier,
+    thumbnailSize: Int,
 ) {
     Box(
         modifier = modifier
-            .tapBounce()
             .fillMaxWidth()
             .aspectRatio(1f)
     ) {
@@ -116,7 +118,7 @@ private fun ArtistDialTile(
             modifier = Modifier.fillMaxSize(),
         ) {
             ItemThumbnail(
-                thumbnailUrl = item.thumbnail?.resize(200, 200),
+                thumbnailUrl = item.thumbnail?.resize(thumbnailSize, thumbnailSize),
                 isActive = isActive,
                 isPlaying = isPlaying,
                 shape = CircleShape,

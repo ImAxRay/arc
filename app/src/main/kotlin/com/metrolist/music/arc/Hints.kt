@@ -223,6 +223,10 @@ suspend fun earnLyricsHoldHint(context: android.content.Context) {
     if (context.dataStore.data.first()[LyricsHoldHintShownKey] != true) ArcHints.lyricsHold = true
 }
 
+/** A song bundled with Arc is playing and its lyrics were never opened, so the lyrics hint owns the player for now. */
+suspend fun bundledLyricsPending(context: android.content.Context, songId: String?): Boolean =
+    songId != null && BundledTracks.isBundled(songId) && songId !in context.dataStore.data.first()[BundledLyricsSeenKey].orEmpty()
+
 /** The user found the lyrics button's hold on their own, so the hint has nothing left to teach. */
 suspend fun lyricsHoldFound(context: android.content.Context) {
     // The bubble leaves only after the write, since leaving cancels the scope it was tapped in.

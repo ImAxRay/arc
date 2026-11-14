@@ -1,36 +1,27 @@
 package com.metrolist.music.arc
 
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBar
-import com.metrolist.innertube.models.AlbumItem
-import com.metrolist.music.LocalPlayerAwareWindowInsets
-import com.metrolist.music.constants.GridItemSize
-import com.metrolist.music.constants.GridItemsSizeKey
-import com.metrolist.music.constants.GridThumbnailHeight
-import com.metrolist.music.ui.component.IconButton
-import com.metrolist.music.ui.component.shimmer.ShimmerHost
-import com.metrolist.music.ui.utils.backToMain
-import com.metrolist.music.utils.rememberEnumPreference
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,8 +29,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -47,21 +36,28 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.WatchEndpoint
-import kotlinx.coroutines.launch
+import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.arc.home.ModuleHeader
+import com.metrolist.music.arc.home.homeTile
+import com.metrolist.music.constants.GridItemSize
+import com.metrolist.music.constants.GridItemsSizeKey
+import com.metrolist.music.constants.GridThumbnailHeight
+import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.queues.YouTubeQueue
-import com.metrolist.music.constants.ThumbnailCornerRadius
+import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.component.YouTubeGridItem
 import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
 import com.metrolist.music.ui.menu.YouTubeAlbumMenu
+import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.rememberEnumPreference
+import kotlinx.coroutines.launch
 
 private const val MODULE_ITEMS = 30
 
@@ -78,8 +74,9 @@ fun NewReleasesModule(navController: NavController) {
     }
     if (albums.isEmpty()) return
     Column {
-        NavigationTitle(
+        ModuleHeader(
             title = stringResource(R.string.release_radar),
+            numeral = albums.size.toString(),
             onClick = { navController.navigate("release_radar") },
         )
         LazyRow(contentPadding = PaddingValues(horizontal = 6.dp)) {
@@ -130,7 +127,7 @@ private fun ReleaseRadarTile(album: AlbumItem, viewModel: ReleaseRadarViewModel,
         fillMaxWidth = fillMaxWidth,
         badges = { if (kind != null) ReleaseTag(kind) },
         modifier =
-            Modifier.combinedClickable(
+            Modifier.homeTile(
                 // A release with one song just plays it. Anything longer opens, so you can see what's on it.
                 onClick = {
                     scope.launch {
@@ -190,11 +187,10 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         modifier =
             modifier
-                .tapBounce()
+                .homeTile(onClick = onClick)
                 .fillMaxSize()
                 .clip(RoundedCornerShape(ThumbnailCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                .clickable(onClick = onClick)
                 .padding(8.dp),
     ) {
         Icon(
@@ -217,7 +213,7 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
 @Composable
 fun ModuleSkeleton(title: String) {
     Column {
-        NavigationTitle(title = title)
+        ModuleHeader(title = title)
         ShimmerHost {
             androidx.compose.foundation.layout.Row(Modifier.padding(horizontal = 6.dp)) {
                 repeat(3) { GridItemPlaceHolder() }
@@ -229,7 +225,7 @@ fun ModuleSkeleton(title: String) {
 @Composable
 fun SpeedDialSkeleton(rows: Int = 3) {
     Column {
-        NavigationTitle(title = stringResource(R.string.speed_dial))
+        ModuleHeader(title = stringResource(R.string.speed_dial))
         ShimmerHost(modifier = Modifier.padding(horizontal = 16.dp)) {
             repeat(rows) {
                 androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth()) {

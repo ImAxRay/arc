@@ -153,6 +153,8 @@ fun rememberPlayHold(
         state.hint = false
         if (!expanded || hintDismissed) return@LaunchedEffect
         if (context.dataStore.data.first()[PlayHoldTriedKey] == true) return@LaunchedEffect
+        // one tip at a time: the bundled song's lyrics hint goes first, and this run doesn't use up a hold-hint run
+        if (bundledLyricsPending(context, playerConnection.player.currentMediaItem?.mediaId)) return@LaunchedEffect
         if (!runCounted) {
             runCounted = true
             context.dataStore.edit { it[PlayerRunsKey] = (it[PlayerRunsKey] ?: 0) + 1 }

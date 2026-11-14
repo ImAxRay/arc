@@ -79,13 +79,44 @@ data class CommunityPlaylistItem(
     val songs: List<SongItem>
 )
 
+/** Most speed dial can hold: three full pages of the biggest grid. The screen trims it to whole pages. */
+internal const val SPEED_DIAL_MAX = 45
+
+private val bracketed = Regex("""\s*[(\[][^)\]]*[)\]]""")
+private val nonWord = Regex("""[^\p{L}\p{N}]+""")
+
+/**
+ * What makes two dial items the same thing: a song uploaded as a song and again as a video has two ids, so
+ * songs also match on title and first artist, without "(Official Video)" tails or an "Artist - " prefix.
+ */
+internal fun speedDialKey(item: YTItem): String {
+    val artist = (item as? SongItem)?.artists?.firstOrNull()?.name ?: (item as? AlbumItem)?.artists?.firstOrNull()?.name
+    if (item !is SongItem && item !is AlbumItem) return item.id
+    fun norm(text: String) = text.lowercase().replace(bracketed, "").replace(nonWord, " ").trim()
+    val a = artist?.let(::norm).orEmpty()
+    val title = norm(item.title).removePrefix("$a ").trim().ifEmpty { return item.id }
+    return "${if (item is SongItem) "song" else "album"}:$title|$a"
+}
+
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
     keepListening: List<YTItem>,
     quickPicks: List<YTItem>,
     home: List<YTItem>,
+    library: List<YTItem> = emptyList(),
 ): List<YTItem> {
-    val items = (pinned + keepListening + quickPicks + home).distinctBy { it.id }.take(27).toMutableList()
+    val seenIds = HashSet<String>()
+    val seenKeys = HashSet<String>()
+    val items = mutableListOf<YTItem>()
+    // pinned ones are the user's own choice and stay even if they're videos
+    pinned.forEach { if (seenIds.add(it.id)) items += it.also { item -> seenKeys += speedDialKey(item) } }
+    for (item in keepListening + quickPicks + home + library) {
+        if (items.size >= SPEED_DIAL_MAX) break
+        if (item is SongItem && item.isVideoSong) continue
+        if (item.id in seenIds || !seenKeys.add(speedDialKey(item))) continue
+        seenIds += item.id
+        items += item
+    }
     val bundled = items.indexOfFirst { item -> BundledTracks.isBundled(item.id) && pinned.any { it.id == item.id } }
     if (bundled >= 0) items.add(minOf(BundledTracks.DIAL_SLOT, items.size - 1), items.removeAt(bundled))
     return items
@@ -131,25 +162,26 @@ class HomeViewModel @Inject constructor(
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /** The library's most played songs, so speed dial never has empty slots. */
+    private val speedDialTopUp =
+        database.mostPlayedSongs(fromTimeStamp = LocalDateTime.now().minusYears(30), limit = SPEED_DIAL_MAX)
+            .map { songs -> songs.filterNot { it.song.isVideo }.map { it.toSpeedDialSong() } }
+            .distinctUntilChanged()
+
     val speedDialItems: StateFlow<List<YTItem>> =
         combine(
             database.speedDialDao.getAll(),
             keepListening,
             quickPicks,
             homePage,
-        ) { pinned, keepListening, quick, home ->
+            speedDialTopUp,
+        ) { pinned, keepListening, quick, home, library ->
             buildSpeedDialItems(
                 pinned = pinned.map { it.toYTItem() },
                 keepListening =
                     keepListening.orEmpty().mapNotNull { item ->
                         when (item) {
-                            is Song ->
-                                SongItem(
-                                    id = item.id,
-                                    title = item.title,
-                                    artists = item.artists.map { Artist(name = it.name, id = it.id) },
-                                    thumbnail = item.thumbnailUrl ?: "",
-                                )
+                            is Song -> item.takeUnless { it.song.isVideo }?.toSpeedDialSong()
 
                             is Album ->
                                 AlbumItem(
@@ -173,18 +205,19 @@ class HomeViewModel @Inject constructor(
                             else -> null
                         }
                     },
-                quickPicks =
-                    quick.orEmpty().map { song ->
-                        SongItem(
-                            id = song.id,
-                            title = song.title,
-                            artists = song.artists.map { Artist(name = it.name, id = it.id) },
-                            thumbnail = song.thumbnailUrl ?: "",
-                        )
-                    },
+                quickPicks = quick.orEmpty().filterNot { it.song.isVideo }.map { it.toSpeedDialSong() },
                 home = home?.sections.orEmpty().flatMap { it.items },
+                library = library,
             )
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private fun Song.toSpeedDialSong() =
+        SongItem(
+            id = id,
+            title = title,
+            artists = artists.map { Artist(name = it.name, id = it.id) },
+            thumbnail = thumbnailUrl ?: "",
+        )
 
     suspend fun getRandomItem(): YTItem? {
         try {
