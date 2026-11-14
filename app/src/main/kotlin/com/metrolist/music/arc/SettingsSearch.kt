@@ -65,6 +65,7 @@ private val TRACKED_SETTINGS: Map<String, SettingsEntry> =
         CrossfadeDurationKey.name to SettingsEntry(R.string.crossfade_duration, "settings/sound", R.string.arc_settings_sound),
         HistoryDuration.name to SettingsEntry(R.string.arc_history_duration, "settings/sound", R.string.arc_settings_sound),
         SkipSilenceKey.name to SettingsEntry(R.string.skip_silence, "settings/sound", R.string.arc_settings_sound),
+        ArcSkipOfftopicKey.name to SettingsEntry(R.string.arc_skip_offtopic, "settings/sound", R.string.arc_settings_sound),
         AudioNormalizationKey.name to SettingsEntry(R.string.audio_normalization, "settings/sound", R.string.arc_settings_sound),
         VarispeedKey.name to SettingsEntry(R.string.arc_varispeed, "settings/sound", R.string.arc_settings_sound),
         AutoplayKey.name to SettingsEntry(R.string.autoplay, "settings/queue", R.string.arc_settings_queue),

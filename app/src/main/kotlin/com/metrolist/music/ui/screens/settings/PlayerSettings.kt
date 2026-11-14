@@ -77,6 +77,7 @@ import com.metrolist.music.constants.ShufflePlaylistFirstKey
 import com.metrolist.music.constants.SimilarContent
 import com.metrolist.music.constants.SkipSilenceInstantKey
 import com.metrolist.music.constants.SkipSilenceKey
+import com.metrolist.music.arc.ArcSkipOfftopicKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.ui.component.DefaultDialog
@@ -133,6 +134,7 @@ fun PlayerSettings(
         CrossfadeGaplessKey,
         defaultValue = true
     )
+    val (skipOfftopic, onSkipOfftopicChange) = rememberPreference(ArcSkipOfftopicKey, defaultValue = true)
     val (skipSilence, onSkipSilenceChange) = rememberPreference(
         SkipSilenceKey,
         defaultValue = false
@@ -538,6 +540,27 @@ fun PlayerSettings(
                             )
                         },
                         onClick = { if (skipSilence) onSkipSilenceInstantChange(!skipSilenceInstant) }
+                    ))
+                    add(Material3SettingsItem(
+                        icon = painterResource(R.drawable.fast_forward),
+                        title = { Text(stringResource(R.string.arc_skip_offtopic)) },
+                        description = { Text(stringResource(R.string.arc_skip_offtopic_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = skipOfftopic,
+                                onCheckedChange = onSkipOfftopicChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (skipOfftopic) R.drawable.check else R.drawable.close
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { onSkipOfftopicChange(!skipOfftopic) }
                     ))
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.volume_up),

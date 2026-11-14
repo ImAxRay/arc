@@ -118,6 +118,8 @@ import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.CrossfadeGaplessKey
+import com.metrolist.music.arc.ArcSkipOfftopicKey
+import com.metrolist.music.arc.SponsorSkip
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.DiscordActivityNameKey
 import com.metrolist.music.constants.DiscordActivityTypeKey
@@ -316,6 +318,8 @@ class MusicService :
     private var crossfadeEnabled = false
     private var crossfadeDuration = 5000f
     private var crossfadeGapless = true
+    private var skipOfftopic = true
+    private var offtopicJob: Job? = null
     private var crossfadeMessage: PlayerMessage? = null
 
     private val secondaryPlayerListener =
@@ -1203,6 +1207,13 @@ class MusicService :
                 crossfadeDuration = duration * 1000f // Convert to ms
                 crossfadeGapless = gapless
             }
+
+        scope.launch {
+            dataStore.data.map { it[ArcSkipOfftopicKey] ?: true }.distinctUntilChanged().collect {
+                skipOfftopic = it
+                armOfftopicSkips()
+            }
+        }
 
         // Observe and cache common preferences to avoid runBlocking reads in playback callbacks
         scope.launch {
@@ -2579,6 +2590,7 @@ class MusicService :
         }
         lastTransitionedMediaId = mediaItem?.mediaId
         skipIfDisliked()
+        armOfftopicSkips()
         initialBufferRecoveryJob?.cancel()
         initialBufferRecoveryJob = null
         initialBufferRecoveryAttemptedMediaId = null
@@ -4913,6 +4925,14 @@ class MusicService :
             setPosition(triggerTime)
             send()
         }
+    }
+
+    private fun armOfftopicSkips() {
+        offtopicJob?.cancel()
+        SponsorSkip.cancel()
+        if (!skipOfftopic || listenTogetherManager.roomState.value != null) return
+        val target = player
+        offtopicJob = scope.launch { SponsorSkip.arm(target) { target === player } }
     }
 
     private fun isNextItemGapless(): Boolean {
