@@ -8,6 +8,9 @@ import com.metrolist.innertube.models.Thumbnails
 import com.metrolist.innertube.models.response.PlayerResponse
 import com.metrolist.innertubex.InnerTubeLogLevel
 import com.metrolist.innertubex.InnerTubeLogger
+import com.metrolist.innertubex.models.YouTubeClient
+import com.metrolist.innertubex.models.response.PlayerResponse as XPlayerResponse
+import io.ktor.client.call.body
 import com.metrolist.innertubex.cipher.PlayerConfigRepository
 import com.metrolist.innertubex.cipher.RemotePlayerConfigStore
 import com.metrolist.innertubex.cipher.YouTubeCipherService
@@ -140,6 +143,43 @@ object InnerTubeXPlayer {
         return extract(emptySet(), true)
     }
 
+    class VideoFormats(
+        val formats: List<XPlayerResponse.StreamingData.Format>,
+        val userAgent: String,
+        val expiresInSeconds: Int,
+    )
+
+    /**
+     * Every video format of [videoId]: ANDROID_VR first, whose links need no deciphering, then the TV client, whose
+     * links go through the same signature and n transform as audio.
+     */
+    suspend fun videoFormats(videoId: String): VideoFormats? {
+        for (client in listOf(YouTubeClient.ANDROID_VR_NO_AUTH, YouTubeClient.TVHTML5)) {
+            try {
+                val bundle = bundle()
+                val config = if (client.useSignatureTimestamp) bundle.configParser.fetchConfig(videoId, false) else null
+                val response =
+                    YouTube.extractionTransport().innerTube
+                        .player(client, videoId, null, config?.signatureTimestamp, null)
+                        .body<XPlayerResponse>()
+                if (response.playabilityStatus.status != "OK") continue
+                val data = response.streamingData ?: continue
+                val video = data.adaptiveFormats.filter { it.mimeType.startsWith("video/") } + data.formats.orEmpty()
+                if (video.isEmpty()) continue
+                val playable =
+                    (if (config != null) bundle.cipherService.processFormats(config.playerUrl, video) else video)
+                        .filter { it.url != null }
+                if (playable.isEmpty()) continue
+                return VideoFormats(playable, client.userAgent, data.expiresInSeconds ?: DEFAULT_STREAM_TTL_SECONDS)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.tag(TAG).w(error, "video formats via ${client.clientName} failed")
+            }
+        }
+        return null
+    }
+
     suspend fun refreshAfterStreamRejection(): Boolean = bundle().cipherService.refreshAfterStreamRejection()
 
     internal fun failedStreamClients(
@@ -177,21 +217,22 @@ object InnerTubeXPlayer {
 
             val remoteStore = RemotePlayerConfigStore(latestTransport.httpClient, configRepository, logger)
             val cipherService = YouTubeCipherService(latestTransport.httpClient, remoteStore, logger)
+            val configParser =
+                YtConfigParserImpl(
+                    latestTransport.httpClient,
+                    latestTransport.innerTube,
+                    remoteStore,
+                    logger,
+                ).withEmbeddedConfigFallback()
             val extractor =
                 InnerTubeExtractor(
-                    configParser =
-                        YtConfigParserImpl(
-                            latestTransport.httpClient,
-                            latestTransport.innerTube,
-                            remoteStore,
-                            logger,
-                        ).withEmbeddedConfigFallback(),
+                    configParser = configParser,
                     cipherService = cipherService,
                     innerTube = latestTransport.innerTube,
                     tokenProvider = tokenProvider,
                     logger = logger,
                 )
-            ExtractionBundle(latestTransport.generation, cipherService, extractor).also { currentBundle = it }
+            ExtractionBundle(latestTransport.generation, cipherService, extractor, configParser).also { currentBundle = it }
         }
     }
 
@@ -259,6 +300,7 @@ object InnerTubeXPlayer {
         val transportGeneration: Long,
         val cipherService: YouTubeCipherService,
         val extractor: InnerTubeExtractor,
+        val configParser: YtConfigParser,
     )
 
     private data class FailedStreamClients(

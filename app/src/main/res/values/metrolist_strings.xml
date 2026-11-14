@@ -1268,4 +1268,22 @@
     <string name="arc_skip_offtopic">Skip non-music parts</string>
     <string name="arc_skip_offtopic_desc">Beta · Jumps over talk, skits and long intros that SponsorBlock users marked in music videos</string>
     <string name="arc_collapse_player">Minimise player</string>
+    <string name="arc_video_360">360p</string>
+    <string name="arc_video_480">480p</string>
+    <string name="arc_video_720">720p</string>
+    <string name="arc_video_1080">1080p</string>
+    <string name="arc_video_1440">1440p</string>
+    <string name="arc_video_2160">4K</string>
+    <string name="arc_show_video">Show the video</string>
+    <string name="arc_show_cover">Show the cover</string>
+    <string name="arc_watch">Watch full screen</string>
+    <string name="arc_watch_close">Close the video</string>
+    <string name="arc_music_videos">Music videos</string>
+    <string name="arc_music_videos_desc">Beta · A button on the cover swaps the cover for the song\'s video, in time with the music</string>
+    <string name="arc_video_quality_wifi">Video quality on Wi-Fi</string>
+    <string name="arc_video_quality_mobile">Video quality on mobile data</string>
+    <string name="arc_radio_songs_only">Radio without music videos</string>
+    <string name="arc_radio_songs_only_desc">Radio and autoplay add songs only, never video clips with skits or noise</string>
+    <string name="arc_search_videos">Videos in search</string>
+    <string name="arc_search_videos_desc">Off: search shows songs, and the Videos filter shows videos</string>
 </resources>
