@@ -1267,4 +1267,5 @@
     <string name="arc_look_pretty_desc">Moving Home background, covers that tilt with the phone, animated album covers on Wi-Fi.</string>
     <string name="arc_skip_offtopic">Skip non-music parts</string>
     <string name="arc_skip_offtopic_desc">Beta · Jumps over talk, skits and long intros that SponsorBlock users marked in music videos</string>
+    <string name="arc_collapse_player">Minimise player</string>
 </resources>

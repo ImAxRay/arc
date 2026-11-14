@@ -195,6 +195,9 @@ import com.metrolist.music.arc.NextUp
 import com.metrolist.music.arc.ArcTimeLine
 import com.metrolist.music.arc.CornerBoxHeight
 import com.metrolist.music.arc.ThumbArcControls
+import com.metrolist.music.arc.pressBounce
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.metrolist.music.ui.theme.LocalThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
 import com.metrolist.music.arc.coverGround
@@ -1039,6 +1042,8 @@ private fun PlayerSheet(
     val coverGroundTarget = remember(groundArt?.edge) { groundArt?.let { coverGround(it.edge) } }
     val groundNear by animateColorAsState(coverGroundTarget?.near ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundNear")
     val groundDeep by animateColorAsState(coverGroundTarget?.deep ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundDeep")
+    val accent by animateColorAsState(coverGroundTarget?.accent ?: textButtonColor, tween(GROUND_FADE_MS), label = "accent")
+    val onAccent by animateColorAsState(coverGroundTarget?.onAccent ?: iconButtonColor, tween(GROUND_FADE_MS), label = "onAccent")
 
     val volumeKnob = remember { VolumeKnobState() }
     val knobHaptics = LocalHapticFeedback.current
@@ -1977,8 +1982,8 @@ private fun PlayerSheet(
                         topLimit = { arcCoverBottom.floatValue },
                         swipeShift = coverSwipeShift,
                         content = TextBackgroundColor,
-                        mainFill = textButtonColor,
-                        mainTint = iconButtonColor,
+                        mainFill = accent,
+                        mainTint = onAccent,
                         positionMs = { sliderPosition ?: effectivePosition },
                         durationMs = { if (duration == C.TIME_UNSET) 0L else duration },
                         onScrub = { sliderPosition = it },
@@ -1998,6 +2003,7 @@ private fun PlayerSheet(
         }
 
         if (!turntable) VinylPlayerToggle(onBackgroundColor, Modifier.align(Alignment.TopEnd))
+        if (!turntable) CollapsePlayerButton(onBackgroundColor, onClick = { state.collapseSoft() }, modifier = Modifier.align(Alignment.TopStart))
         // The vinyl hides the status bar like the cover layouts, so it gets the same clock and battery line.
         if (!turntable && vinylPlayerEnabled && bareCover) StatusLine(dark = onBackgroundColor.luminance() < 0.5f)
         VolumeKnobOverlay(
@@ -2249,3 +2255,24 @@ private fun BoxScope.CoverPeeks(shift: Animatable<Float, *>, songId: String?) {
 internal const val LYRICS_FADE_MS = 250
 
 private const val GROUND_FADE_MS = 500
+
+/** Rolls the player down, for anyone who doesn't know the swipe. Sits opposite the vinyl toggle. */
+@Composable
+private fun CollapsePlayerButton(contentColor: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val haptics = LocalHapticFeedback.current
+    val press = remember { MutableInteractionSource() }
+    IconButton(
+        interactionSource = press,
+        onClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+            onClick()
+        },
+        modifier =
+            modifier
+                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                .padding(top = 8.dp, start = 8.dp)
+                .pressBounce(press),
+    ) {
+        Icon(painterResource(R.drawable.expand_more), contentDescription = stringResource(R.string.arc_collapse_player), tint = contentColor)
+    }
+}

@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val BLEND_INTO_COVER = 0.18f
-private const val GLOW_LENGTH = 0.85f
+private const val GLOW_LENGTH = 0.8f
 private const val CROSSFADE_MS = 220
 private const val ART_SIZE = 96
 
@@ -104,12 +104,12 @@ private suspend fun loadCoverArt(context: Context, url: String, titleOnLeft: Boo
         image = bitmap.asImageBitmap(),
         statusBright = bright(0f, 0.45f, 0f, 0.1f, threshold = 0.5f),
         titleBright = if (titleOnLeft) bright(0f, 0.45f, 0.7f, 1f, threshold = 0.55f) else bright(0.55f, 1f, 0.7f, 1f, threshold = 0.55f),
-        edge = edgeColor(bitmap, left, top + side * 2 / 3, left + side, top + side),
+        edge = edgeColor(bitmap, left, top + side * 4 / 5, left + side, top + side),
     )
 }
 
 /**
- * The colour the player's ground carries on from: the main colour of the cover's bottom third, or of
+ * The colour the player's ground carries on from: the main colour of the cover's lower edge, or of
  * the whole cover when that edge is close to grey, so a dark band along the bottom doesn't wash it out.
  */
 private fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
@@ -126,19 +126,24 @@ private fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
 private const val GREY_CHROMA = 8.0
 
 /**
- * The ground under the player: [near] meets the cover's bottom edge, [deep] sits behind the
- * buttons. Both keep the cover's hue, made stronger, and stay dark so the hue holds to the bottom.
+ * The ground under the player, one colour carried on from the cover's lower edge at about the
+ * cover's own depth: [near] meets the cover, [deep] is a touch darker behind the buttons. [accent]
+ * is a pale tint of the same hue for the play button and the line, with [onAccent] on it.
  */
-internal class CoverGround(val near: Color, val deep: Color)
+internal class CoverGround(val near: Color, val deep: Color, val accent: Color, val onAccent: Color)
 
 internal fun coverGround(edge: Int): CoverGround {
     val hct = Hct.fromInt(edge)
     val grey = hct.chroma < GREY_CHROMA
-    fun tone(tone: Double, minChroma: Double, maxChroma: Double): Color {
-        val chroma = if (grey) hct.chroma else hct.chroma.coerceIn(minChroma, maxChroma)
-        return Color(Hct.from(hct.hue, chroma, tone).toInt())
-    }
-    return CoverGround(near = tone(24.0, 30.0, 52.0), deep = tone(13.0, 26.0, 44.0))
+    val chroma = if (grey) hct.chroma else (hct.chroma * 1.15).coerceIn(24.0, 56.0)
+    val depth = hct.tone.coerceIn(16.0, 32.0)
+    fun tone(tone: Double, chroma: Double) = Color(Hct.from(hct.hue, chroma, tone).toInt())
+    return CoverGround(
+        near = tone(depth, chroma),
+        deep = tone(depth - 6.0, chroma),
+        accent = tone(88.0, if (grey) hct.chroma else chroma.coerceAtMost(36.0)),
+        onAccent = tone(18.0, chroma),
+    )
 }
 
 private fun luminance(bitmap: Bitmap, x0: Int, x1: Int, y0: Int, y1: Int): Float {
@@ -198,8 +203,8 @@ internal fun CoverGlow(art: CoverArt?, coverBottom: Float, pivot: Offset, cutRad
                     Brush.verticalGradient(
                         0f to Color.Transparent,
                         at(coverBottom) to Color.Black,
-                        at(coverBottom + size.width * 0.15f) to Color.Black.copy(alpha = 0.8f),
-                        at(coverBottom + size.width * 0.45f) to Color.Black.copy(alpha = 0.35f),
+                        at(coverBottom + size.width * 0.2f) to Color.Black.copy(alpha = 0.85f),
+                        at(coverBottom + size.width * 0.45f) to Color.Black.copy(alpha = 0.5f),
                         1f to Color.Transparent,
                         startY = from,
                         endY = to,
@@ -207,7 +212,7 @@ internal fun CoverGlow(art: CoverArt?, coverBottom: Float, pivot: Offset, cutRad
                     blendMode = BlendMode.DstIn,
                 )
                 if (cutRadius > 0f) drawCircle(Color.Black, cutRadius, pivot, blendMode = BlendMode.DstOut)
-            }.blur(32.dp),
+            }.blur(20.dp),
     ) {
         val moved = shift()
         translate(left = moved) {
