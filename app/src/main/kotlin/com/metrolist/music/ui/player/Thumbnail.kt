@@ -406,12 +406,18 @@ fun Thumbnail(
                             Modifier.fillMaxSize()
                         }
                     ) {
+                        // a song queued twice gets its own key for each copy, which the grid requires
+                        val seen = HashMap<String, Int>()
+                        val itemKeys = mediaItems.map { item ->
+                            val id = item.mediaId.ifEmpty { "unknown_${item.hashCode()}" }
+                            val copy = seen.merge(id, 1, Int::plus)!!
+                            if (copy == 1) id else "$id#$copy"
+                        }
                         items(
-                            items = mediaItems,
-                            key = { item -> 
-                                item.mediaId.ifEmpty { "unknown_${item.hashCode()}" }
-                            }
-                        ) { item ->
+                            count = mediaItems.size,
+                            key = { index -> itemKeys[index] }
+                        ) { index ->
+                            val item = mediaItems[index]
                             ThumbnailItem(
                                 item = item,
                                 dimensions = dimensions,
