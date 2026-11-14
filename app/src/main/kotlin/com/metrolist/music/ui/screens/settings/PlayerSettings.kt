@@ -712,6 +712,7 @@ fun PlayerSettings(
             )
 
             Spacer(modifier = Modifier.height(27.dp))
+            com.metrolist.music.arc.MusicVideoSettings()
         }
 
         var showSleepTimerDialog by remember { mutableStateOf(false) }
