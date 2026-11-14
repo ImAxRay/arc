@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,13 +27,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
@@ -40,6 +45,9 @@ import androidx.compose.ui.unit.sp
 import com.metrolist.music.R
 import com.metrolist.music.arc.ArcMotion
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 
 /** Height of [ModuleHeader], so modules that fit themselves to the screen can leave room for it. */
 val ModuleHeaderHeight = 48.dp
@@ -181,30 +189,72 @@ fun ModuleHeader(
     }
 }
 
-/** Page indicator in the line's style: a thin track that fills up to the current page and ends in a dot. */
+/**
+ * Page dots: the current page's dot is stretched into a pill, and the pill flows into the next dot as the pager moves.
+ * Reads the pager's position while drawing, so a swipe redraws this without recomposing anything.
+ */
 @Composable
-fun LinePager(state: PagerState, modifier: Modifier = Modifier) {
-    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
-    val line = MaterialTheme.colorScheme.primary
+fun PageDots(state: PagerState, modifier: Modifier = Modifier) {
+    val idle = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+    val active = MaterialTheme.colorScheme.primary
     val pages = state.pageCount
     Spacer(
         modifier
-            .width(LinePagerStep * pages)
+            .width(PageDot * pages + (PagePill - PageDot) + PageDotGap * (pages - 1))
             .height(24.dp)
-            // reads the pager's position while drawing, so a swipe redraws this without recomposing anything
             .drawBehind {
-                val y = size.height / 2
-                val stroke = 2.dp.toPx()
-                val dot = 3.dp.toPx()
-                val start = dot
-                val end = size.width - dot
-                drawLine(track, Offset(start, y), Offset(end, y), stroke, StrokeCap.Round)
+                val dot = PageDot.toPx()
+                val stretch = PagePill.toPx() - dot
+                val gap = PageDotGap.toPx()
+                val top = (size.height - dot) / 2
                 val position = (state.currentPage + state.currentPageOffsetFraction).coerceIn(0f, (pages - 1).toFloat())
-                val x = start + (end - start) * (position + 1) / pages
-                drawLine(line, Offset(start, y), Offset(x, y), stroke, StrokeCap.Round)
-                drawCircle(line, dot, Offset(x, y))
+                var x = 0f
+                for (page in 0 until pages) {
+                    val near = (1f - abs(position - page)).coerceIn(0f, 1f)
+                    val width = dot + stretch * near
+                    drawRoundRect(lerp(idle, active, near), Offset(x, top), Size(width, dot), CornerRadius(dot / 2))
+                    x += width + gap
+                }
             },
     )
 }
 
-private val LinePagerStep = 24.dp
+private val PageDot = 6.dp
+private val PagePill = 20.dp
+private val PageDotGap = 6.dp
+
+/** Height of [HomeDayHeader], kept fixed so the dial under it can fit the rest of the screen. */
+internal val DayHeaderHeight = 84.dp
+
+/** "SATURDAY · 14 NOV" in small caps over a thin greeting for the time of day; the top of Home. */
+@Composable
+fun HomeDayHeader() {
+    val now = remember { LocalDateTime.now() }
+    val greeting =
+        when (now.hour) {
+            in 5..11 -> R.string.arc_home_morning
+            in 12..17 -> R.string.arc_home_afternoon
+            in 18..22 -> R.string.arc_home_evening
+            else -> R.string.arc_home_night
+        }
+    Column(
+        verticalArrangement = Arrangement.Bottom,
+        modifier = Modifier.fillMaxWidth().height(DayHeaderHeight).padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+    ) {
+        Text(
+            now.format(DateTimeFormatter.ofPattern("EEEE · d MMM")).uppercase(),
+            fontSize = 11.sp,
+            letterSpacing = 1.8.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Text(
+            stringResource(greeting),
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}

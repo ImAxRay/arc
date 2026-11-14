@@ -84,8 +84,8 @@ fun SpeedDialModule(env: HomeEnv) {
         }
     val itemsPerPage = columns * rows
     val insets = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-    // title above and page dots below stay on screen with the grid
-    val gridHeight = env.height - insets.calculateTopPadding() - insets.calculateBottomPadding() - ModuleHeaderHeight - 24.dp
+    // Home's day header and the dial's title above, and page dots below, stay on screen with the grid
+    val gridHeight = env.height - insets.calculateTopPadding() - insets.calculateBottomPadding() - DayHeaderHeight - ModuleHeaderHeight - 24.dp
     val itemWidth = speedDialCellSize(availableWidth, columns, rows, gridHeight)
     val tiltEye = rememberTiltEye()
 
@@ -166,7 +166,7 @@ fun SpeedDialModule(env: HomeEnv) {
         }
 
         if (pagerState.pageCount > 1) {
-            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) { LinePager(pagerState) }
+            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) { PageDots(pagerState) }
         }
     }
 }

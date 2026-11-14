@@ -36,8 +36,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.R
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.ui.utils.resize
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun topPicksAvailable(env: HomeEnv): Boolean {
@@ -46,13 +44,11 @@ internal fun topPicksAvailable(env: HomeEnv): Boolean {
     return !forgotten.isNullOrEmpty() || discover.orEmpty().any { it.recommendation is SongItem }
 }
 
-/** The day and a greeting, then two picks side by side: a forgotten favourite and one for you. */
+/** Two picks side by side: a forgotten favourite and one for you. */
 @Composable
 fun TopPicksModule(env: HomeEnv) {
     val forgotten by env.viewModel.forgottenFavorites.collectAsStateWithLifecycle()
     val discover by env.viewModel.dailyDiscover.collectAsStateWithLifecycle()
-
-    DayHeader()
 
     val rediscover = forgotten.orEmpty().getOrNull(0)
     val forYou = discover.orEmpty().firstNotNullOfOrNull { it.recommendation as? SongItem }
@@ -92,34 +88,6 @@ fun TopPicksModule(env: HomeEnv) {
                 modifier = Modifier.weight(1f).fillMaxHeight().homeTile(onClick = { env.playSong(secondForgotten) }, onLongClick = { env.showSongMenu(secondForgotten) }),
             )
         }
-    }
-}
-
-/** "SATURDAY · 14 NOV" in small caps over a thin greeting for the time of day. */
-@Composable
-private fun DayHeader() {
-    val now = remember { LocalDateTime.now() }
-    val greeting =
-        when (now.hour) {
-            in 5..11 -> R.string.arc_home_morning
-            in 12..17 -> R.string.arc_home_afternoon
-            in 18..22 -> R.string.arc_home_evening
-            else -> R.string.arc_home_night
-        }
-    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp)) {
-        Text(
-            now.format(DateTimeFormatter.ofPattern("EEEE · d MMM")).uppercase(),
-            fontSize = 11.sp,
-            letterSpacing = 1.8.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            stringResource(greeting),
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Light,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 

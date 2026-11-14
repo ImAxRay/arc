@@ -54,6 +54,7 @@ import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.TopBarEndPadding
 import com.metrolist.music.arc.home.HomeEnv
 import com.metrolist.music.arc.home.HomeModuleOrder
+import com.metrolist.music.arc.home.HomeDayHeader
 import com.metrolist.music.arc.home.HomeModules
 import com.metrolist.music.arc.home.playLuckyItem
 import com.metrolist.music.arc.homeLine
@@ -211,6 +212,7 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
+                item(key = "day", contentType = "day") { HomeDayHeader() }
                 shown.forEach { module ->
                     item(key = module.id.key, contentType = module.id.key) { module.content(env) }
                 }
