@@ -42,6 +42,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +67,8 @@ import com.metrolist.music.utils.makeTimeString
 import kotlinx.coroutines.delay
 
 private const val CONTROLS_FOR_MS = 3_000L
+private const val SEEK_STEP_MS = 10_000L
+private val CLOSE_PULL = 120.dp
 
 /** Opens the watch view: the playing video full screen, sideways. */
 @Composable
@@ -94,7 +101,9 @@ fun WatchHost() {
     val watching by VideoState.watching
     val view by VideoState.view
     val metadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
-    val videoId = metadata?.id?.takeIf { watching && view == VideoView.VIDEO && MusicVideos.canHaveVideo(metadata) }
+    val current by VideoState.current
+    val video = current?.takeIf { watching && view == VideoView.VIDEO && it.songId == metadata?.id }
+    val videoId = video?.videoId
 
     val activity = LocalContext.current.findActivity()
     DisposableEffect(watching, activity) {
@@ -140,13 +149,88 @@ fun WatchHost() {
                 shown = false
             }
         }
+        val player = playerConnection.player
+        val haptics = LocalHapticFeedback.current
+        val density = LocalDensity.current
+        var jump by remember { mutableStateOf<Pair<Int, Long>?>(null) }
+        var fast by remember { mutableStateOf(false) }
+        var pull by remember { mutableFloatStateOf(0f) }
+        LaunchedEffect(jump) {
+            if (jump != null) {
+                delay(700)
+                jump = null
+            }
+        }
         Box(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .clickable(remember { MutableInteractionSource() }, indication = null) { shown = !shown },
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { shown = !shown },
+                        onDoubleTap = { at ->
+                            val forward = at.x > size.width / 2
+                            val step = if (forward) SEEK_STEP_MS else -SEEK_STEP_MS
+                            val duration = player.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+                            player.seekTo((player.currentPosition + step).coerceIn(0, duration))
+                            val total = jump?.takeIf { (it.first > 0) == forward }?.second?.plus(step) ?: step
+                            jump = (if (forward) 1 else -1) to total
+                        },
+                        onLongPress = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            fast = true
+                        },
+                        onPress = {
+                            tryAwaitRelease()
+                            fast = false
+                        },
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
+                            if (pull > with(density) { CLOSE_PULL.toPx() }) VideoState.watching.value = false
+                            pull = 0f
+                        },
+                        onDragCancel = { pull = 0f },
+                    ) { _, dy -> pull = (pull + dy).coerceAtLeast(0f) }
+                }
+                .graphicsLayer {
+                    translationY = pull / 2
+                    alpha = 1f - (pull / with(density) { (CLOSE_PULL * 4).toPx() }).coerceIn(0f, 0.5f)
+                },
         ) {
-            MusicVideoLayer(videoId, { it }, crop = false, active = true, ground = false)
+            DisposableEffect(fast) {
+                if (!fast) return@DisposableEffect onDispose {}
+                val before = player.playbackParameters
+                player.playbackParameters = before.withSpeed(before.speed * 2)
+                onDispose { player.playbackParameters = before }
+            }
+            MusicVideoLayer(videoId, video::time, crop = false, active = true, ground = false)
+            jump?.let { (side, total) ->
+                Text(
+                    (if (total > 0) "+" else "−") + "${kotlin.math.abs(total) / 1000}s",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .align(if (side > 0) Alignment.CenterEnd else Alignment.CenterStart)
+                        .padding(horizontal = 72.dp)
+                        .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            if (fast) {
+                Text(
+                    "2×",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 20.dp)
+                        .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
                 WatchControls(
                     title = metadata?.title.orEmpty(),

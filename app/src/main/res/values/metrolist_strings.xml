@@ -1280,6 +1280,8 @@
     <string name="arc_watch_close">Close the video</string>
     <string name="arc_music_videos">Music videos</string>
     <string name="arc_music_videos_desc">Beta · A button on the cover swaps the cover for the song\'s video, in time with the music</string>
+    <string name="arc_video_button">Video button on the cover</string>
+    <string name="arc_video_button_desc">Switches between the cover and the video. Off: only long videos and concerts show their picture</string>
     <string name="arc_video_quality_wifi">Video quality on Wi-Fi</string>
     <string name="arc_video_quality_mobile">Video quality on mobile data</string>
     <string name="arc_radio_songs_only">Radio without music videos</string>

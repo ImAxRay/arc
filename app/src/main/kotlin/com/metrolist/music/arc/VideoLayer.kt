@@ -1,15 +1,18 @@
 package com.metrolist.music.arc
 
-import android.graphics.Bitmap
 import android.view.TextureView
 import androidx.annotation.OptIn
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -61,58 +64,52 @@ import timber.log.Timber
 
 enum class VideoView { SONG, VIDEO }
 
-/** What the cover spot shows for the playing song, and the colour the video's frames give the ground. */
+/** What the cover spot shows for the playing song. */
 object VideoState {
     val view = mutableStateOf(VideoView.SONG)
-    val frameEdge = mutableStateOf<Int?>(null)
+    val current = mutableStateOf<SongVideo?>(null)
+    /** The player's ground, around a video that isn't as tall as the cover spot. */
+    val ground = mutableStateOf(Color.Black)
+
+    /** Where the video in the cover spot ends, in root pixels, so the arc's names can sit below it. */
+    val videoBottom = mutableStateOf<Float?>(null)
     val watching = mutableStateOf(false)
     var seekLead = 600L
     var startLag = 60L
-    var shownFor: String? = null
-        private set
+    private var shownFor: String? = null
     private var lastPick = VideoView.SONG
-    private var pending: Pair<String, VideoView>? = null
 
-    fun pick(view: VideoView, forId: String?) {
+    fun pick(view: VideoView) {
         lastPick = view
         this.view.value = view
-        shownFor = forId
-    }
-
-    /** Sets the view the next item [id] opens with, for a swap that changes the playing id. */
-    fun expect(id: String, view: VideoView) {
-        pending = id to view
-        lastPick = view
     }
 
     fun songChanged(video: SongVideo?, id: String?) {
+        current.value = video
         if (id == shownFor) return
         shownFor = id
-        val waiting = pending?.takeIf { it.first == id }?.second
-        pending = null
         view.value = when {
             video == null -> VideoView.SONG
-            waiting != null -> waiting
-            video.back != null -> VideoView.VIDEO
             video.watch -> VideoView.VIDEO
-            lastPick == VideoView.VIDEO && video.native -> VideoView.VIDEO
-            else -> VideoView.SONG
+            else -> lastPick
         }
         if (view.value != VideoView.VIDEO) watching.value = false
     }
 }
 
 /**
- * The video side of the playing song: [native] when the song is itself a video, [counterpart] for an album
- * track with a music video, [back] for a video swapped in for a song.
+ * The video for the playing song: the song itself when it is a video, or for an album track its music video,
+ * played muted over the song's own audio with [time] mapping the song's position into it.
  */
 class SongVideo(
     val songId: String,
-    val native: Boolean,
     val counterpart: Counterpart?,
-    val back: Counterpart?,
     val watch: Boolean,
-)
+) {
+    val videoId: String get() = counterpart?.videoId ?: songId
+
+    fun time(ms: Long) = counterpart?.map(ms) ?: ms
+}
 
 private const val WATCH_MIN_SECONDS = 8 * 60
 
@@ -122,17 +119,10 @@ fun rememberSongVideo(metadata: MediaMetadata?): SongVideo? {
     val resolved by produceState<Pair<String?, SongVideo?>?>(null, metadata?.id, enabled) {
         value = null
         val song = metadata?.takeIf { enabled && MusicVideos.canHaveVideo(it) }
-        if (song == null) {
-            value = metadata?.id to null
-            return@produceState
-        }
-        val back = VideoSwap.swappedFrom(song.id)
-        value = song.id to when {
-            back != null -> SongVideo(song.id, native = true, counterpart = null, back = back, watch = false)
-            song.isVideoSong -> SongVideo(song.id, native = true, counterpart = null, back = null, watch = song.duration <= 0 || song.duration >= WATCH_MIN_SECONDS)
-            else -> withContext(Dispatchers.IO) { VideoSwap.counterpart(song) }?.let {
-                SongVideo(song.id, native = false, counterpart = it, back = null, watch = false)
-            }
+        value = metadata?.id to when {
+            song == null -> null
+            song.isVideoSong -> SongVideo(song.id, counterpart = null, watch = song.duration <= 0 || song.duration >= WATCH_MIN_SECONDS)
+            else -> withContext(Dispatchers.IO) { Counterparts.counterpart(song) }?.let { SongVideo(song.id, it, watch = false) }
         }
     }
     val current = resolved?.takeIf { it.first == metadata?.id }
@@ -144,8 +134,7 @@ fun rememberSongVideo(metadata: MediaMetadata?): SongVideo? {
 
 /** Turns the cover spot between the cover and the video; shows what a tap switches to. */
 @Composable
-fun VideoToggle(video: SongVideo, modifier: Modifier = Modifier) {
-    val playerConnection = LocalPlayerConnection.current ?: return
+fun VideoToggle(modifier: Modifier = Modifier) {
     val haptics = LocalHapticFeedback.current
     val view by VideoState.view
     val press = remember { MutableInteractionSource() }
@@ -159,7 +148,7 @@ fun VideoToggle(video: SongVideo, modifier: Modifier = Modifier) {
             .background(Color.Black.copy(alpha = 0.28f))
             .clickable(press, indication = null) {
                 haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
-                choose(playerConnection.player, video, if (toVideo) VideoView.VIDEO else VideoView.SONG)
+                VideoState.pick(if (toVideo) VideoView.VIDEO else VideoView.SONG)
             },
     ) {
         Icon(
@@ -171,23 +160,6 @@ fun VideoToggle(video: SongVideo, modifier: Modifier = Modifier) {
     }
 }
 
-private fun choose(player: Player, video: SongVideo, option: VideoView) {
-    val back = video.back
-    val counterpart = video.counterpart
-    when {
-        // a video swapped in for a song gives the song back
-        back != null && option == VideoView.SONG -> {
-            VideoState.expect(back.videoId, option)
-            VideoSwap.swap(player, back)
-        }
-        option == VideoView.VIDEO && !video.native && counterpart != null -> {
-            VideoState.expect(counterpart.videoId, option)
-            VideoSwap.swap(player, counterpart)
-        }
-        else -> VideoState.pick(option, video.songId)
-    }
-}
-
 private const val SAMPLE_EVERY_MS = 5_000L
 private const val SEEK_OVER_MS = 400L
 private const val NUDGE_OVER_MS = 35L
@@ -195,7 +167,7 @@ private const val NUDGE_OVER_MS = 35L
 /**
  * A muted video that follows the music player's clock: [time] maps the song's position into the video. It
  * nudges its own speed for small drift and seeks for large drift, so the music itself never changes engine.
- * [crop] fills a square; otherwise the whole picture shows at its own shape on [ground]. Played only while
+ * [crop] fills a square; otherwise the whole picture shows at its own shape, [top] down, on the player's ground. Played only while
  * [active] and the app is on screen; the cover underneath shows until the first frame.
  */
 @OptIn(UnstableApi::class)
@@ -207,6 +179,9 @@ fun MusicVideoLayer(
     active: Boolean,
     modifier: Modifier = Modifier,
     ground: Boolean = true,
+    top: Dp = 0.dp,
+    report: Boolean = false,
+    overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -232,6 +207,7 @@ fun MusicVideoLayer(
         MusicVideos.player(context.applicationContext, source).apply {
             addListener(object : Player.Listener {
                 override fun onRenderedFirstFrame() { shown = true }
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) { Timber.tag("ArcVideo").w(error, "video failed") }
                 override fun onVideoSizeChanged(videoSize: VideoSize) {
                     if (videoSize.width > 0 && videoSize.height > 0) aspect = videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height
                 }
@@ -241,27 +217,12 @@ fun MusicVideoLayer(
     DisposableEffect(player) {
         onDispose {
             player.release()
-            VideoState.frameEdge.value = null
+            if (report) VideoState.videoBottom.value = null
         }
     }
     LaunchedEffect(player) { follow(player, playerConnection.player) { mapTime(it) } }
-    LaunchedEffect(player, shown) {
-        if (!shown) return@LaunchedEffect
-        val frame = Bitmap.createBitmap(64, 36, Bitmap.Config.ARGB_8888)
-        while (true) {
-            view?.takeIf { it.isAvailable }?.let { v ->
-                v.getBitmap(frame)
-                VideoState.frameEdge.value = withContext(Dispatchers.Default) { edgeColor(frame, 0, 28, 64, 36) }
-            }
-            delay(SAMPLE_EVERY_MS)
-        }
-    }
     val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(500), label = "videoAlpha")
-    val groundColor by animateColorAsState(
-        VideoState.frameEdge.value?.let { coverGround(it).near } ?: Color.Black,
-        tween(800),
-        label = "videoGround",
-    )
+    val groundColor by VideoState.ground
 
     Box(
         contentAlignment = Alignment.Center,
@@ -271,19 +232,34 @@ fun MusicVideoLayer(
             .graphicsLayer { this.alpha = alpha }
             .then(if (crop || !ground) Modifier else Modifier.background(groundColor)),
     ) {
-        AndroidView(
-            factory = { TextureView(it).apply { isOpaque = false }.also { v -> view = v } },
-            update = { player.setVideoTextureView(it) },
-            onRelease = { player.clearVideoTextureView(it) },
-            modifier = if (crop) {
-                Modifier.fillMaxSize().graphicsLayer {
-                    scaleX = aspect.coerceAtLeast(1f)
-                    scaleY = (1f / aspect).coerceAtLeast(1f)
-                }
-            } else {
-                Modifier.aspectRatio(aspect.coerceIn(0.5f, 3f))
-            },
-        )
+        val video = @Composable {
+            AndroidView(
+                factory = { TextureView(it).apply { isOpaque = false }.also { v -> view = v } },
+                update = { player.setVideoTextureView(it) },
+                onRelease = { player.clearVideoTextureView(it) },
+                modifier = if (crop) {
+                    Modifier.fillMaxSize().graphicsLayer {
+                        scaleX = aspect.coerceAtLeast(1f)
+                        scaleY = (1f / aspect).coerceAtLeast(1f)
+                    }
+                } else {
+                    Modifier.fillMaxSize()
+                },
+            )
+        }
+        if (crop) {
+            video()
+        } else {
+            Box(
+                Modifier
+                    .then(if (top > 0.dp) Modifier.align(Alignment.TopCenter).padding(top = top) else Modifier)
+                    .aspectRatio(aspect.coerceIn(0.5f, 3f))
+                    .then(if (report) Modifier.onGloballyPositioned { VideoState.videoBottom.value = it.boundsInRoot().bottom } else Modifier),
+            ) {
+                video()
+                if (shown) overlay()
+            }
+        }
     }
 }
 

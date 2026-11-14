@@ -50,7 +50,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -63,6 +65,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
@@ -166,6 +170,7 @@ fun ThumbArcControls(
     ground: Color,
     groundNear: Color = ground,
     topLimit: () -> Float,
+    labelTop: Float = 0f,
     swipeShift: Animatable<Float, AnimationVector1D>,
     positionMs: () -> Long,
     durationMs: () -> Long,
@@ -174,7 +179,8 @@ fun ThumbArcControls(
     modifier: Modifier = Modifier,
 ) {
     val swipeFromButtons = remember { SongSwitch() }
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    var rootTop by remember { mutableFloatStateOf(0f) }
+    BoxWithConstraints(modifier.fillMaxSize().onGloballyPositioned { rootTop = it.positionInRoot().y }) {
         val density = LocalDensity.current
         val haptics = LocalHapticFeedback.current
         val width = constraints.maxWidth.toFloat()
@@ -202,7 +208,7 @@ fun ThumbArcControls(
             // Left-handed, the line fills from its far end, so the song starts at the top.
             if (leftHanded) 1f - along else along
         }
-        val lines = rememberCurvedLines(labels, arc, trackRadius + px(TrackWidth) / 2, width, leftHanded, content)
+        val lines = rememberCurvedLines(labels, arc, trackRadius + px(TrackWidth) / 2, width, leftHanded, content, labelTop - rootTop)
         val marqueeClock = remember { mutableLongStateOf(0L) }
         if (lines.any { it.overflows } && trackShown > 0f) {
             val marqueeSpeed = px(MarqueeSpeed)
@@ -700,9 +706,10 @@ private fun rememberCurvedLines(
     screenWidth: Float,
     mirrored: Boolean,
     color: Color,
+    top: Float,
 ): List<CurvedLine> {
     val density = LocalDensity.current
-    return remember(labels.title, labels.artists, arc.pivot, arc.radius, trackOuter, screenWidth, mirrored, color, density) {
+    return remember(labels.title, labels.artists, arc.pivot, arc.radius, trackOuter, screenWidth, mirrored, color, density, top) {
         val px = { dp: Dp -> with(density) { dp.toPx() } }
         val time = CurvedLine.Spec(with(density) { 14.sp.toPx() }, bold = false, alpha = 0.85f, tabular = true)
         val artist = CurvedLine.Spec(with(density) { 16.sp.toPx() }, bold = false, alpha = 0.9f)
@@ -716,7 +723,9 @@ private fun rememberCurvedLines(
             val from = maxOf(asin((px(LabelLift) / base).coerceIn(0f, 1f)), lowest)
             val outer = base + spec.size * 0.8f
             // Names run on over the cover up to the screen edge, so long ones get the whole curve.
-            val to = arc.angleAtX(if (mirrored) px(LabelEdgeGap) else screenWidth - px(LabelEdgeGap), outer) ?: (PI / 3).toFloat()
+            val edge = arc.angleAtX(if (mirrored) px(LabelEdgeGap) else screenWidth - px(LabelEdgeGap), outer) ?: (PI / 3).toFloat()
+            // something in the cover spot (a video) reaching down to [top]: the names stop short of it
+            val to = if (top > 0f) minOf(edge, asin(((arc.pivot.y - top - px(LabelEdgeGap)) / outer).coerceIn(-1f, 1f))) else edge
             return CurvedLine(arc.pivot, base, from, maxOf(from, to), mirrored, spec, color, text, px(MarqueeGap), px(MarqueeSpeed), px(MarqueeFade), onTap, onHold)
         }
         listOfNotNull(

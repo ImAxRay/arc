@@ -30,6 +30,7 @@ fun MusicVideoSettings() {
     val (mobile, onMobile) = rememberEnumPreference(ArcVideoQualityMobileKey, VideoQuality.AUTO)
     val (radioSongsOnly, onRadioSongsOnly) = rememberPreference(ArcRadioSongsOnlyKey, true)
     val (searchVideos, onSearchVideos) = rememberPreference(ArcSearchVideosKey, false)
+    val (videoButton, onVideoButton) = rememberPreference(ArcVideoButtonKey, true)
     var picking by remember { mutableStateOf<Boolean?>(null) }
 
     picking?.let { onWifiList ->
@@ -51,6 +52,7 @@ fun MusicVideoSettings() {
         items = buildList {
             add(switchItem(R.drawable.arc_video, R.string.arc_music_videos, R.string.arc_music_videos_desc, enabled, onEnabled))
             if (enabled) {
+                add(switchItem(R.drawable.music_note, R.string.arc_video_button, R.string.arc_video_button_desc, videoButton, onVideoButton))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.wifi),
                     title = { Text(stringResource(R.string.arc_video_quality_wifi)) },

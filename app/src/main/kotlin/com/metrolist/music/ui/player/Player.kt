@@ -1039,9 +1039,9 @@ private fun PlayerSheet(
     // The cover and arc layouts sit on a ground in the cover's own colour, so the screen carries on from the cover.
     val coverGroundOn = !vinylPlayerEnabled && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     val groundArt = rememberCoverArt(mediaMetadata?.thumbnailUrl.takeIf { coverGroundOn }, upcoming = null, titleOnLeft = panelOnLeft)
-    val videoEdge by com.metrolist.music.arc.VideoState.frameEdge
-    val coverGroundTarget = remember(groundArt?.edge, videoEdge) { (videoEdge?.takeIf { coverGroundOn } ?: groundArt?.edge)?.let { coverGround(it) } }
+    val coverGroundTarget = remember(groundArt?.edge) { groundArt?.let { coverGround(it.edge) } }
     val groundNear by animateColorAsState(coverGroundTarget?.near ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundNear")
+    androidx.compose.runtime.SideEffect { com.metrolist.music.arc.VideoState.ground.value = groundNear }
     val groundDeep by animateColorAsState(coverGroundTarget?.deep ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundDeep")
     val accent by animateColorAsState(coverGroundTarget?.accent ?: textButtonColor, tween(GROUND_FADE_MS), label = "accent")
     val onAccent by animateColorAsState(coverGroundTarget?.onAccent ?: iconButtonColor, tween(GROUND_FADE_MS), label = "onAccent")
@@ -1903,6 +1903,8 @@ private fun PlayerSheet(
                     val showAudioDetails by rememberPreference(ArcAudioDetailsKey, true)
                     val storedFormat by LocalDatabase.current.format(arcMetadata.id).collectAsStateWithLifecycle(null)
                     val audioDetails = if (showAudioDetails) rememberAudioDetails(playerConnection.player, storedFormat?.bitrate) else null
+                    val videoBottom by com.metrolist.music.arc.VideoState.videoBottom
+                    val videoLabelTop by animateFloatAsState(videoBottom ?: 0f, tween(GROUND_FADE_MS), label = "videoLabelTop")
                     ThumbArcControls(
                         audioDetails = audioDetails,
                         mainIcon =
@@ -1982,6 +1984,7 @@ private fun PlayerSheet(
                                 },
                             ),
                         topLimit = { arcCoverBottom.floatValue },
+                        labelTop = videoLabelTop,
                         swipeShift = coverSwipeShift,
                         content = TextBackgroundColor,
                         mainFill = accent,

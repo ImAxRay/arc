@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import com.metrolist.music.arc.MotionCover
 import com.metrolist.music.arc.MusicVideoLayer
 import com.metrolist.music.arc.VideoToggle
+import com.metrolist.music.arc.ArcVideoButtonKey
+import androidx.compose.foundation.layout.asPaddingValues
 import com.metrolist.music.arc.WatchButton
 import androidx.compose.foundation.layout.Row
 import com.metrolist.music.arc.VideoState
@@ -562,7 +564,16 @@ private fun ThumbnailItem(
             }
             .pointerInput(onTap != null) {
                 detectTapGestures(
-                    onTap = if (onTap != null) { _ -> currentOnTap?.invoke() } else null,
+                    onTap = if (onTap != null) {
+                        { _ ->
+                            // on a playing video a tap goes to the watch view; the album opens from the cover
+                            if (VideoState.view.value == VideoView.VIDEO && VideoState.current.value?.songId == item.mediaId) {
+                                VideoState.watching.value = true
+                            } else {
+                                currentOnTap?.invoke()
+                            }
+                        }
+                    } else null,
                     onDoubleTap = { offset ->
                         if (isListenTogetherGuest) return@detectTapGestures
 
@@ -626,20 +637,22 @@ private fun ThumbnailItem(
                         )
                     }
                     val watching by VideoState.watching
-                    if (video != null && videoView == VideoView.VIDEO && video.native) {
-                        MusicVideoLayer(video.songId, { it }, crop = false, active = videoActive && !watching)
+                    val bareTop = dimensions.padding == 0.dp
+                    if (video != null && videoView == VideoView.VIDEO) {
+                        // under the player's top row of buttons, so neither covers the other
+                        val top = if (bareTop) WindowInsets.statusBarsIgnoringVisibility.asPaddingValues().calculateTopPadding() + 64.dp else 0.dp
+                        MusicVideoLayer(video.videoId, video::time, crop = false, active = videoActive && !watching, top = top, report = bareTop) {
+                            WatchButton(Modifier.align(Alignment.BottomEnd).padding(8.dp))
+                        }
                     }
-                    if (video != null) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
+                    val showButton by rememberPreference(ArcVideoButtonKey, true)
+                    if (video != null && showButton) {
+                        VideoToggle(
+                            Modifier
                                 .align(Alignment.TopCenter)
                                 .then(if (dimensions.padding == 0.dp) Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility) else Modifier)
                                 .padding(top = 12.dp),
-                        ) {
-                            VideoToggle(video)
-                            if (videoView == VideoView.VIDEO && video.native) WatchButton()
-                        }
+                        )
                     }
                 }
             }

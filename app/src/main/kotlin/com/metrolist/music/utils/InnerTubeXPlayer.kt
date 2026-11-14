@@ -146,31 +146,57 @@ object InnerTubeXPlayer {
     class VideoFormats(
         val formats: List<XPlayerResponse.StreamingData.Format>,
         val userAgent: String,
+        val headers: Map<String, String>,
         val expiresInSeconds: Int,
     )
 
     /**
-     * Every video format of [videoId]: ANDROID_VR first, whose links need no deciphering, then the TV client, whose
-     * links go through the same signature and n transform as audio.
+     * Every video format of [videoId]. ANDROID_VR first, whose links need no deciphering; where YouTube's bot check
+     * turns it away, the web client with the same botguard token audio uses, then the TV client.
      */
     suspend fun videoFormats(videoId: String): VideoFormats? {
-        for (client in listOf(YouTubeClient.ANDROID_VR_NO_AUTH, YouTubeClient.TVHTML5)) {
+        for (client in listOf(YouTubeClient.ANDROID_VR_NO_AUTH, YouTubeClient.WEB, YouTubeClient.TVHTML5)) {
             try {
                 val bundle = bundle()
                 val config = if (client.useSignatureTimestamp) bundle.configParser.fetchConfig(videoId, false) else null
+                val innerTube = YouTube.extractionTransport().innerTube
+                val session = innerTube.sessionSnapshot()
+                val visitorData = config?.visitorData ?: session.visitorData
+                val token =
+                    if (client.useWebPoTokens) {
+                        poTokenGenerator.getWebClientPoToken(videoId, visitorData ?: continue) ?: continue
+                    } else {
+                        null
+                    }
                 val response =
-                    YouTube.extractionTransport().innerTube
-                        .player(client, videoId, null, config?.signatureTimestamp, null)
-                        .body<XPlayerResponse>()
+                    innerTube
+                        .playerWithSessionBound(
+                            client = client,
+                            videoId = videoId,
+                            playlistId = null,
+                            signatureTimestamp = config?.signatureTimestamp,
+                            poToken = token?.playerRequestPoToken,
+                            requestVisitorData = visitorData,
+                            requestSession = session,
+                        ).body<XPlayerResponse>()
                 if (response.playabilityStatus.status != "OK") continue
                 val data = response.streamingData ?: continue
                 val video = data.adaptiveFormats.filter { it.mimeType.startsWith("video/") } + data.formats.orEmpty()
                 if (video.isEmpty()) continue
                 val playable =
                     (if (config != null) bundle.cipherService.processFormats(config.playerUrl, video) else video)
-                        .filter { it.url != null }
+                        .mapNotNull { format ->
+                            val url = format.url ?: return@mapNotNull null
+                            if (token == null) format else format.copy(url = "$url&pot=${java.net.URLEncoder.encode(token.streamingDataPoToken, "UTF-8")}")
+                        }
                 if (playable.isEmpty()) continue
-                return VideoFormats(playable, client.userAgent, data.expiresInSeconds ?: DEFAULT_STREAM_TTL_SECONDS)
+                val headers =
+                    if (token != null) {
+                        mapOf("Origin" to "https://www.youtube.com", "Referer" to "https://www.youtube.com/")
+                    } else {
+                        emptyMap()
+                    }
+                return VideoFormats(playable, client.userAgent, headers, data.expiresInSeconds ?: DEFAULT_STREAM_TTL_SECONDS)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {

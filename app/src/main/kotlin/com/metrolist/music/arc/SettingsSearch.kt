@@ -70,6 +70,7 @@ private val TRACKED_SETTINGS: Map<String, SettingsEntry> =
         ArcVideoQualityWifiKey.name to SettingsEntry(R.string.arc_video_quality_wifi, "settings/sound", R.string.arc_settings_sound),
         ArcVideoQualityMobileKey.name to SettingsEntry(R.string.arc_video_quality_mobile, "settings/sound", R.string.arc_settings_sound),
         ArcRadioSongsOnlyKey.name to SettingsEntry(R.string.arc_radio_songs_only, "settings/sound", R.string.arc_settings_sound),
+        ArcVideoButtonKey.name to SettingsEntry(R.string.arc_video_button, "settings/sound", R.string.arc_settings_sound),
         ArcSearchVideosKey.name to SettingsEntry(R.string.arc_search_videos, "settings/sound", R.string.arc_settings_sound),
         AudioNormalizationKey.name to SettingsEntry(R.string.audio_normalization, "settings/sound", R.string.arc_settings_sound),
         VarispeedKey.name to SettingsEntry(R.string.arc_varispeed, "settings/sound", R.string.arc_settings_sound),

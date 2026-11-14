@@ -24,6 +24,11 @@ import com.metrolist.innertube.YouTube
 import com.metrolist.music.R
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.utils.InnerTubeXPlayer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -32,6 +37,7 @@ val ArcVideoQualityWifiKey = stringPreferencesKey("arcVideoQualityWifi")
 val ArcVideoQualityMobileKey = stringPreferencesKey("arcVideoQualityMobile")
 val ArcRadioSongsOnlyKey = booleanPreferencesKey("arcRadioSongsOnly")
 val ArcSearchVideosKey = booleanPreferencesKey("arcSearchVideos")
+val ArcVideoButtonKey = booleanPreferencesKey("arcVideoButton")
 
 enum class VideoQuality(val height: Int, @StringRes val label: Int) {
     AUTO(0, R.string.audio_quality_auto),
@@ -49,6 +55,7 @@ class VideoStream(
     val height: Int,
     val contentLength: Long,
     val userAgent: String,
+    val headers: Map<String, String>,
 )
 
 object MusicVideos {
@@ -72,20 +79,42 @@ object MusicVideos {
     fun canHaveVideo(metadata: MediaMetadata?) =
         metadata != null && !metadata.isEpisode && metadata.uploadEntityId == null && YOUTUBE_ID.matches(metadata.id)
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val asking = HashMap<String, Deferred<InnerTubeXPlayer.VideoFormats?>>()
+    private val missed = HashMap<String, Long>()
+
+    /** One lookup per video, outside any screen, so leaving the player mid-request doesn't throw it away. */
+    private suspend fun formats(videoId: String): InnerTubeXPlayer.VideoFormats? {
+        val now = System.currentTimeMillis()
+        synchronized(known) {
+            known[videoId]?.takeIf { it.until > now }?.let { return it.formats }
+            if ((missed[videoId] ?: 0) > now) return null
+        }
+        val job = synchronized(asking) {
+            asking.getOrPut(videoId) {
+                scope.async {
+                    val found = InnerTubeXPlayer.videoFormats(videoId)
+                    synchronized(known) {
+                        if (found != null) {
+                            known[videoId] = Known(found, System.currentTimeMillis() + found.expiresInSeconds * 900L)
+                        } else {
+                            missed[videoId] = System.currentTimeMillis() + 60_000
+                        }
+                    }
+                    synchronized(asking) { asking.remove(videoId) }
+                    found
+                }
+            }
+        }
+        return job.await()
+    }
+
     fun metered(context: Context) =
         context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
 
-    fun forget(videoId: String) {
-        synchronized(known) { known.remove(videoId) }
-    }
 
     suspend fun stream(videoId: String, quality: VideoQuality, metered: Boolean): VideoStream? {
-        val formats = synchronized(known) { known[videoId]?.takeIf { it.until > System.currentTimeMillis() } }?.formats
-            ?: InnerTubeXPlayer.videoFormats(videoId)?.also {
-                val until = System.currentTimeMillis() + (it.expiresInSeconds * 1000L * 9 / 10)
-                synchronized(known) { known[videoId] = Known(it, until) }
-            }
-            ?: return null
+        val formats = formats(videoId) ?: return null
         val target = if (quality == VideoQuality.AUTO) (if (metered) 720 else 1080) else quality.height
         val (videoOnly, muxed) = formats.formats.filter { it.mimeType.startsWith("video/") }.partition { "mp4a" !in it.mimeType && "opus" !in it.mimeType }
         val usable = videoOnly.filter { (it.height ?: 0) > 0 && decodes(it.mimeType) }
@@ -98,14 +127,14 @@ object MusicVideos {
                 ?: return null
         val url = picked.url ?: return null
         val length = picked.contentLength?.takeIf { it > 0 }
-            ?: YouTube.extractionTransport().innerTube.mediaContentLength(url, mapOf("User-Agent" to formats.userAgent))
+            ?: YouTube.extractionTransport().innerTube.mediaContentLength(url, formats.headers + ("User-Agent" to formats.userAgent))
             ?: return null
-        return VideoStream(videoId, url, picked.height ?: 0, length, formats.userAgent)
+        return VideoStream(videoId, url, picked.height ?: 0, length, formats.userAgent, formats.headers)
     }
 
     @OptIn(UnstableApi::class)
     fun player(context: Context, stream: VideoStream): ExoPlayer {
-        val upstream = OkHttpDataSource.Factory(http).setUserAgent(stream.userAgent)
+        val upstream = OkHttpDataSource.Factory(http).setUserAgent(stream.userAgent).setDefaultRequestProperties(stream.headers)
         val chunked = DataSource.Factory { ChunkedDataSource(upstream.createDataSource(), stream.contentLength) }
         return ExoPlayer.Builder(context)
             .setMediaSourceFactory(ProgressiveMediaSource.Factory(chunked))

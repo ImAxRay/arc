@@ -1,14 +1,12 @@
 package com.metrolist.music.arc
 
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.PlaylistPanelVideoRenderer
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_OMV
 import com.metrolist.innertube.pages.NextPage
 import com.metrolist.innertubex.models.YouTubeClient
-import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.MediaMetadata
 import io.ktor.client.statement.bodyAsText
@@ -22,7 +20,7 @@ import timber.log.Timber
 /** One stretch where the song and its video play the same music: [from] in the song is [to] in the video. */
 class Segment(val from: Long, val to: Long, val length: Long)
 
-/** The other version of a song: its music video, or for a swapped-in video, the song it replaced. */
+/** An album track's music video, and how the track's time maps into it. */
 class Counterpart(val item: MediaItem, val segments: List<Segment>) {
     val videoId: String get() = item.mediaId
 
@@ -36,14 +34,9 @@ private fun mapThrough(segments: List<Segment>, ms: Long): Long {
     return (ms - inside.from + inside.to).coerceAtLeast(0)
 }
 
-object VideoSwap {
+object Counterparts {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; coerceInputValues = true }
     private val found = HashMap<String, Counterpart?>()
-
-    /** Videos swapped in for songs, with the way back. */
-    private val swappedIn = HashMap<String, Counterpart>()
-
-    fun swappedFrom(videoId: String?): Counterpart? = synchronized(swappedIn) { videoId?.let { swappedIn[it] } }
 
     /**
      * The music video of an album track. YouTube Music lists it as the track's counterpart, with a segment map,
@@ -112,29 +105,6 @@ object VideoSwap {
                 item.artists.any { fold(it.name) == fold(artist) }
         } ?: return null
         return Counterpart(match.toMediaItem(), emptyList())
-    }
-
-    /** Plays [to] in place of the current item, at the matching moment. */
-    fun swap(player: Player, to: Counterpart) {
-        val index = player.currentMediaItemIndex
-        val from = player.currentMediaItem ?: return
-        val at = to.map(player.currentPosition)
-        val back = to.segments.map { Segment(it.to, it.from, it.length) }
-        synchronized(swappedIn) {
-            swappedIn.remove(from.mediaId)
-            if (from.metadata?.isVideoSong != true) swappedIn[to.videoId] = Counterpart(from, back)
-        }
-        // in next, straight to the matching moment, then out with the old one, so the position never passes 0;
-        // the removal waits a moment so it isn't folded into the same batch of player events as the seek
-        player.addMediaItem(index + 1, to.item)
-        player.seekTo(index + 1, at)
-        android.os.Handler(player.applicationLooper).postDelayed({
-            if (index < player.mediaItemCount && player.getMediaItemAt(index).mediaId == from.mediaId &&
-                player.currentMediaItem?.mediaId == to.videoId
-            ) {
-                player.removeMediaItem(index)
-            }
-        }, 400)
     }
 
     private fun cut(name: String) =
