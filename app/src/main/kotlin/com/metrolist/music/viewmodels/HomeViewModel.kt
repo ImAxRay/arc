@@ -217,6 +217,12 @@ class HomeViewModel @Inject constructor(
     private var dialPinned: Set<String> = emptySet()
     private var dialBuiltFor = 0
 
+    /**
+     * The song the dial leaves out because the Continue tile shows it, fixed when the dial is built, so a tile tapped
+     * later stays put. Kept here, as the dial's own state is lost whenever Home scrolls it away or another tab opens.
+     */
+    var dialHiddenId: String? = null
+
     private val freshSpeedDial =
         combine(
             database.speedDialDao.getAll(),
@@ -268,7 +274,12 @@ class HomeViewModel @Inject constructor(
         combine(freshSpeedDial, dialGeneration) { (pinned, fresh), generation ->
             if (generation == 0) return@combine emptyList()
             dialShown =
-                if (generation != dialBuiltFor) fresh else keepDialInPlace(dialShown, fresh, dialPinned, pinned)
+                if (generation != dialBuiltFor) {
+                    dialHiddenId = null
+                    fresh
+                } else {
+                    keepDialInPlace(dialShown, fresh, dialPinned, pinned)
+                }
             dialBuiltFor = generation
             dialPinned = pinned
             dialShown

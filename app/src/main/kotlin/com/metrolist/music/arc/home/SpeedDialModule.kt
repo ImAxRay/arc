@@ -68,9 +68,9 @@ fun SpeedDialModule(env: HomeEnv) {
     }
     val continueId = env.mediaMetadata.value?.id ?: continueSong?.id
     // The Continue tile's song isn't repeated in the grid, judged once per dial: a tile tapped later stays put, lit as playing.
-    val hiddenId = remember(dialItems) { arrayOfNulls<String>(1) }
-    if (hiddenId[0] == null) hiddenId[0] = continueId
-    val allItems = remember(dialItems, hiddenId[0]) { dialItems.filterNot { it.id == hiddenId[0] } }
+    if (env.viewModel.dialHiddenId == null) env.viewModel.dialHiddenId = continueId
+    val hiddenId = env.viewModel.dialHiddenId
+    val allItems = remember(dialItems, hiddenId) { dialItems.filterNot { it.id == hiddenId } }
     val scope = rememberCoroutineScope()
     var randomizeJob by remember { mutableStateOf<Job?>(null) }
 
@@ -101,7 +101,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val pageCount = (1 until pages.size).takeWhile { capacities.take(it + 1).sum() <= allItems.size }.lastOrNull()?.plus(1) ?: 1
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
     val pagerState = rememberPagerState(pageCount = { pageCount })
-    val shownIds = remember(allItems, pageCount) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + listOfNotNull(hiddenId[0]) }
+    val shownIds = remember(allItems, pageCount) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + listOfNotNull(hiddenId) }
     SideEffect { env.viewModel.dialShownIds.value = shownIds }
 
     Column(Modifier.fillMaxWidth()) {
