@@ -77,6 +77,7 @@ val LocalPressGlow = compositionLocalOf<PressGlow?> { null }
 // Tuned with the user in demo/glow-fog.html; everything in dp.
 private const val RISE = 0.1f
 private const val FADE = 0.05f
+private const val FLASH = 0.4f
 private val SPILL = 24.dp
 private val GRID_ITEM_PADDING = 12.dp
 
@@ -102,7 +103,10 @@ class PressGlow internal constructor(private val context: Context, private val s
 
     fun press(coordinates: LayoutCoordinates?, cornerPx: Float, area: GlowArea, cover: String?) {
         if (coordinates == null || !enabled || !glowMayMove(context)) return
-        if (target !== coordinates) clock.reset()
+        if (target !== coordinates) {
+            clock.reset()
+            rect = Rect.Zero
+        }
         target = coordinates
         corner = cornerPx
         this.area = area
@@ -144,6 +148,9 @@ class PressGlow internal constructor(private val context: Context, private val s
             val b = o.localPositionOf(c, local.bottomRight)
             rect = Rect(min(a.x, b.x), min(a.y, b.y), max(a.x, b.x), max(a.y, b.y))
             scale = if (local.width > 0f) rect.width / local.width else 1f
+        } else {
+            // the tile left the screen before its release came, as a quick tap that starts a song can do
+            clock.release()
         }
         if (rect.isEmpty) return
         shader.set(rect, corner * scale, density, time, e, idle = 0f, dark, color)
@@ -167,6 +174,8 @@ internal class GlowClock {
     var seconds by mutableFloatStateOf(Random.nextFloat() * 500f)
         private set
     private var held = false
+    // a quick tap can lift before the first frame comes; it still rises this far before fading
+    private var flash = false
     private var loop: Job? = null
 
     fun reset() {
@@ -175,6 +184,7 @@ internal class GlowClock {
 
     fun press(scope: CoroutineScope) {
         held = true
+        flash = true
         if (loop?.isActive != true) loop = scope.launch { run() }
     }
 
@@ -184,11 +194,12 @@ internal class GlowClock {
 
     private suspend fun run() {
         var last = withFrameNanos { it }
-        while (held || level > 0.003f) {
+        while (held || flash || level > 0.003f) {
             val now = withFrameNanos { it }
             val dt = ((now - last) / 1e9f).coerceIn(0f, 0.1f)
             last = now
-            val goal = if (held) 1f else 0f
+            if (level >= FLASH) flash = false
+            val goal = if (held || flash) 1f else 0f
             val rate = if (goal > level) RISE else FADE
             // the demo eased by a fixed share per 60 Hz frame; this keeps that feel at any refresh rate
             level += (goal - level) * (1f - (1f - rate).pow(dt * 60f))
