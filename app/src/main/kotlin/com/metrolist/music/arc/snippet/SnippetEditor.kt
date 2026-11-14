@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.snippet
 
+import com.metrolist.music.arc.ArcSlider
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -545,7 +546,7 @@ private fun Level(label: String, value: String, current: Float, range: ClosedFlo
             Spacer(Modifier.weight(1f))
             Text(value, style = MaterialTheme.typography.labelMedium)
         }
-        Slider(value = current, onValueChange = onChange, valueRange = range)
+        ArcSlider(value = current, onValueChange = onChange, valueRange = range)
     }
 }
 

@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.arc.arcScroll
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
@@ -357,7 +358,7 @@ fun StorageSettings(
                                     else -> Formatter.formatShortFileSize(context, maxSongCacheSize * 1024 * 1024L)
                                 }
                             )
-                            Slider(
+                            ArcSlider(
                                 value = songCacheValues.indexOf(maxSongCacheSize).toFloat(),
                                 enabled = enableSongCache,
                                 onValueChange = {
@@ -430,7 +431,7 @@ fun StorageSettings(
                                             else -> Formatter.formatShortFileSize(context, maxImageCacheSize * 1024 * 1024L)
                                         },
                                 )
-                                Slider(
+                                ArcSlider(
                                     value = imageCacheValues.indexOf(maxImageCacheSize).toFloat(),
                                     onValueChange = {
                                         val newValue = imageCacheValues[it.roundToInt()]

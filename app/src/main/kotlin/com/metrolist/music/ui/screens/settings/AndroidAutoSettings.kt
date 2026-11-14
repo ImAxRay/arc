@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.arc.arcScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -355,7 +356,7 @@ fun AndroidAutoSettings(
                                         else -> "$androidAutoSearchLocalLimit ${stringResource(R.string.songs)}"
                                     },
                             )
-                            Slider(
+                            ArcSlider(
                                 value = limitValues.indexOf(androidAutoSearchLocalLimit).toFloat(),
                                 enabled = true,
                                 onValueChange = {

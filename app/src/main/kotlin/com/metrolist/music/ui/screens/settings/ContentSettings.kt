@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.constants.ShowCachedPlaylistKey
 import com.metrolist.music.constants.ShowDownloadedPlaylistKey
 import com.metrolist.music.constants.ShowLikedPlaylistKey
@@ -673,7 +674,7 @@ fun ContentSettings(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(tempLength.toInt().toString())
-                    Slider(
+                    ArcSlider(
                         value = tempLength,
                         onValueChange = { tempLength = it },
                         valueRange = 1f..100f,

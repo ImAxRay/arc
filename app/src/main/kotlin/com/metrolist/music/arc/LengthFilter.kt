@@ -86,7 +86,7 @@ private fun LengthDialog(rule: Int, onDismiss: () -> Unit, onApply: (Int) -> Uni
                     fontWeight = FontWeight.Thin,
                     style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 )
-                Slider(value = seconds, onValueChange = { seconds = it }, valueRange = 15f..900f)
+                ArcSlider(value = seconds, onValueChange = { seconds = it }, valueRange = 15f..900f)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                     FilterChip(selected = longer, onClick = { longer = true }, label = { Text(stringResource(R.string.arc_length_longer)) })
                     FilterChip(selected = !longer, onClick = { longer = false }, label = { Text(stringResource(R.string.arc_length_shorter)) })

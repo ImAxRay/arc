@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.player
 
+import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.arc.ArcAudioDetailsKey
 import com.metrolist.music.arc.rememberAudioDetails
 import com.metrolist.music.arc.rememberOutputIcon
@@ -742,7 +743,7 @@ fun BottomSheetPlayer(
                         style = MaterialTheme.typography.bodyLarge,
                     )
 
-                    Slider(
+                    ArcSlider(
                         value = sleepTimerValue,
                         onValueChange = { sleepTimerValue = it },
                         valueRange = 5f..120f,

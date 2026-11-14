@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.player
 
+import com.metrolist.music.arc.ArcSlider
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import android.annotation.SuppressLint
@@ -321,7 +322,7 @@ fun Queue(
 
                             Spacer(Modifier.height(16.dp))
 
-                            Slider(
+                            ArcSlider(
                                 value = sleepTimerValue,
                                 onValueChange = { sleepTimerValue = it },
                                 valueRange = 5f..120f,

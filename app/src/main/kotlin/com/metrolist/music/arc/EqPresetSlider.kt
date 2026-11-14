@@ -60,7 +60,7 @@ fun EqPresetSlider(connection: PlayerConnection, modifier: Modifier = Modifier) 
                 fontWeight = FontWeight.Bold,
             )
         }
-        Slider(
+        ArcSlider(
             value = position,
             onValueChange = { value ->
                 val index = value.roundToInt().coerceIn(0, presets.lastIndex)

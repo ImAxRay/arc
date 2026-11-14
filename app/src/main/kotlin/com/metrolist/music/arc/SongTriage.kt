@@ -500,7 +500,7 @@ private fun LengthRuleDialog(songs: List<Song>, onDismiss: () -> Unit, onKeepLon
         text = {
             Column {
                 Text(makeTimeString(cut * 1000L), fontSize = 44.sp, fontWeight = FontWeight.Thin, style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"))
-                androidx.compose.material3.Slider(value = seconds, onValueChange = { seconds = it }, valueRange = 15f..900f)
+                ArcSlider(value = seconds, onValueChange = { seconds = it }, valueRange = 15f..900f)
                 Text(
                     stringResource(R.string.arc_triage_length_split, longer, songs.size - longer),
                     style = MaterialTheme.typography.bodyMedium,

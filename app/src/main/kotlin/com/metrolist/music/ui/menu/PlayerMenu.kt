@@ -316,7 +316,6 @@ fun PlayerMenu(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    accentColor = MaterialTheme.colorScheme.primary,
                 )
             }
             EqPresetSlider(playerConnection, Modifier.fillMaxWidth().padding(top = 16.dp))

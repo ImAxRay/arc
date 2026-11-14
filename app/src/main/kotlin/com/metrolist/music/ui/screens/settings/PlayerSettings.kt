@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.arc.arcScroll
 import com.metrolist.music.constants.AudioQualityDownloadKey
 import com.metrolist.music.arc.PlayHoldAction
@@ -450,7 +451,7 @@ fun PlayerSettings(
                             description = {
                                 Column {
                                     Text(pluralStringResource(R.plurals.seconds, crossfadeDuration.toInt(), crossfadeDuration.toInt()))
-                                    Slider(
+                                    ArcSlider(
                                         value = crossfadeDuration,
                                         onValueChange = onCrossfadeDurationChange,
                                         valueRange = 1f..15f,
@@ -487,7 +488,7 @@ fun PlayerSettings(
                         description = {
                             Column {
                                 Text(stringResource(R.string.arc_history_duration_desc, historyDuration.roundToInt()))
-                                Slider(
+                                ArcSlider(
                                     value = historyDuration,
                                     onValueChange = onHistoryDurationChange,
                                     valueRange = 1f..100f

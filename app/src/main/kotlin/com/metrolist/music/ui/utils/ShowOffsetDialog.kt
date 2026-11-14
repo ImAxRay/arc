@@ -1,5 +1,6 @@
 package com.metrolist.music.ui.utils
 
+import com.metrolist.music.arc.ArcSlider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -214,7 +215,7 @@ fun ShowOffsetDialog(songProvider: () -> SongEntity?) {
                 )
             }
 
-            Slider(
+            ArcSlider(
                 value = lyricsOffset.toFloat(),
                 onValueChange = { newValue ->
                     val rounded = (newValue / 100).toInt() * 100
