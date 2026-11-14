@@ -216,6 +216,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.arc.rememberEndDot
 import com.metrolist.music.arc.songHandoverLeadMs
 import com.metrolist.music.arc.tapBounce
+import com.metrolist.music.arc.vinyl.ArcVinylPlayerDefault
 import com.metrolist.music.arc.vinyl.ArcVinylPlayerKey
 import com.metrolist.music.arc.vinyl.VinylPlayer
 import com.metrolist.music.arc.vinyl.VinylPlayerToggle
@@ -1035,7 +1036,7 @@ private fun PlayerSheet(
 
     val backgroundAlpha = state.progress.coerceIn(0f, 1f)
 
-    val vinylPlayerEnabled by rememberPreference(ArcVinylPlayerKey, true)
+    val vinylPlayerEnabled by rememberPreference(ArcVinylPlayerKey, ArcVinylPlayerDefault)
     // The cover and arc layouts sit on a ground in the cover's own colour, so the screen carries on from the cover.
     val coverGroundOn = !vinylPlayerEnabled && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     val groundArt = rememberCoverArt(mediaMetadata?.thumbnailUrl.takeIf { coverGroundOn }, upcoming = null, titleOnLeft = panelOnLeft)

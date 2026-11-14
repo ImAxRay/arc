@@ -144,6 +144,9 @@ import kotlin.math.roundToInt
 
 val ArcVinylPlayerKey = booleanPreferencesKey("arcVinylPlayer")
 
+/** The player opens in its plain view; the vinyl one is a switch away. */
+const val ArcVinylPlayerDefault = false
+
 private const val PLAY_DEGREES_PER_SECOND = 200f // 33 1/3 RPM
 private const val SCRUB_MS_PER_TURN = 1_800f // A real record: one turn at 33 1/3 RPM
 private const val LIKED_HEART_ID = "liked"
@@ -1017,7 +1020,7 @@ internal fun VinylTime(positionMs: () -> Long, durationMs: () -> Long, color: Co
 @Composable
 fun VinylPlayerToggle(contentColor: Color, modifier: Modifier = Modifier) {
     if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) return
-    var enabled by rememberPreference(ArcVinylPlayerKey, true)
+    var enabled by rememberPreference(ArcVinylPlayerKey, ArcVinylPlayerDefault)
     val haptics = LocalHapticFeedback.current
     val turn by animateFloatAsState(if (enabled) 360f else 0f, spring(0.5f, Spring.StiffnessLow), label = "vinylToggleTurn")
     val press = remember { MutableInteractionSource() }
