@@ -199,7 +199,8 @@ fun SongLikeButton(song: MediaMetadata, modifier: Modifier = Modifier) {
                             paintTo(fingerY)
                         },
                     )
-                }.tapBounce(),
+                // no tick on touch-down: a finger resting on the heart isn't a like, and the like itself buzzes
+                }.tapBounce(tick = false),
         onClick = toggle,
     ) {
         Icon(

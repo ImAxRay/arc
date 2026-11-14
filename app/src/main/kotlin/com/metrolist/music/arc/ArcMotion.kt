@@ -62,14 +62,14 @@ fun Modifier.pressBounce(source: InteractionSource): Modifier {
  * modifier chain so borders and backgrounds scale with it.
  */
 @Composable
-fun Modifier.tapBounce(remoteTaps: Int = 0): Modifier {
+fun Modifier.tapBounce(remoteTaps: Int = 0, tick: Boolean = true): Modifier {
     val scale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     // a tap that landed beside the button still bounces it, as if it hit
     LaunchedEffect(remoteTaps) {
         if (remoteTaps == 0) return@LaunchedEffect
-        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        if (tick) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
         scale.animateTo(ArcMotion.TAPPED_SCALE, tween(60))
         scale.animateTo(1f, ArcMotion.springy())
     }
@@ -79,7 +79,7 @@ fun Modifier.tapBounce(remoteTaps: Int = 0): Modifier {
     }.pointerInput(Unit) {
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            if (tick) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
             val dip = scope.launch { scale.animateTo(ArcMotion.TAPPED_SCALE, tween(60)) }
             waitForUpOrCancellation(PointerEventPass.Initial)
             scope.launch {

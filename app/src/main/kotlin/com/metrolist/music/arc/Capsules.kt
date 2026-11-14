@@ -41,6 +41,8 @@ class CapsuleButton(
     val iconModifier: Modifier = Modifier,
     val content: (@Composable () -> Unit)? = null,
     val hint: (@Composable BoxScope.() -> Unit)? = null,
+    /** False for a button whose action buzzes on its own, such as the heart, so a finger just landing on it doesn't. */
+    val tickOnPress: Boolean = true,
 )
 
 /** The app's button style: a row of bare icons, the active one marked with a dot beneath it. */
@@ -67,7 +69,7 @@ private fun CapsulePiece(button: CapsuleButton, color: Color, sizing: Modifier) 
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .tapBounce()
+                .tapBounce(tick = button.tickOnPress)
                 .then(sizing)
                 .alpha(if (button.enabled) 1f else 0.35f)
                 .clip(CircleShape)

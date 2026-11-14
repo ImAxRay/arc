@@ -22,6 +22,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
@@ -46,13 +50,15 @@ private const val BLEND_INTO_COVER = 0.18f
 private const val GLOW_LENGTH = 0.8f
 private const val CROSSFADE_MS = 220
 private const val ART_SIZE = 96
+private const val SPILL_COLUMNS = 5
+private val EvenSpill = FloatArray(SPILL_COLUMNS) { 1f }
 
 /**
  * A small copy of the cover, loaded once per song for the glow and for deciding where text needs
  * to turn dark. [statusBright] is the patch behind the time and battery, [titleBright] the corner
  * the curved title runs over.
  */
-internal class CoverArt(val image: ImageBitmap, val statusBright: Boolean, val titleBright: Boolean, val edge: Int)
+internal class CoverArt(val image: ImageBitmap, val statusBright: Boolean, val titleBright: Boolean, val edge: Int, val spill: FloatArray = EvenSpill)
 
 /** The last few songs' art, so skipping back and forth swaps the glow in the same frame as the cover. */
 private object CoverArtCache {
@@ -105,7 +111,20 @@ private suspend fun loadCoverArt(context: Context, url: String, titleOnLeft: Boo
         statusBright = bright(0f, 0.45f, 0f, 0.1f, threshold = 0.5f),
         titleBright = if (titleOnLeft) bright(0f, 0.45f, 0.7f, 1f, threshold = 0.55f) else bright(0.55f, 1f, 0.7f, 1f, threshold = 0.55f),
         edge = edgeColor(bitmap, left, top + side * 4 / 5, left + side, top + side),
+        spill = spill(bitmap, left, top, side),
     )
+}
+
+/**
+ * How far the glow reaches below each part of the cover's bottom edge, around 1: further under bright parts,
+ * with a little jitter fixed per cover, so the glow ends unevenly instead of along one straight line.
+ */
+private fun spill(bitmap: Bitmap, left: Int, top: Int, side: Int): FloatArray {
+    val band = side / SPILL_COLUMNS
+    val light = FloatArray(SPILL_COLUMNS) { i -> luminance(bitmap, left + i * band, left + (i + 1) * band, top + side * 3 / 4, top + side) }
+    val brightest = light.max().coerceAtLeast(0.05f)
+    val random = java.util.Random(bitmap.getPixel(left + side / 2, top + side - 1).toLong())
+    return FloatArray(SPILL_COLUMNS) { i -> 0.7f + 0.35f * light[i] / brightest + 0.3f * random.nextFloat() }
 }
 
 /**
@@ -186,6 +205,8 @@ internal fun CoverGlow(art: CoverArt?, coverBottom: Float, pivot: Offset, cutRad
     // a moving cover lights the glow with its own frames
     val live = MotionCovers.liveFrame.value
     val current = live ?: shown
+    val spill = art?.spill ?: EvenSpill
+    val maskPaint = remember { Paint().apply { blendMode = BlendMode.DstIn } }
     if (current == null || coverBottom <= 0f || alpha <= 0.01f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     Canvas(
         modifier
@@ -196,21 +217,44 @@ internal fun CoverGlow(art: CoverArt?, coverBottom: Float, pivot: Offset, cutRad
             }
             .drawWithContent {
                 drawContent()
-                val from = coverBottom - size.width * BLEND_INTO_COVER
-                val to = coverBottom + size.width * GLOW_LENGTH
+                val w = size.width
+                val from = coverBottom - w * BLEND_INTO_COVER
+                val to = coverBottom + w * GLOW_LENGTH * 0.75f
                 val at = { y: Float -> ((y - from) / (to - from)).coerceIn(0f, 1f) }
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        at(coverBottom) to Color.Black,
-                        at(coverBottom + size.width * 0.2f) to Color.Black.copy(alpha = 0.85f),
-                        at(coverBottom + size.width * 0.45f) to Color.Black.copy(alpha = 0.5f),
-                        1f to Color.Transparent,
-                        startY = from,
-                        endY = to,
-                    ),
-                    blendMode = BlendMode.DstIn,
-                )
+                // The mask is a layer of its own, so the soft lobes hanging below the even fade add up instead of cutting each other.
+                drawIntoCanvas { canvas ->
+                    canvas.saveLayer(Rect(Offset.Zero, size), maskPaint)
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            at(coverBottom) to Color.Black,
+                            at(coverBottom + w * 0.2f) to Color.Black.copy(alpha = 0.85f),
+                            at(coverBottom + w * 0.38f) to Color.Black.copy(alpha = 0.45f),
+                            at(coverBottom + w * 0.5f) to Color.Black.copy(alpha = 0.15f),
+                            1f to Color.Transparent,
+                            startY = from,
+                            endY = to,
+                        ),
+                    )
+                    // below the cover only, or the lobes would lay the blurred copy over the cover itself
+                    clipRect(top = coverBottom) { spill.forEachIndexed { i, reach ->
+                        val centre = Offset(w * (i + 0.5f) / spill.size, coverBottom + w * 0.1f)
+                        val radius = w * 0.62f * reach
+                        drawCircle(
+                            Brush.radialGradient(
+                                0f to Color.Black.copy(alpha = 0.55f),
+                                0.45f to Color.Black.copy(alpha = 0.3f),
+                                0.75f to Color.Black.copy(alpha = 0.08f),
+                                1f to Color.Transparent,
+                                center = centre,
+                                radius = radius,
+                            ),
+                            radius = radius,
+                            center = centre,
+                        )
+                    } }
+                    canvas.restore()
+                }
                 if (cutRadius > 0f) drawCircle(Color.Black, cutRadius, pivot, blendMode = BlendMode.DstOut)
             }.blur(20.dp),
     ) {

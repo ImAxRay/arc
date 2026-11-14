@@ -55,6 +55,26 @@ class HomeSpeedDialTest {
         assertEquals(listOf(home) + library, result)
     }
 
+    @Test
+    fun `tiles keep their items when the sources reshuffle, and new items only fill empty slots`() {
+        val shown = (1..4).map { song("s$it") }
+        val fresh = listOf(song("s4"), song("n1"), song("s2"), song("n2"), song("s1"), song("n3"))
+
+        val result = keepDialInPlace(shown, fresh, emptySet(), emptySet())
+
+        assertEquals(shown + song("n1") + song("n2"), result)
+    }
+
+    @Test
+    fun `an unpinned item hands its tile on, a new pin joins the pins`() {
+        val shown = listOf(song("p1"), song("p2"), song("s1"), song("s2"))
+        val fresh = listOf(song("p1"), song("p3"), song("s2"), song("s1"), song("n1"))
+
+        val result = keepDialInPlace(shown, fresh, pinnedBefore = setOf("p1", "p2"), pinnedNow = setOf("p1", "p3"))
+
+        assertEquals(listOf("p1", "p3", "n1", "s1", "s2"), result.map { it.id })
+    }
+
     private fun song(
         id: String,
         title: String = id,

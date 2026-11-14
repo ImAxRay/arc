@@ -54,6 +54,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -122,6 +123,35 @@ internal fun buildSpeedDialItems(
     return items
 }
 
+/**
+ * The dial as it stays between refreshes: every tile keeps its item while plays and history change underneath.
+ * An unpinned item gives its tile to the next new one, a new pin joins the pins at the front, and only empty
+ * slots at the end take items from [fresh].
+ */
+internal fun keepDialInPlace(
+    shown: List<YTItem>,
+    fresh: List<YTItem>,
+    pinnedBefore: Set<String>,
+    pinnedNow: Set<String>,
+): List<YTItem> {
+    val unpinned = pinnedBefore - pinnedNow
+    val used = HashSet<String>()
+    shown.forEach { if (it.id !in unpinned) used += speedDialKey(it) }
+    val spare = fresh.filter { it.id !in pinnedNow && it.id !in unpinned && speedDialKey(it) !in used }.iterator()
+    fun nextSpare(): YTItem? {
+        while (spare.hasNext()) {
+            val item = spare.next()
+            if (used.add(speedDialKey(item))) return item
+        }
+        return null
+    }
+    val result = shown.mapNotNull { if (it.id in unpinned) nextSpare() else it }.toMutableList()
+    val newPins = fresh.filter { it.id in pinnedNow && it.id !in pinnedBefore && used.add(speedDialKey(it)) }
+    result.addAll(result.indexOfLast { it.id in pinnedNow } + 1, newPins)
+    while (result.size < fresh.size) result += nextSpare() ?: break
+    return result.take(SPEED_DIAL_MAX)
+}
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext val context: Context,
@@ -181,7 +211,13 @@ class HomeViewModel @Inject constructor(
             .map { songs -> songs.filterNot { it.song.isVideo }.map { it.toSpeedDialSong() } }
             .distinctUntilChanged()
 
-    val speedDialItems: StateFlow<List<YTItem>> =
+    /** Bumped once when Home's first load is in (or took too long) and on every pull to refresh; only then is the dial rebuilt. */
+    private val dialGeneration = MutableStateFlow(0)
+    private var dialShown: List<YTItem> = emptyList()
+    private var dialPinned: Set<String> = emptySet()
+    private var dialBuiltFor = 0
+
+    private val freshSpeedDial =
         combine(
             database.speedDialDao.getAll(),
             keepListening,
@@ -189,7 +225,7 @@ class HomeViewModel @Inject constructor(
             homePage,
             speedDialTopUp,
         ) { pinned, keepListening, quick, home, library ->
-            buildSpeedDialItems(
+            pinned.mapTo(HashSet()) { it.id } to buildSpeedDialItems(
                 pinned = pinned.map { it.toYTItem() },
                 keepListening =
                     keepListening.orEmpty().mapNotNull { item ->
@@ -222,7 +258,21 @@ class HomeViewModel @Inject constructor(
                 home = home?.sections.orEmpty().flatMap { it.items },
                 library = library,
             )
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        }
+
+    /**
+     * Speed dial's items. Its sources arrive one by one and reshuffle on every play, so the dial waits for the first
+     * load (a skeleton holds its place), then keeps each tile's item until the user refreshes or Arc restarts.
+     */
+    val speedDialItems: StateFlow<List<YTItem>> =
+        combine(freshSpeedDial, dialGeneration) { (pinned, fresh), generation ->
+            if (generation == 0) return@combine emptyList()
+            dialShown =
+                if (generation != dialBuiltFor) fresh else keepDialInPlace(dialShown, fresh, dialPinned, pinned)
+            dialBuiltFor = generation
+            dialPinned = pinned
+            dialShown
+        }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private fun Song.toSpeedDialSong() =
         SongItem(
@@ -538,6 +588,7 @@ class HomeViewModel @Inject constructor(
         allLocalItems.value = (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
             .filter { it is Song || it is Album }
         isLoading.value = false
+        dialGeneration.compareAndSet(0, 1)
 
         // Phase 2: Heavy multi-request operations — run in background without blocking the UI.
         viewModelScope.launch(Dispatchers.IO) { getDailyDiscover() }
@@ -734,7 +785,8 @@ class HomeViewModel @Inject constructor(
     private fun <T : Any> List<T>.filterOutNulls(): List<T> =
         (this as List<T?>).filterNotNull()
 
-    fun refresh() {
+    /** [fromUser] is a pull to refresh, the one time besides a restart that the dial gets new items. */
+    fun refresh(fromUser: Boolean = true) {
         if (isRefreshing.value) return
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onPullToRefresh(context, database) }
@@ -757,6 +809,7 @@ class HomeViewModel @Inject constructor(
             } else {
                 load()
             }
+            if (fromUser) dialGeneration.value++
             isRefreshing.value = false
         }
         // Run sync when user manually refreshes
@@ -771,6 +824,12 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        // a slow network must not keep the dial a skeleton
+        viewModelScope.launch {
+            delay(2_500L)
+            dialGeneration.compareAndSet(0, 1)
+        }
+
         // Run sync in separate coroutine with cooldown to avoid blocking UI
         viewModelScope.launch(Dispatchers.IO) {
             syncUtils.tryAutoSync()
@@ -783,7 +842,7 @@ class HomeViewModel @Inject constructor(
                     wasOffline = true
                 } else if (wasOffline) {
                     wasOffline = false
-                    refresh()
+                    refresh(fromUser = false)
                 }
             }
         }

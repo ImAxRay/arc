@@ -179,7 +179,7 @@ internal fun FloatingIcon(button: CapsuleButton, content: Color, modifier: Modif
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .tapBounce(remoteTaps)
+                .tapBounce(remoteTaps, tick = button.tickOnPress)
                 .size(IconTarget)
                 .alpha(if (button.enabled) 1f else 0.35f)
                 .clip(CircleShape)

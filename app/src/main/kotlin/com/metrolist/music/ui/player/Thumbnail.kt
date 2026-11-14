@@ -65,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
@@ -622,7 +623,8 @@ private fun ThumbnailItem(
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
                     // Edge to edge there's no room for letterboxing, so 16:9 video thumbnails are cropped square.
-                    cropArtwork = cropAlbumArt || dimensions.padding == 0.dp
+                    cropArtwork = cropAlbumArt || dimensions.padding == 0.dp,
+                    fadeEmpty = dimensions.padding == 0.dp,
                 )
                 if (currentMetadata != null && item.mediaId == currentMetadata.id) {
                     val video = rememberSongVideo(currentMetadata)
@@ -698,8 +700,11 @@ private fun HiddenThumbnailPlaceholder(
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
+    fadeEmpty: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var loaded by remember(artworkUri) { mutableStateOf(false) }
+    val placeholder = MaterialTheme.colorScheme.surfaceVariant
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -707,7 +712,14 @@ private fun ThumbnailImage(
                 // Use offscreen compositing for hardware acceleration during animations
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(
+                // Edge to edge, a song without a cover would end in a hard line against the player's ground; it melts into it instead.
+                if (fadeEmpty && !loaded) {
+                    Modifier.background(Brush.verticalGradient(0f to placeholder, 0.5f to placeholder, 0.8f to placeholder.copy(alpha = 0.45f), 1f to Color.Transparent))
+                } else {
+                    Modifier.background(placeholder)
+                }
+            )
     ) {
         Icon(
             painter = painterResource(R.drawable.music_note),
@@ -728,6 +740,7 @@ private fun ThumbnailImage(
             contentDescription = null,
             contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
             onError = { if (useSharper) useSharper = false },
+            onSuccess = { loaded = true },
             modifier = Modifier.fillMaxSize()
         )
     }
