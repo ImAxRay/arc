@@ -57,13 +57,15 @@ class YouTubeQueue(
                         }
                     }
 
+                    val selected = items.getOrNull(nextResult.currentIndex ?: 0)
+                    if (songsOnly()) items = items.filter { it === selected || !it.isClip() }
                     endpoint = nextResult.endpoint
                     continuation = nextResult.continuation
                     retryCount = 0
                     return@withContext Queue.Status(
                         title = nextResult.title,
                         items = items.map { it.toMediaItem() },
-                        mediaItemIndex = nextResult.currentIndex ?: 0,
+                        mediaItemIndex = items.indexOf(selected).coerceAtLeast(0),
                     )
                 } catch (e: Exception) {
                     lastException = e
@@ -81,6 +83,15 @@ class YouTubeQueue(
         }
     }
 
+    private fun songsOnly(): Boolean {
+        val playlist = endpoint.playlistId
+        val radio = playlist == null || (playlist.startsWith("RD") && !playlist.startsWith("RDCLAK"))
+        return radio && com.metrolist.music.arc.MusicVideos.radioSongsOnly
+    }
+
+    private fun com.metrolist.innertube.models.SongItem.isClip() =
+        musicVideoType != null && musicVideoType != com.metrolist.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.MUSIC_VIDEO_TYPE_ATV
+
     override fun hasNextPage(): Boolean = continuation != null
 
     override suspend fun nextPage(): List<MediaItem> {
@@ -93,7 +104,9 @@ class YouTubeQueue(
                     endpoint = nextResult.endpoint
                     continuation = nextResult.continuation
                     retryCount = 0
-                    return@withContext nextResult.items.map { it.toMediaItem() }
+                    return@withContext nextResult.items
+                        .filter { !songsOnly() || !it.isClip() }
+                        .map { it.toMediaItem() }
                 } catch (e: Exception) {
                     lastException = e
                     retryCount++

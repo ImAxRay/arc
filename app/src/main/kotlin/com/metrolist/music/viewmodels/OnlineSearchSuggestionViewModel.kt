@@ -77,7 +77,7 @@ class OnlineSearchSuggestionViewModel
                             } else {
                                 val result = YouTube.searchSuggestions(query).getOrNull()
                                 val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false) || !context.dataStore.get(com.metrolist.music.arc.ArcSearchVideosKey, false)
 
                                 database
                                     .searchHistory(query)

@@ -1229,6 +1229,11 @@ class MusicService :
             dataStore.data.map { it[HideVideoSongsKey] ?: false }.distinctUntilChanged().collect { cachedHideVideoSongs = it }
         }
         scope.launch {
+            dataStore.data.map { it[com.metrolist.music.arc.ArcRadioSongsOnlyKey] ?: true }.distinctUntilChanged().collect {
+                com.metrolist.music.arc.MusicVideos.radioSongsOnly = it
+            }
+        }
+        scope.launch {
             dataStore.data.map { it[ShufflePlaylistFirstKey] ?: false }.distinctUntilChanged().collect { cachedShufflePlaylistFirst = it }
         }
         scope.launch {
@@ -1985,7 +1990,7 @@ class MusicService :
                                     .filter { it.id != currentMediaId }
                                     .map { it.toMediaItem() }
                                     .filterExplicit(cachedHideExplicit)
-                                    .filterVideoSongs(cachedHideVideoSongs)
+                                    .filterVideoSongs(cachedHideVideoSongs || com.metrolist.music.arc.MusicVideos.radioSongsOnly)
 
                             if (radioItems.isNotEmpty()) {
                                 val itemCount = player.mediaItemCount
@@ -2030,7 +2035,7 @@ class MusicService :
                                         automixItems.value =
                                             firstResult.items.map { song ->
                                                 song.toMediaItem()
-                                            }
+                                            }.filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                     }
                                 }
                         }.onFailure {
@@ -2049,7 +2054,7 @@ class MusicService :
                                                 .map { it.toMediaItem() }
                                         if (filteredItems.isNotEmpty()) {
                                             automixItems.value = filteredItems
-                                        }
+                                        }.filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                     }.onFailure {
                                         YouTube
                                             .next(WatchEndpoint(videoId = currentSong.id))
@@ -2060,6 +2065,7 @@ class MusicService :
                                                     val relatedItems =
                                                         relatedPage.songs
                                                             .filter { it.id != currentSong.id }
+                                                .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                                             .map { it.toMediaItem() }
                                                     if (relatedItems.isNotEmpty()) {
                                                         automixItems.value = relatedItems
@@ -2074,6 +2080,7 @@ class MusicService :
             }
         }
     }
+                                                            .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
 
     fun addToQueueAutomix(
         item: MediaItem,

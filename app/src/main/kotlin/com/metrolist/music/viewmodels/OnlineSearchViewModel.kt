@@ -107,7 +107,7 @@ constructor(
                     summaryPage =
                         resolvedPage
                             .filterExplicit(hideExplicit)
-                            .filterVideoSongs(hideVideoSongs)
+                            .filterVideoSongs(hideVideoSongs || !context.dataStore.get(com.metrolist.music.arc.ArcSearchVideosKey, false))
                             .filterYoutubeShorts(hideYoutubeShorts)
                 }.onFailure {
                     reportException(it)
