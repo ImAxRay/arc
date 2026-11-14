@@ -28,7 +28,7 @@ object BundledTracks {
         val lyricsTag get() = "$key@$lyricsVersion"
     }
 
-    private val tracks = listOf(Track("lynxi_inro", "Inro", "Lynxi", 114, lyricsVersion = 4))
+    private val tracks = listOf(Track("lynxi_inro", "Inro", "Lynxi", 114, lyricsVersion = 5))
 
     fun isBundled(mediaId: String?) = mediaId?.startsWith(PREFIX) == true
 
