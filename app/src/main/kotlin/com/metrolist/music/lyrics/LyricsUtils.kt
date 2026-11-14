@@ -27,6 +27,7 @@ private val PAXSENIX_BG_LINE_REGEX = "^\\[bg:\\s*(.*)\\]$".toRegex()
 // Regex for agent and background markers (existing format)
 private val AGENT_REGEX = "\\{agent:([^}]+)\\}".toRegex()
 private val BACKGROUND_REGEX = "^\\{bg\\}".toRegex()
+private val SHOUT_REGEX = "^\\{shout\\}".toRegex()
 
 @Suppress("RegExpRedundantEscape")
 object LyricsUtils {
@@ -544,6 +545,11 @@ object LyricsUtils {
                     content = content.replaceFirst(BACKGROUND_REGEX, "")
                 }
 
+                val isShout = SHOUT_REGEX.containsMatchIn(content)
+                if (isShout) {
+                    content = content.replaceFirst(SHOUT_REGEX, "")
+                }
+
                 // Parse word-level timestamps from content
                 val wordTimings = parseRichSyncWords(content, index, lines)
                     ?: run {
@@ -559,7 +565,7 @@ object LyricsUtils {
                 if (!isBackground && !agent.isNullOrBlank()) {
                     lastNonBgAgent = agent
                 }
-                result.add(LyricsEntry(lineTimeMs, plainText, wordTimings, agent = if (isBackground) lastNonBgAgent ?: "bg" else agent, isBackground = isBackground))
+                result.add(LyricsEntry(lineTimeMs, plainText, wordTimings, agent = if (isBackground) lastNonBgAgent ?: "bg" else agent, isBackground = isBackground, isShout = isShout))
             }
         }
 

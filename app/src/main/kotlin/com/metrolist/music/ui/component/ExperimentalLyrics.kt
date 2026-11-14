@@ -891,6 +891,10 @@ fun ExperimentalLyrics(
             }
         }
 
+        com.metrolist.music.arc.ShoutBalloons(
+            trigger = activeLineIndices.firstOrNull { lines.getOrNull(it)?.isShout == true } ?: -1,
+        )
+
         LyricsActionOverlay(
             modifier = Modifier.align(Alignment.BottomCenter),
             isAutoScrollEnabled = isAutoScrollEnabled, isSynced = isSynced,

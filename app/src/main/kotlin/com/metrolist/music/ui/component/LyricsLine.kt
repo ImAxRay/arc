@@ -245,7 +245,10 @@ internal fun LyricsLine(
                 // only songs timed word by word fill word by word; a line timed as a whole lights up as one block
                 val effectiveWords = item.words?.takeIf { it.isNotEmpty() && !(romanizeAsMain && isRomanizedAvailable) }
 
-                if (isSynced && effectiveWords != null && (isActiveLine || abs(index - displayedCurrentLineIndex) <= 3) && mainText != null) {
+                if (item.isShout && isSynced && mainText != null) {
+                    val sung = isActiveLine || (displayedCurrentLineIndex - index) in 1..SHOUT_STAYS_BIG_LINES
+                    ShoutText(mainText, sung, isActiveLine, lyricStyle, expressiveAccent, lineColor)
+                } else if (isSynced && effectiveWords != null && (isActiveLine || abs(index - displayedCurrentLineIndex) <= 3) && mainText != null) {
                     WordLevelLyrics(
                         mainText = mainText,
                         words = effectiveWords,
@@ -313,6 +316,46 @@ internal fun LyricsLine(
 }
 
 private const val LINE_AFTERGLOW_MS = 450
+
+private const val SHOUT_SCALE = 1.9f
+private const val SHOUT_STAYS_BIG_LINES = 3
+private const val SHOUT_OVERSHOOT = 0.25f
+
+/**
+ * A line marked {shout} looks like any other line until it is sung, then grows to the biggest size that still fits
+ * on one line, and stays big while the next few lines play.
+ */
+@Composable
+private fun ShoutText(text: String, sung: Boolean, isActive: Boolean, style: TextStyle, activeColor: Color, idleColor: Color) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val measurer = rememberTextMeasurer()
+        val widest = remember(text, style, constraints.maxWidth) {
+            val width = measurer.measure(text, style, maxLines = 1, softWrap = false).size.width.coerceAtLeast(1)
+            (constraints.maxWidth * 0.94f / width).coerceAtLeast(1f)
+        }
+        // the spring overshoots by about a quarter of its travel, so the resting size leaves room for the bounce
+        val fit = ((widest + SHOUT_OVERSHOOT) / (1f + SHOUT_OVERSHOOT)).coerceIn(1f, SHOUT_SCALE)
+        val growRaw by animateFloatAsState(
+            if (sung) fit else 1f,
+            androidx.compose.animation.core.spring(dampingRatio = 0.42f, stiffness = 260f),
+            label = "shoutGrow",
+        )
+        val grow = growRaw.coerceAtMost(widest)
+        val color by androidx.compose.animation.animateColorAsState(if (isActive) activeColor else idleColor, tween(220), label = "shoutColor")
+        Text(
+            text = text,
+            style = style.copy(
+                color = color,
+                fontSize = style.fontSize * grow,
+                lineHeight = style.lineHeight * grow,
+                fontWeight = if (sung) FontWeight.Black else style.fontWeight,
+            ),
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
 
 @Composable
 private fun WordLevelLyrics(
