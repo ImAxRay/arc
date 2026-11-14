@@ -14,6 +14,7 @@ import com.metrolist.music.arc.UntitledMusic
 /** Plays songs stored on the phone straight from their file, leaving the stream resolver and its caches out. */
 @UnstableApi
 class DeviceFileDataSource(
+    private val context: Context,
     private val file: DataSource,
     private val stream: DataSource,
     private val untitled: DataSource? = null,
@@ -38,7 +39,7 @@ class DeviceFileDataSource(
         val target = if (local) file else stream
         open = target
         val spec = when {
-            bundled -> dataSpec.withUri(BundledTracks.audioUri(id))
+            bundled -> dataSpec.withUri(BundledTracks.audioUri(context, id))
             local -> dataSpec.withUri(DeviceMusic.fileUri(id) ?: error("Bad device song id $id"))
             else -> dataSpec
         }
@@ -62,6 +63,6 @@ class DeviceFileDataSource(
         private val untitled: DataSource.Factory? = null,
     ) : DataSource.Factory {
         override fun createDataSource() =
-            DeviceFileDataSource(DefaultDataSource(context, false), stream.createDataSource(), untitled?.createDataSource())
+            DeviceFileDataSource(context, DefaultDataSource(context, false), stream.createDataSource(), untitled?.createDataSource())
     }
 }

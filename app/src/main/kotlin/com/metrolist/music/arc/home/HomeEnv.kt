@@ -111,7 +111,7 @@ class HomeEnv(
             playerConnection.togglePlayPause()
         } else {
             playerConnection.playQueue(
-                if (autoRadioQueue) {
+                if (autoRadioQueue && !isOwnFile(song.id)) {
                     YouTubeQueue.radio(song.toMediaMetadata())
                 } else {
                     ListQueue(title = song.title, items = listOf(song.toMediaItem()))

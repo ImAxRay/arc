@@ -15,11 +15,15 @@ import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.LocalDateTime
 
 private val BundledAddedKey = stringSetPreferencesKey("arcBundledAdded")
 
-/** Songs shipped inside the APK (audio, cover and word-timed lyrics in assets/bundled), added to the library once. */
+/**
+ * Songs shipped inside the APK (audio, cover and word-timed lyrics in assets/bundled), added to the library once. The audio
+ * is copied into app storage, so a song keeps playing after a later build leaves its files out.
+ */
 object BundledTracks {
     private const val PREFIX = "BUNDLED_"
     const val DIAL_SLOT = 4
@@ -30,11 +34,33 @@ object BundledTracks {
 
     private val tracks = listOf(Track("lynxi_inro", "Inro", "Lynxi", 114, lyricsVersion = 5))
 
+    /** The first bundled song's id: a fresh install's Continue tile until something else was played. */
+    val firstSongId get() = PREFIX + tracks.first().key
+
     fun isBundled(mediaId: String?) = mediaId?.startsWith(PREFIX) == true
 
-    fun audioPath(mediaId: String) = "bundled/${mediaId.removePrefix(PREFIX)}.ogg"
+    private fun audioPath(mediaId: String) = "bundled/${mediaId.removePrefix(PREFIX)}.ogg"
 
-    fun audioUri(mediaId: String): Uri = "asset:///${audioPath(mediaId)}".toUri()
+    private fun savedAudio(context: Context, key: String) = File(context.filesDir, "bundled/$key.ogg")
+
+    fun audioUri(context: Context, mediaId: String): Uri =
+        savedAudio(context, mediaId.removePrefix(PREFIX)).takeIf { it.exists() }?.let(Uri::fromFile)
+            ?: "asset:///${audioPath(mediaId)}".toUri()
+
+    fun openAudio(context: Context, mediaId: String) =
+        savedAudio(context, mediaId.removePrefix(PREFIX)).takeIf { it.exists() }?.inputStream()
+            ?: context.assets.open(audioPath(mediaId))
+
+    private fun shipped(context: Context) = context.assets.list("bundled").orEmpty().toSet()
+
+    private fun saveAudio(context: Context, key: String) {
+        val target = savedAudio(context, key)
+        if (target.exists()) return
+        target.parentFile?.mkdirs()
+        val part = File(target.path + ".part")
+        context.assets.open("bundled/$key.ogg").use { input -> part.outputStream().use { input.copyTo(it) } }
+        part.renameTo(target)
+    }
 
     /**
      * Adds each new track to the library and pins it to the speed dial; a track the user removes stays removed.
@@ -42,12 +68,16 @@ object BundledTracks {
      */
     suspend fun addNew(context: Context, database: MusicDatabase) = withContext(Dispatchers.IO) {
         val added = context.dataStore.data.first()[BundledAddedKey].orEmpty()
+        val shipped = shipped(context)
+        val tracks = tracks.filter { "${it.key}.ogg" in shipped }
+        tracks.filter { it.key in added }.forEach { saveAudio(context, it.key) }
         val newLyrics = tracks.filter { it.key in added && it.lyricsTag !in added }
         newLyrics.forEach { t -> database.query { upsert(LyricsEntity(PREFIX + t.key, lyrics(context, t), t.artist)) } }
         val fresh = tracks.filter { it.key !in added }
         if (fresh.isEmpty() && newLyrics.isEmpty()) return@withContext
         fresh.forEach { t ->
             val id = PREFIX + t.key
+            saveAudio(context, t.key)
             val art = context.assets.open("bundled/${t.key}.jpg").use { DeviceMusic.saveArtBytes(context, id, it.readBytes()) }
             val lyrics = lyrics(context, t)
             val artistId = database.artistByName(t.artist)?.id ?: ArtistEntity.generateArtistId().also {

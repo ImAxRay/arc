@@ -36,28 +36,26 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.R
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.ui.utils.resize
-import com.metrolist.music.utils.makeTimeString
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun topPicksAvailable(env: HomeEnv): Boolean {
     val forgotten by env.viewModel.forgottenFavorites.collectAsStateWithLifecycle()
-    return env.mediaMetadata.value != null || !forgotten.isNullOrEmpty()
+    val discover by env.viewModel.dailyDiscover.collectAsStateWithLifecycle()
+    return !forgotten.isNullOrEmpty() || discover.orEmpty().any { it.recommendation is SongItem }
 }
 
-/** The day and a greeting, then the song you stopped on as one big card with two smaller picks beside it. */
+/** The day and a greeting, then two picks side by side: a forgotten favourite and one for you. */
 @Composable
 fun TopPicksModule(env: HomeEnv) {
     val forgotten by env.viewModel.forgottenFavorites.collectAsStateWithLifecycle()
     val discover by env.viewModel.dailyDiscover.collectAsStateWithLifecycle()
-    val current = env.mediaMetadata.value
-    val playing = env.isPlaying.value
 
     DayHeader()
 
     val rediscover = forgotten.orEmpty().getOrNull(0)
-    val forYou = (discover.orEmpty().firstNotNullOfOrNull { it.recommendation as? SongItem })
+    val forYou = discover.orEmpty().firstNotNullOfOrNull { it.recommendation as? SongItem }
     val secondForgotten = forgotten.orEmpty().getOrNull(1)
 
     Row(
@@ -66,52 +64,33 @@ fun TopPicksModule(env: HomeEnv) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .height((env.width - 40.dp) * 2 / 3),
+                .height((env.width - 40.dp) / 2),
     ) {
-        if (current != null) {
-            // time left is read once per pause, not ticked, so an idle Home draws nothing
-            val left =
-                remember(current.id, playing) {
-                    val player = env.playerConnection.player
-                    val duration = player.duration
-                    if (!playing && duration > 0) makeTimeString(duration - player.currentPosition) else null
-                }
+        rediscover?.let { song ->
             PickCard(
-                label = stringResource(if (playing) R.string.arc_home_now_playing else R.string.arc_home_continue),
-                title = current.title,
-                subtitle = listOfNotNull(current.artists.joinToString { it.name }.ifEmpty { null }, left?.let { stringResource(R.string.arc_home_time_left, it) }).joinToString(" · "),
-                thumbnail = current.thumbnailUrl,
-                big = true,
-                modifier = Modifier.weight(2f).fillMaxHeight().homeTile(onClick = { env.playerConnection.togglePlayPause() }),
+                label = stringResource(R.string.arc_home_rediscover),
+                title = song.title,
+                subtitle = null,
+                thumbnail = song.thumbnailUrl,
+                modifier = Modifier.weight(1f).fillMaxHeight().homeTile(onClick = { env.playSong(song) }, onLongClick = { env.showSongMenu(song) }),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).fillMaxHeight()) {
-            rediscover?.let { song ->
-                PickCard(
-                    label = stringResource(R.string.arc_home_rediscover),
-                    title = song.title,
-                    subtitle = null,
-                    thumbnail = song.thumbnailUrl,
-                    modifier = Modifier.weight(1f).fillMaxWidth().homeTile(onClick = { env.playSong(song) }, onLongClick = { env.showSongMenu(song) }),
-                )
-            }
-            if (forYou != null) {
-                PickCard(
-                    label = stringResource(R.string.arc_home_for_you),
-                    title = forYou.title,
-                    subtitle = null,
-                    thumbnail = forYou.thumbnail,
-                    modifier = Modifier.weight(1f).fillMaxWidth().homeTile(onClick = { env.playYtSong(forYou) }, onLongClick = { env.showYtItemMenu(forYou) }),
-                )
-            } else if (secondForgotten != null) {
-                PickCard(
-                    label = stringResource(R.string.arc_home_rediscover),
-                    title = secondForgotten.title,
-                    subtitle = null,
-                    thumbnail = secondForgotten.thumbnailUrl,
-                    modifier = Modifier.weight(1f).fillMaxWidth().homeTile(onClick = { env.playSong(secondForgotten) }, onLongClick = { env.showSongMenu(secondForgotten) }),
-                )
-            }
+        if (forYou != null) {
+            PickCard(
+                label = stringResource(R.string.arc_home_for_you),
+                title = forYou.title,
+                subtitle = null,
+                thumbnail = forYou.thumbnail,
+                modifier = Modifier.weight(1f).fillMaxHeight().homeTile(onClick = { env.playYtSong(forYou) }, onLongClick = { env.showYtItemMenu(forYou) }),
+            )
+        } else if (secondForgotten != null) {
+            PickCard(
+                label = stringResource(R.string.arc_home_rediscover),
+                title = secondForgotten.title,
+                subtitle = null,
+                thumbnail = secondForgotten.thumbnailUrl,
+                modifier = Modifier.weight(1f).fillMaxHeight().homeTile(onClick = { env.playSong(secondForgotten) }, onLongClick = { env.showSongMenu(secondForgotten) }),
+            )
         }
     }
 }
@@ -145,7 +124,7 @@ private fun DayHeader() {
 }
 
 @Composable
-private fun PickCard(
+internal fun PickCard(
     label: String,
     title: String,
     subtitle: String?,

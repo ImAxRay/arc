@@ -41,7 +41,7 @@ suspend fun shareSongFile(context: Context, mediaId: String, name: String? = nul
         val base = name?.replace(Regex("[\\\\/:*?\"<>|]"), " ")?.trim()?.takeIf { it.isNotEmpty() } ?: mediaId
         if (BundledTracks.isBundled(mediaId)) {
             val target = File(dir, "$base.ogg")
-            context.assets.open(BundledTracks.audioPath(mediaId)).use { input -> target.outputStream().use { input.copyTo(it) } }
+            BundledTracks.openAudio(context, mediaId).use { input -> target.outputStream().use { input.copyTo(it) } }
             target
         } else if (DeviceMusic.isDeviceSong(mediaId)) {
             // a MediaStore link can't be handed on to another app, so the file itself goes through Arc's provider

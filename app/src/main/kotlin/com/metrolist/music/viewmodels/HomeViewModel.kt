@@ -158,6 +158,12 @@ class HomeViewModel @Inject constructor(
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
 
+    /** The song the dial's Continue tile falls back to when the player is empty: the last one played, else the bundled song. */
+    val continueSong: StateFlow<Song?> =
+        combine(database.latestEvent(), database.song(BundledTracks.firstSongId)) { last, bundled -> last?.song ?: bundled }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
     val pinnedSpeedDialItems: StateFlow<List<SpeedDialItem>> =
         database.speedDialDao.getAll()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

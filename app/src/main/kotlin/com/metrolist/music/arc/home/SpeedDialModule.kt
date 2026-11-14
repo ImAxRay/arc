@@ -33,9 +33,11 @@ import com.metrolist.music.arc.SpeedDialShortcut
 import com.metrolist.music.arc.SpeedDialSkeleton
 import com.metrolist.music.arc.rememberTiltEye
 import com.metrolist.music.arc.speedDialCellSize
+import com.metrolist.music.db.entities.Song
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.RandomizeGridItem
 import com.metrolist.music.ui.component.SpeedDialGridItem
+import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -55,13 +57,17 @@ internal fun speedDialAvailable(env: HomeEnv): Boolean {
 
 @Composable
 fun SpeedDialModule(env: HomeEnv) {
-    val allItems by env.viewModel.speedDialItems.collectAsStateWithLifecycle()
+    val dialItems by env.viewModel.speedDialItems.collectAsStateWithLifecycle()
+    val continueSong by env.viewModel.continueSong.collectAsStateWithLifecycle()
     val isRandomizing by env.viewModel.isRandomizing.collectAsStateWithLifecycle()
     val speedDialRows by rememberPreference(SpeedDialRowsKey, 3)
-    if (allItems.isEmpty()) {
+    if (dialItems.isEmpty()) {
         SpeedDialSkeleton(speedDialRows)
         return
     }
+    val continueId = env.mediaMetadata.value?.id ?: continueSong?.id
+    // the Continue tile's song isn't repeated in the grid
+    val allItems = remember(dialItems, continueId) { dialItems.filterNot { it.id == continueId } }
     val scope = rememberCoroutineScope()
     var randomizeJob by remember { mutableStateOf<Job?>(null) }
 
@@ -84,7 +90,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val tiltEye = rememberTiltEye()
 
     val big = rows >= 3 && columns >= 3
-    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big) }
+    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, continueTile = continueId != null) }
     val capacities = pages.map { page -> page.count { it.button == null } }
     // only whole pages, at most three; a half-empty last page looks broken
     var pageCount = 1
@@ -110,6 +116,8 @@ fun SpeedDialModule(env: HomeEnv) {
                                 .size(itemWidth * slot.span)
                                 .padding(4.dp)
                         when (slot.button) {
+                            DialButton.CONTINUE -> ContinueTile(env, continueSong, big = slot.span > 1, modifier = cell)
+
                             DialButton.NEW_PLAYLIST -> {
                                 var showCreatePlaylist by remember { mutableStateOf(false) }
                                 if (showCreatePlaylist) CreatePlaylistDialog(onDismiss = { showCreatePlaylist = false })
@@ -163,31 +171,25 @@ fun SpeedDialModule(env: HomeEnv) {
     }
 }
 
-internal enum class DialButton { NEW_PLAYLIST, MOODS, RANDOM }
+internal enum class DialButton { CONTINUE, NEW_PLAYLIST, MOODS, RANDOM }
 
 /** One tile on a dial page, in cells: a square [span] cells wide, holding an item or one of the first page's buttons. */
 internal data class DialSlot(val col: Int, val row: Int, val span: Int = 1, val button: DialButton? = null)
 
 /**
- * Where tiles sit on one dial page. The first page keeps its buttons in the bottom-right corner (random in the corner, new
- * playlist above it, moods beside it). With [big], each page has one 2x2 tile, moving corner to corner from page to page,
- * and it comes first so it gets the page's top item.
+ * Where tiles sit on one dial page. The first page opens with the Continue tile in the top-left corner, 2x2 when [big]
+ * (the top item takes the spot when there is nothing to continue), and keeps its buttons in the bottom-right corner
+ * (random in the corner, new playlist above it, moods beside it). Later pages are plain grids.
  */
-internal fun dialPageSlots(page: Int, columns: Int, rows: Int, big: Boolean): List<DialSlot> {
+internal fun dialPageSlots(page: Int, columns: Int, rows: Int, big: Boolean, continueTile: Boolean = true): List<DialSlot> {
     val taken = Array(rows) { BooleanArray(columns) }
     val slots = mutableListOf<DialSlot>()
     fun place(slot: DialSlot) {
         for (r in slot.row until slot.row + slot.span) for (c in slot.col until slot.col + slot.span) taken[r][c] = true
         slots += slot
     }
-    if (big) {
-        val (col, row) =
-            when (page % 3) {
-                0 -> 0 to 0
-                1 -> (columns - 2) to (rows - 2)
-                else -> (columns - 2) to 0
-            }
-        place(DialSlot(col, row, span = 2))
+    if (page == 0 && (big || continueTile)) {
+        place(DialSlot(0, 0, span = if (big) 2 else 1, button = if (continueTile) DialButton.CONTINUE else null))
     }
     val buttons = mutableListOf<DialSlot>()
     if (page == 0) {
@@ -198,4 +200,42 @@ internal fun dialPageSlots(page: Int, columns: Int, rows: Int, big: Boolean): Li
     }
     for (r in 0 until rows) for (c in 0 until columns) if (!taken[r][c]) place(DialSlot(c, r))
     return slots + buttons
+}
+
+/**
+ * Page one's big tile: the song in the player (tap pauses or resumes it), else the last one played, else the song bundled
+ * with Arc, which a fresh install plays from here. Time left is read once per pause, not ticked.
+ */
+@Composable
+private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: Modifier) {
+    val current = env.mediaMetadata.value
+    val playing = env.isPlaying.value
+    val title = current?.title ?: fallback?.title ?: return
+    val artists = current?.artists?.joinToString { it.name } ?: fallback?.artists?.joinToString { it.name }
+    val left =
+        remember(current?.id, playing) {
+            val player = env.playerConnection.player
+            val duration = player.duration
+            if (current != null && !playing && duration > 0) makeTimeString(duration - player.currentPosition) else null
+        }
+    PickCard(
+        label = stringResource(if (current != null && playing) R.string.arc_home_now_playing else R.string.arc_home_continue),
+        title = title,
+        subtitle =
+            listOfNotNull(artists?.ifEmpty { null }, left?.let { stringResource(R.string.arc_home_time_left, it) })
+                .joinToString(" · ")
+                .ifEmpty { null },
+        thumbnail = current?.thumbnailUrl ?: fallback?.thumbnailUrl,
+        big = big,
+        modifier =
+            modifier.homeTile(
+                onClick = {
+                    when {
+                        current != null -> env.playerConnection.togglePlayPause()
+                        fallback != null -> env.playSong(fallback)
+                    }
+                },
+                onLongClick = fallback?.takeIf { current == null }?.let { song -> { env.showSongMenu(song) } },
+            ),
+    )
 }
