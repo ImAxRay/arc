@@ -6,13 +6,8 @@
 package com.metrolist.music.ui.component
 
 import android.graphics.BlurMaskFilter
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -302,11 +297,12 @@ internal fun LyricsLine(
         }
 
         if (item.isBackground) {
-            AnimatedVisibility(
-                visible = bgVisible,
-                enter = expandVertically(tween(300)) + fadeIn(tween(durationMillis = 250, delayMillis = 100)),
-                exit = shrinkVertically(tween(300)) + fadeOut(tween(250))
-            ) {
+            // An ad-lib keeps its space and only fades, so the lines under it never move when it comes or goes.
+            val shown by animateFloatAsState(if (bgVisible) 1f else 0f, tween(if (bgVisible) 450 else 700), label = "adLib")
+            Box(Modifier.graphicsLayer {
+                alpha = shown
+                translationY = (1f - shown) * 6.dp.toPx()
+            }) {
                 LyricContent()
             }
         } else {

@@ -108,6 +108,7 @@ import com.metrolist.music.constants.ShowIntervalIndicatorKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
+import com.metrolist.music.lyrics.LyricsEntry
 import com.metrolist.music.lyrics.LyricsTranslationHelper
 import com.metrolist.music.lyrics.LyricsUtils.findActiveLineIndices
 import com.metrolist.music.lyrics.lyricsTextLooksSynced
@@ -332,7 +333,6 @@ fun ExperimentalLyrics(
         }
     }
 
-    var lastMainMaxSeen by remember(lyrics, lines) { mutableIntStateOf(-1) }
     var smoothPositionForSync by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(lyrics, lines) {
@@ -343,6 +343,7 @@ fun ExperimentalLyrics(
         
         var lastPlayerPos = playerConnection.player.currentPosition
         var lastUpdateTime = System.currentTimeMillis()
+        var lastEffectivePosition = -1L
         
         while (isActive) {
             withFrameNanos { _ -> }
@@ -370,6 +371,14 @@ fun ExperimentalLyrics(
             val lyricsOffset = currentSong?.song?.lyricsOffset ?: 0
             val effectivePosition = position + lyricsOffset
             
+            // A seek, a tapped line or a restart moves the position in one go; the scroll target follows it either way.
+            val jumped = lastEffectivePosition >= 0 && abs(effectivePosition - lastEffectivePosition) > LYRICS_JUMP_MS
+            lastEffectivePosition = effectivePosition
+            if (jumped) {
+                scrollTargetIndex = mainLineAt(lines, effectivePosition)
+                previousScrollActiveIndices = emptySet()
+            }
+
             val initialActiveIndices = findActiveLineIndices(lines, effectivePosition)
             val scrollActiveIndicesRaw = findActiveLineIndices(lines, effectivePosition + (if (hasWordTimings) 0L else 250L))
             
@@ -385,17 +394,8 @@ fun ExperimentalLyrics(
                 }
             }
             
-            val newActiveIndices = initialActiveIndices.toMutableSet()
-            for (i in initialActiveIndices) {
-                if (lines.getOrNull(i)?.isBackground == true) {
-                    for (j in i - 1 downTo 0) {
-                        if (lines.getOrNull(j)?.isBackground == false) {
-                            newActiveIndices.add(j)
-                            break
-                        }
-                    }
-                }
-            }
+            // An ad-lib lights up on its own; its main line only holds the scroll (above), so a finished line doesn't light up again.
+            val newActiveIndices = initialActiveIndices
 
             val scrollMax = scrollActiveIndices
                 .filter { lines.getOrNull(it)?.isBackground == false }
@@ -423,23 +423,17 @@ fun ExperimentalLyrics(
 
             if (shouldScroll) {
                 val targetToScroll = when {
-                    isSeeking -> scrollMax
+                    isSeeking -> scrollMax.takeIf { it != -1 } ?: mainLineAt(lines, effectivePosition)
                     !isCurrentTargetStillActive && anyStillActive -> scrollMax
-                    !isCurrentTargetStillActive && !anyStillActive -> {
-                        (lastMainMaxSeen + 1 until lines.size).firstOrNull {
-                            lines.getOrNull(it)?.isBackground == false
-                        } ?: scrollTargetIndex
-                    }
+                    !isCurrentTargetStillActive && !anyStillActive ->
+                        lines.indices.firstOrNull { !lines[it].isBackground && lines[it].time > effectivePosition } ?: scrollTargetIndex
                     else -> scrollMax
                 }
                 if (targetToScroll != -1 && (isSeeking || targetToScroll > scrollTargetIndex)) {
                     scrollTargetIndex = targetToScroll
                 }
             }
-            
-            if (scrollMax > lastMainMaxSeen && scrollMax != -1) {
-                lastMainMaxSeen = scrollMax
-            }
+
             
             previousScrollActiveIndices = scrollActiveIndices
             activeLineIndices = newActiveIndices
@@ -510,8 +504,9 @@ fun ExperimentalLyrics(
             var currentY = 0f
             for (i in activeListIndex - 1 downTo 0) {
                 val item = mergedLyricsList[i]
+                val below = mergedLyricsList[i + 1]
                 val height = itemHeights[i]?.toFloat() ?: (if (item is LyricsListItem.Indicator) indicatorHeightPx else lineHeightPx)
-                val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
+                val noGap = (below as? LyricsListItem.Line)?.entry?.isBackground == true || below is LyricsListItem.Indicator
                 currentY -= (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() })
                 map[i] = currentY
             }
@@ -544,8 +539,9 @@ fun ExperimentalLyrics(
             if (mergedLyricsList.isEmpty() || activeListIndex == -1) return@remember 0f
             val totalAbove = (0 until activeListIndex).sumOf { i ->
                 val item = mergedLyricsList[i]
+                val below = mergedLyricsList[i + 1]
                 val height = itemHeights[i]?.toFloat() ?: (if (item is LyricsListItem.Indicator) indicatorHeightPx else constraintLineHeightPx)
-                val noGap = (item as? LyricsListItem.Line)?.entry?.isBackground == true || item is LyricsListItem.Indicator
+                val noGap = (below as? LyricsListItem.Line)?.entry?.isBackground == true || below is LyricsListItem.Indicator
                 (height + if (noGap) 0f else with(density) { LYRICS_ITEM_GAP_DP.toPx() }).toDouble()
             }.toFloat()
             with(density) { 40.dp.toPx() } + totalAbove
@@ -692,14 +688,8 @@ fun ExperimentalLyrics(
         val latestResyncLyrics by rememberUpdatedState(
             newValue = {
                 flingJob?.cancel()
-                var target = scrollTargetIndex
-                if (target == -1) {
-                    target =
-                        findActiveLineIndices(
-                            lines,
-                            currentPositionState + (currentSong?.song?.lyricsOffset ?: 0),
-                        ).maxOrNull() ?: -1
-                }
+                val target = mainLineAt(lines, currentPositionState + (currentSong?.song?.lyricsOffset ?: 0))
+                    .takeIf { it != -1 } ?: scrollTargetIndex
                 if (target != -1) {
                     reanchorTo(target)
                 }
@@ -842,9 +832,7 @@ fun ExperimentalLyrics(
                                     
                                     // Once shown, an ad-lib stays until its line is a few lines back, by then off screen,
                                     // so it never leaves a hole or pulls the lines under it up mid-song.
-                                    val bgPassed = item.isBackground && pairedMainLineIndex in 0..deferredCurrentLineIndex &&
-                                        deferredCurrentLineIndex - pairedMainLineIndex <= AD_LIB_KEEP_LINES
-                                    val bgVisible = item.isBackground && (activeLineIndices.contains(pairedMainLineIndex) || activeLineIndices.contains(index) || isInGapWithMain || bgPassed)
+                                    val bgVisible = item.isBackground && (!isSynced || activeLineIndices.contains(pairedMainLineIndex) || activeLineIndices.contains(index) || isInGapWithMain)
                                     
                                     LyricsLine(
                                         index = index,
@@ -977,4 +965,8 @@ fun ExperimentalLyrics(
     }
 }
 
-private const val AD_LIB_KEEP_LINES = 3
+private const val LYRICS_JUMP_MS = 1500L
+
+/** The last main (not ad-lib) line that has started by [position], or -1 before the first one. */
+private fun mainLineAt(lines: List<LyricsEntry>, position: Long) =
+    lines.indexOfLast { !it.isBackground && it.time <= position }
