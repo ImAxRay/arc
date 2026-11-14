@@ -38,11 +38,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +54,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.metrolist.music.R
 import com.metrolist.music.arc.ArcMotion
+import com.metrolist.music.arc.GlowArea
+import com.metrolist.music.arc.LocalPressGlow
+import com.metrolist.music.constants.ThumbnailCornerRadius
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -75,8 +82,17 @@ private const val PRESS_DELAY_MS = 60L
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Modifier.homeTile(onClick: () -> Unit, onLongClick: (() -> Unit)? = null): Modifier {
+fun Modifier.homeTile(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    cover: String? = null,
+    glowArea: GlowArea = GlowArea.Whole,
+    glowCorner: Dp = ThumbnailCornerRadius,
+): Modifier {
     val scale = remember { Animatable(1f) }
+    val glow = LocalPressGlow.current
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val layoutDensity = LocalDensity.current
     val tiltX = remember { Animatable(0f) }
     val tiltY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -88,9 +104,11 @@ fun Modifier.homeTile(onClick: () -> Unit, onLongClick: (() -> Unit)? = null): M
         scope.launch { scale.animateTo(TILE_PRESSED_SCALE, tween(80)) }
         scope.launch { tiltY.animateTo(x.coerceIn(-1f, 1f) * TILE_TILT, tween(80)) }
         scope.launch { tiltX.animateTo(-y.coerceIn(-1f, 1f) * TILE_TILT, tween(80)) }
+        glow?.press(placed[0], with(layoutDensity) { glowCorner.toPx() }, glowArea, cover)
     }
 
     fun release() {
+        glow?.release()
         scope.launch { scale.animateTo(1f, ArcMotion.springy()) }
         scope.launch { tiltX.animateTo(0f, ArcMotion.bouncy()) }
         scope.launch { tiltY.animateTo(0f, ArcMotion.bouncy()) }
@@ -102,7 +120,8 @@ fun Modifier.homeTile(onClick: () -> Unit, onLongClick: (() -> Unit)? = null): M
         rotationX = tiltX.value
         rotationY = tiltY.value
         cameraDistance = 12f * density
-    }.pointerInput(Unit) {
+    }.onPlaced { placed[0] = it }
+        .pointerInput(Unit) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             val slop = viewConfiguration.touchSlop

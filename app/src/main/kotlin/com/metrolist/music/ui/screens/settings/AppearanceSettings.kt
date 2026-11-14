@@ -57,6 +57,7 @@ import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.ArcHomeBackgroundKey
+import com.metrolist.music.arc.ArcPressGlowKey
 import com.metrolist.music.arc.SpeedDialRowChoices
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.ArcTiltCoversKey
@@ -200,6 +201,7 @@ fun AppearanceSettings(
         )
     }
     val (tiltCovers, onTiltCoversChange) = rememberPreference(ArcTiltCoversKey, defaultValue = false)
+    val (pressGlow, onPressGlowChange) = rememberPreference(ArcPressGlowKey, defaultValue = true)
     val (speedDialRows, onSpeedDialRowsChange) = rememberPreference(SpeedDialRowsKey, defaultValue = 3)
     var showSpeedDialRowsDialog by rememberSaveable { mutableStateOf(false) }
     if (showSpeedDialRowsDialog) {
@@ -348,6 +350,7 @@ fun AppearanceSettings(
                     switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange),
                     switchItem(R.drawable.palette, R.string.enable_dynamic_icon, R.string.enable_dynamic_icon_desc, enableDynamicIcon, onEnableDynamicIconChange),
                     switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCoversChange),
+                    switchItem(R.drawable.gradient, R.string.arc_press_glow, R.string.arc_press_glow_desc, pressGlow, onPressGlowChange),
                 ),
         )
 

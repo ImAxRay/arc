@@ -59,6 +59,7 @@ fun FirstLookChoice() {
                     it[ArcHomeBackgroundKey] = (if (pretty) HomeBackground.FIELD else HomeBackground.OFF).name
                     it[ArcTiltCoversKey] = pretty
                     it[ArcMotionCoversKey] = pretty
+                    it[ArcPressGlowKey] = pretty
                 }
             }
         }

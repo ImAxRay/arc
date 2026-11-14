@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -50,6 +52,10 @@ import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.CapsuleGap
 import com.metrolist.music.arc.CapsuleSize
 import com.metrolist.music.arc.HomeBackdrop
+import com.metrolist.music.arc.ArcPressGlowKey
+import com.metrolist.music.arc.LocalPressGlow
+import com.metrolist.music.arc.PressGlowLayer
+import com.metrolist.music.arc.rememberPressGlow
 import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.TopBarEndPadding
 import com.metrolist.music.arc.home.HomeEnv
@@ -166,6 +172,13 @@ fun HomeScreen(
         val showHomeLine by rememberPreference(ArcHomeLineKey, true)
         val homeBackground by rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD)
         val listenTogetherInTopBar by rememberPreference(ListenTogetherInTopBarKey, true)
+        val pressGlowOn by rememberPreference(ArcPressGlowKey, true)
+        val pressGlow =
+            rememberPressGlow(
+                enabled = pressGlowOn,
+                dark = MaterialTheme.colorScheme.background.luminance() < 0.5f,
+                fallback = MaterialTheme.colorScheme.primary,
+            )
         HomeBackdrop(homeBackground, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.primary)
         BoxWithConstraints(
             modifier =
@@ -208,15 +221,18 @@ fun HomeScreen(
                 }
             val shown = HomeModuleOrder.mapNotNull { id -> key(id) { HomeModules.getValue(id).takeIf { it.available(env) } } }
 
-            LazyColumn(
-                state = lazylistState,
-                contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
-            ) {
-                item(key = "day", contentType = "day") { HomeDayHeader(lazylistState) }
-                shown.forEach { module ->
-                    item(key = module.id.key, contentType = module.id.key) { module.content(env) }
+            CompositionLocalProvider(LocalPressGlow provides pressGlow) {
+                LazyColumn(
+                    state = lazylistState,
+                    contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
+                ) {
+                    item(key = "day", contentType = "day") { HomeDayHeader(lazylistState) }
+                    shown.forEach { module ->
+                        item(key = module.id.key, contentType = module.id.key) { module.content(env) }
+                    }
                 }
             }
+            PressGlowLayer(pressGlow)
 
             HideOnScrollFAB(
                 visible = !ARC_HOME_SPEED_DIAL_ONLY && (allLocalItems.isNotEmpty() || allYtItems.isNotEmpty()),

@@ -127,6 +127,8 @@ private fun ReleaseRadarTile(album: AlbumItem, viewModel: ReleaseRadarViewModel,
         badges = { if (kind != null) ReleaseTag(kind) },
         modifier =
             Modifier.homeTile(
+                cover = album.thumbnail,
+                glowArea = GlowArea.Cover,
                 // A release with one song just plays it. Anything longer opens, so you can see what's on it.
                 onClick = {
                     scope.launch {

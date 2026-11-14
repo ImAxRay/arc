@@ -3,6 +3,8 @@ package com.metrolist.music.arc
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -23,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -102,12 +106,30 @@ internal fun PlayButton(
     val held = remember { mutableStateOf(false) }
     val snippet by com.metrolist.music.arc.snippet.Snippet.recording.collectAsState()
     val stopsSnippet = snippet?.locked == true
+    val interactions = remember { MutableInteractionSource() }
+    val glow = rememberPressDisc(interactions)
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
                 .tapBounce()
                 .size(PlaySize)
+                .drawBehind {
+                    val g = glow.value
+                    if (g > 0f) {
+                        val radius = size.minDimension * 0.95f
+                        drawCircle(
+                            Brush.radialGradient(
+                                0f to fill.copy(alpha = 0.6f * g),
+                                0.5f to fill.copy(alpha = 0.35f * g),
+                                1f to Color.Transparent,
+                                center = center,
+                                radius = radius,
+                            ),
+                            radius = radius,
+                        )
+                    }
+                }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
@@ -130,6 +152,8 @@ internal fun PlayButton(
                 }.clip(CircleShape)
                 .background(fill)
                 .combinedClickable(
+                    interactionSource = interactions,
+                    indication = LocalIndication.current,
                     onClick = { if (stopsSnippet) com.metrolist.music.arc.snippet.Snippet.stop("stop tapped") else onClick() },
                     onLongClick = {
                         if (stopsSnippet) return@combinedClickable

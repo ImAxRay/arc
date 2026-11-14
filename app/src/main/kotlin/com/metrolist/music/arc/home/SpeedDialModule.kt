@@ -158,7 +158,7 @@ fun SpeedDialModule(env: HomeEnv) {
                                             isPlaying = env.isPlaying.value,
                                             tiltEye = tiltEye,
                                             thumbnailSize = if (slot.span > 1) 544 else 200,
-                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }).fillMaxSize(),
+                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail).fillMaxSize(),
                                         )
                                     }
                                 }
@@ -240,6 +240,7 @@ private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: 
                     }
                 },
                 onLongClick = fallback?.takeIf { current == null }?.let { song -> { env.showSongMenu(song) } },
+                cover = current?.thumbnailUrl ?: fallback?.thumbnailUrl,
             ),
     )
 }

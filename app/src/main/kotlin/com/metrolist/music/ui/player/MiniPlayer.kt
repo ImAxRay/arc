@@ -87,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
+import com.metrolist.music.arc.GlowFogSurface
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
@@ -416,6 +417,7 @@ private fun NewMiniPlayer(
                 }
                 else -> {}
             }
+            GlowFogSurface(cover = mediaMetadata?.thumbnailUrl, interactions = interactionSource, corner = 32.dp)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),

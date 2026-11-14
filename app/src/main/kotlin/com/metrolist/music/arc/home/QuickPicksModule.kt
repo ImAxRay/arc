@@ -40,7 +40,7 @@ fun QuickPicksModule(env: HomeEnv) {
                     title = song.title,
                     subtitle = null,
                     thumbnail = song.thumbnailUrl,
-                    modifier = Modifier.size(card).homeTile(onClick = { env.playSong(song) }, onLongClick = { env.showSongMenu(song) }),
+                    modifier = Modifier.size(card).homeTile(onClick = { env.playSong(song) }, onLongClick = { env.showSongMenu(song) }, cover = song.thumbnailUrl),
                 )
             }
         }

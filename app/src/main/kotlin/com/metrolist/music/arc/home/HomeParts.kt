@@ -45,6 +45,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.music.arc.CircleGlowCorner
+import com.metrolist.music.arc.GlowArea
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -77,7 +79,7 @@ fun HomeYtGridItem(env: HomeEnv, item: YTItem) {
         isPlaying = env.isPlaying.value,
         coroutineScope = env.scope,
         thumbnailRatio = 1f,
-        modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }),
+        modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowArea = GlowArea.Cover),
     )
 }
 
@@ -95,7 +97,7 @@ fun HomeLocalGridItem(env: HomeEnv, item: LocalItem) {
         is Song ->
             SongGridItem(
                 song = item,
-                modifier = Modifier.homeTile(onClick = { env.playSong(item) }, onLongClick = { env.showSongMenu(item) }).fillMaxWidth(),
+                modifier = Modifier.homeTile(onClick = { env.playSong(item) }, onLongClick = { env.showSongMenu(item) }, cover = item.thumbnailUrl, glowArea = GlowArea.Cover).fillMaxWidth(),
                 isActive = item.id == env.mediaMetadata.value?.id,
                 isPlaying = env.isPlaying.value,
             )
@@ -111,6 +113,8 @@ fun HomeLocalGridItem(env: HomeEnv, item: LocalItem) {
                         .homeTile(
                             onClick = { env.navController.navigate("album/${item.id}") },
                             onLongClick = { env.menuState.show { AlbumMenu(originalAlbum = item, onDismiss = env.menuState::dismiss) } },
+                            cover = item.thumbnailUrl,
+                            glowArea = GlowArea.Cover,
                         ).fillMaxWidth(),
             )
 
@@ -122,6 +126,9 @@ fun HomeLocalGridItem(env: HomeEnv, item: LocalItem) {
                         .homeTile(
                             onClick = { env.navController.navigate("artist/${item.id}") },
                             onLongClick = { env.menuState.show { ArtistMenu(originalArtist = item, coroutineScope = env.scope, onDismiss = env.menuState::dismiss) } },
+                            cover = item.thumbnailUrl,
+                            glowArea = GlowArea.Cover,
+                            glowCorner = CircleGlowCorner,
                         ).fillMaxWidth(),
             )
 
@@ -169,7 +176,7 @@ fun HomeSongRow(env: HomeEnv, song: Song, modifier: Modifier = Modifier) {
                 Icon(painterResource(R.drawable.more_vert), contentDescription = null)
             }
         },
-        modifier = modifier.homeTile(onClick = { env.playSong(shown) }, onLongClick = { env.showSongMenu(shown) }),
+        modifier = modifier.homeTile(onClick = { env.playSong(shown) }, onLongClick = { env.showSongMenu(shown) }, cover = shown.thumbnailUrl, glowCorner = 12.dp),
     )
 }
 

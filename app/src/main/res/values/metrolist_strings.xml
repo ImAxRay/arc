@@ -1026,6 +1026,8 @@
     <string name="arc_home_background">Home background</string>
     <string name="arc_tilt_covers">Tilt covers</string>
     <string name="arc_tilt_covers_desc">Speed dial and album covers sit behind the screen and shift as you tilt the phone. Paused in battery saver</string>
+    <string name="arc_press_glow">Glow on press</string>
+    <string name="arc_press_glow_desc">Pressed tiles glow in their cover\'s colour, with a shimmer of dots along the edge. Off in battery saver</string>
     <string name="arc_speed_dial_rows">Speed dial size</string>
     <plurals name="arc_speed_dial_rows_value">
         <item quantity="one">%d row</item>
