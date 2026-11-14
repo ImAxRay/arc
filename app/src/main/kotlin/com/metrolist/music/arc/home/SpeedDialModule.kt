@@ -94,8 +94,9 @@ fun SpeedDialModule(env: HomeEnv) {
     val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, continueTile = continueId != null) }
     val capacities = pages.map { page -> page.count { it.button == null } }
     // only whole pages, at most three; a half-empty last page looks broken
-    var pageCount = 1
-    while (pageCount < pages.size && capacities.take(pageCount + 1).sum() <= allItems.size) pageCount++
+    // a val, so the pager's page count lambda stays the same object; a captured var made a new one each composition,
+    // and the pager re-reading it recomposed the dial every frame
+    val pageCount = (1 until pages.size).takeWhile { capacities.take(it + 1).sum() <= allItems.size }.lastOrNull()?.plus(1) ?: 1
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val shownIds = remember(allItems, pageCount, continueId) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + listOfNotNull(continueId) }
@@ -168,7 +169,7 @@ fun SpeedDialModule(env: HomeEnv) {
             }
         }
 
-        if (pagerState.pageCount > 1) {
+        if (pageCount > 1) {
             Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) { PageDots(pagerState) }
         }
     }
