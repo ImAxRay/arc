@@ -1438,7 +1438,20 @@ class MusicService :
             onStatsReady = this@MusicService,
         )
         historyReporters[player] = historyReporter
-        player.addAnalyticsListener(historyReporter.statsListener)
+        // Media3's stats tracker can trip over its own event order when the playing item is swapped; a lost
+        // stat must not take the app down.
+        val stats = historyReporter.statsListener
+        player.addAnalyticsListener(
+            object : androidx.media3.exoplayer.analytics.AnalyticsListener by stats {
+                override fun onEvents(player: Player, events: androidx.media3.exoplayer.analytics.AnalyticsListener.Events) {
+                    try {
+                        stats.onEvents(player, events)
+                    } catch (error: IllegalArgumentException) {
+                        Timber.tag(TAG).w(error, "playback stats skipped")
+                    }
+                }
+            },
+        )
         player.addAnalyticsListener(historyReporter.listener)
 
         // Cleanup handled manually in onDestroy/release
@@ -2029,7 +2042,7 @@ class MusicService :
                                     automixItems.value =
                                         secondResult.items.map { song ->
                                             song.toMediaItem()
-                                        }
+                                        }.filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                 }.onFailure {
                                     if (firstResult.items.isNotEmpty()) {
                                         automixItems.value =
@@ -2052,9 +2065,10 @@ class MusicService :
                                             radioResult.items
                                                 .filter { it.id != currentSong.id }
                                                 .map { it.toMediaItem() }
+                                                .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                         if (filteredItems.isNotEmpty()) {
                                             automixItems.value = filteredItems
-                                        }.filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
+                                        }
                                     }.onFailure {
                                         YouTube
                                             .next(WatchEndpoint(videoId = currentSong.id))
@@ -2065,8 +2079,8 @@ class MusicService :
                                                     val relatedItems =
                                                         relatedPage.songs
                                                             .filter { it.id != currentSong.id }
-                                                .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                                             .map { it.toMediaItem() }
+                                                            .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
                                                     if (relatedItems.isNotEmpty()) {
                                                         automixItems.value = relatedItems
                                                     }
@@ -2080,7 +2094,6 @@ class MusicService :
             }
         }
     }
-                                                            .filterVideoSongs(com.metrolist.music.arc.MusicVideos.radioSongsOnly)
 
     fun addToQueueAutomix(
         item: MediaItem,
