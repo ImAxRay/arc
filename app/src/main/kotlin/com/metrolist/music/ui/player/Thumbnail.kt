@@ -36,6 +36,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.metrolist.music.arc.MotionCover
+import com.metrolist.music.arc.MusicVideoLayer
+import com.metrolist.music.arc.VideoToggle
+import com.metrolist.music.arc.WatchButton
+import androidx.compose.foundation.layout.Row
+import com.metrolist.music.arc.VideoState
+import com.metrolist.music.arc.VideoView
+import com.metrolist.music.arc.rememberSongVideo
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.metrolist.music.models.MediaMetadata
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -418,6 +428,7 @@ fun Thumbnail(
                                 currentMediaThumbnail = mediaMetadata?.thumbnailUrl,
                                 currentMetadata = mediaMetadata,
                                 motionActive = isPlaying && isPlayerExpanded(),
+                                videoActive = isPlayerExpanded(),
                                 onTap = onCoverTap,
                             )
                         }
@@ -518,6 +529,7 @@ private fun ThumbnailItem(
     currentMediaThumbnail: String? = null,
     currentMetadata: MediaMetadata? = null,
     motionActive: Boolean = false,
+    videoActive: Boolean = false,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -596,12 +608,33 @@ private fun ThumbnailItem(
                     cropArtwork = cropAlbumArt || dimensions.padding == 0.dp
                 )
                 if (currentMetadata != null && item.mediaId == currentMetadata.id) {
-                    MotionCover(
-                        title = currentMetadata.title,
-                        artist = currentMetadata.artists.firstOrNull()?.name.orEmpty(),
-                        album = currentMetadata.album?.title,
-                        active = motionActive,
-                    )
+                    val video = rememberSongVideo(currentMetadata)
+                    val view by VideoState.view
+                    val videoView = if (video == null) VideoView.SONG else view
+                    if (videoView == VideoView.SONG) {
+                        MotionCover(
+                            title = currentMetadata.title,
+                            artist = currentMetadata.artists.firstOrNull()?.name.orEmpty(),
+                            album = currentMetadata.album?.title,
+                            active = motionActive,
+                        )
+                    }
+                    val watching by VideoState.watching
+                    if (video != null && videoView == VideoView.VIDEO && video.native) {
+                        MusicVideoLayer(video.songId, { it }, crop = false, active = videoActive && !watching)
+                    }
+                    if (video != null) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .then(if (dimensions.padding == 0.dp) Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility) else Modifier)
+                                .padding(top = 12.dp),
+                        ) {
+                            VideoToggle(video)
+                            if (videoView == VideoView.VIDEO && video.native) WatchButton()
+                        }
+                    }
                 }
             }
             

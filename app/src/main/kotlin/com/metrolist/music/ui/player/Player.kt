@@ -1039,7 +1039,8 @@ private fun PlayerSheet(
     // The cover and arc layouts sit on a ground in the cover's own colour, so the screen carries on from the cover.
     val coverGroundOn = !vinylPlayerEnabled && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     val groundArt = rememberCoverArt(mediaMetadata?.thumbnailUrl.takeIf { coverGroundOn }, upcoming = null, titleOnLeft = panelOnLeft)
-    val coverGroundTarget = remember(groundArt?.edge) { groundArt?.let { coverGround(it.edge) } }
+    val videoEdge by com.metrolist.music.arc.VideoState.frameEdge
+    val coverGroundTarget = remember(groundArt?.edge, videoEdge) { (videoEdge?.takeIf { coverGroundOn } ?: groundArt?.edge)?.let { coverGround(it) } }
     val groundNear by animateColorAsState(coverGroundTarget?.near ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundNear")
     val groundDeep by animateColorAsState(coverGroundTarget?.deep ?: bottomSheetBackgroundColor, tween(GROUND_FADE_MS), label = "groundDeep")
     val accent by animateColorAsState(coverGroundTarget?.accent ?: textButtonColor, tween(GROUND_FADE_MS), label = "accent")
@@ -1048,6 +1049,7 @@ private fun PlayerSheet(
     val volumeKnob = remember { VolumeKnobState() }
     val knobHaptics = LocalHapticFeedback.current
     val castDeviceName by castHandler?.castDeviceName?.collectAsStateWithLifecycle() ?: remember { mutableStateOf<String?>(null) }
+    com.metrolist.music.arc.WatchHost()
     BottomSheet(
         state = state,
         modifier = modifier,

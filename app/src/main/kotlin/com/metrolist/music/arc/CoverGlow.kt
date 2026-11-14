@@ -112,7 +112,7 @@ private suspend fun loadCoverArt(context: Context, url: String, titleOnLeft: Boo
  * The colour the player's ground carries on from: the main colour of the cover's lower edge, or of
  * the whole cover when that edge is close to grey, so a dark band along the bottom doesn't wash it out.
  */
-private fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
+internal fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
     fun dominant(region: Boolean): Int? {
         val builder = Palette.from(bitmap).maximumColorCount(8).clearFilters()
         if (region) builder.setRegion(x0, y0, x1, y1)
