@@ -20,13 +20,15 @@ import com.metrolist.music.db.entities.Artist
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.ui.component.NavigationTitle
+import com.metrolist.music.utils.rememberPreference
 
-/** "Similar to" rows, one per seed from the library. */
+/** "Similar to" rows, one per seed from the library, as many as the gear allows. */
 @Composable
 fun SimilarToModule(env: HomeEnv) {
     val recommendations by env.viewModel.similarRecommendations.collectAsStateWithLifecycle()
+    val rows by rememberPreference(SimilarRowsSetting.key, SimilarRowsSetting.default)
     Column {
-        recommendations.orEmpty().forEachIndexed { index, recommendation ->
+        recommendations.orEmpty().take(rows).forEachIndexed { index, recommendation ->
             key(index, recommendation.title.id) {
                 NavigationTitle(
                     label = stringResource(R.string.similar_to),

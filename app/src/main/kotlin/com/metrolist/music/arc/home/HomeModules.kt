@@ -40,7 +40,8 @@ class HomeModule(
 class ModuleSetting(@StringRes val label: Int, val key: androidx.datastore.preferences.core.Preferences.Key<Int>, val default: Int, val choices: List<Int>)
 
 val DialRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, SpeedDialRowsKey, 3, listOf(3, 4, 5))
-val RecentsCountSetting = ModuleSetting(R.string.arc_home_setting_songs, intPreferencesKey("arcHomeRecentsCount"), 5, listOf(3, 5, 8))
+val RecentsRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPreferencesKey("arcHomeRecentsRows"), 2, listOf(1, 2, 3))
+val SimilarRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPreferencesKey("arcHomeSimilarRows"), 1, listOf(1, 2, 3))
 val ForgottenRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPreferencesKey("arcHomeForgottenRows"), 3, listOf(1, 2, 3))
 
 val HomeModules: Map<HomeModuleId, HomeModule> =
@@ -48,14 +49,14 @@ val HomeModules: Map<HomeModuleId, HomeModule> =
         HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
         HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, { env -> speedDialAvailable(env) }, DialRowsSetting) { SpeedDialModule(it) },
         HomeModule(HomeModuleId.NEW_RELEASES, R.string.release_radar, { true }) { NewReleasesModule(it.navController) },
-        HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, { env -> recentsShown(env).isNotEmpty() }, RecentsCountSetting) { RecentsModule(it) },
+        HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, { env -> recentsShown(env).isNotEmpty() }, RecentsRowsSetting) { RecentsModule(it) },
         HomeModule(HomeModuleId.QUICK_PICKS, R.string.quick_picks, { env -> quickPicksShown(env).isNotEmpty() }) { QuickPicksModule(it) },
         HomeModule(HomeModuleId.COMMUNITY, R.string.from_the_community, { env -> env.viewModel.communityPlaylists.notEmpty() }) { CommunityModule(it) },
         HomeModule(HomeModuleId.DAILY_DISCOVER, R.string.your_daily_discover, { env -> env.viewModel.dailyDiscover.notEmpty() }) { DailyDiscoverModule(it) },
         HomeModule(HomeModuleId.KEEP_LISTENING, R.string.keep_listening, { env -> env.viewModel.keepListening.notEmpty() }) { KeepListeningModule(it) },
         HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.arc_home_your_playlists, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
         HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, { env -> forgottenShown(env).isNotEmpty() }, ForgottenRowsSetting) { ForgottenFavoritesModule(it) },
-        HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, { env -> env.viewModel.similarRecommendations.notEmpty() }) { SimilarToModule(it) },
+        HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, { env -> env.viewModel.similarRecommendations.notEmpty() }, SimilarRowsSetting) { SimilarToModule(it) },
         HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.arc_home_youtube, { true }) { YouTubeHomeModule(it) },
         HomeModule(HomeModuleId.MOODS, R.string.mood_and_genres, { env -> moodsAvailable(env) }) { MoodsModule(it) },
     ).associateBy { it.id }

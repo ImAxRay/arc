@@ -19,7 +19,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -92,9 +98,9 @@ fun EditFrame(
         Modifier
             .fillMaxWidth()
             .graphicsLayer {
-                // read here, so the wobble only redraws; neighbours swing out of step
+                // read here, so the bob only redraws; a slow float out of step with the neighbours, the same for any module height
                 val t = clock.longValue
-                rotationZ = if (dragging || t == 0L) 0f else sin(t / 1000f * 13f + index * 1.9f) * 0.45f
+                translationY = if (dragging || t == 0L) 0f else sin(t / 1000f * 3.5f + index * 1.9f) * 1.5.dp.toPx()
                 val s = if (dragging) 0.96f else EDIT_SCALE
                 scaleX = s
                 scaleY = s
@@ -140,9 +146,10 @@ fun EmptyModuleStub(module: HomeModule) {
     Box(Modifier.graphicsLayer { alpha = 0.5f }) { ModuleHeader(stringResource(module.title)) }
 }
 
-/** The bottom of Home while editing: every hidden module as a chip that brings it back, and Reset. */
+/** The bottom of Home while editing: every hidden module as a chip that brings it back. */
 @Composable
-fun AddModulesRow(hidden: List<HomeModule>, onAdd: (HomeModuleId) -> Unit, onReset: () -> Unit) {
+fun AddModulesRow(hidden: List<HomeModule>, onAdd: (HomeModuleId) -> Unit) {
+    if (hidden.isEmpty()) return
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
         CapsLabel(stringResource(R.string.arc_home_add_module))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
@@ -153,7 +160,6 @@ fun AddModulesRow(hidden: List<HomeModule>, onAdd: (HomeModuleId) -> Unit, onRes
                     icon = { Icon(painterResource(R.drawable.add), contentDescription = null, modifier = Modifier.size(18.dp)) },
                 )
             }
-            SuggestionChip(onClick = onReset, label = { Text(stringResource(R.string.reset)) })
         }
     }
 }
@@ -171,6 +177,16 @@ fun ModuleSettingsSheet(module: HomeModule) {
                 FilterChip(selected = value == choice, onClick = { value = choice }, label = { Text(choice.toString()) })
             }
         }
+    }
+}
+
+/** Home's own snackbar host, whose snackbars can be swiped away. */
+@Composable
+fun SwipeSnackbarHost(state: SnackbarHostState, modifier: Modifier) {
+    SnackbarHost(state, modifier) { data ->
+        val swipe = rememberSwipeToDismissBoxState()
+        LaunchedEffect(swipe.currentValue) { if (swipe.currentValue != SwipeToDismissBoxValue.Settled) data.dismiss() }
+        SwipeToDismissBox(swipe, backgroundContent = {}) { Snackbar(data) }
     }
 }
 

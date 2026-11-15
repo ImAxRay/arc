@@ -91,7 +91,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.Button
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.FilledTonalButton
+import com.metrolist.music.arc.home.SwipeSnackbarHost
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -311,14 +314,22 @@ fun HomeScreen(
             // the app's own snackbar sits above the player sheet, off screen here, so Undo gets its own spot over Done
             val editSnackbar = remember { SnackbarHostState() }
 
+            fun offerUndo(message: String, restore: () -> Unit) {
+                editSnackbar.currentSnackbarData?.dismiss()
+                scope.launch { if (editSnackbar.showSnackbar(message, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) restore() }
+            }
+
             fun hide(module: com.metrolist.music.arc.home.HomeModule) {
                 fun show(shown: Boolean) = save(slots.map { if (it.id == module.id) it.copy(shown = shown) else it })
                 show(false)
-                editSnackbar.currentSnackbarData?.dismiss()
-                scope.launch {
-                    val hidden = context.getString(R.string.arc_home_module_hidden, context.getString(module.title))
-                    if (editSnackbar.showSnackbar(hidden, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) show(true)
-                }
+                offerUndo(context.getString(R.string.arc_home_module_hidden, context.getString(module.title))) { show(true) }
+            }
+
+            fun reset() {
+                val before = savedModules
+                slots = parseHomeSlots("")
+                savedModules = ""
+                offerUndo(context.getString(R.string.arc_home_reset_done)) { savedModules = before }
             }
 
             CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit) {
@@ -356,10 +367,6 @@ fun HomeScreen(
                             AddModulesRow(
                                 hidden = slots.filterNot { it.shown }.map { HomeModules.getValue(it.id) },
                                 onAdd = { id -> save(slots.filterNot { it.id == id } + HomeSlot(id, true)) },
-                                onReset = {
-                                    slots = parseHomeSlots("")
-                                    savedModules = ""
-                                },
                             )
                         }
                     } else {
@@ -370,16 +377,19 @@ fun HomeScreen(
             PressGlowLayer(pressGlow)
 
             if (editing) {
-                Button(
-                    onClick = { editing = false },
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
                             .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
                             .padding(bottom = 12.dp),
-                ) { Text(stringResource(R.string.arc_home_done)) }
+                ) {
+                    FilledTonalButton(onClick = ::reset) { Text(stringResource(R.string.reset)) }
+                    Button(onClick = { editing = false }) { Text(stringResource(R.string.arc_home_done)) }
+                }
             }
-            SnackbarHost(
+            SwipeSnackbarHost(
                 editSnackbar,
                 Modifier
                     .align(Alignment.BottomCenter)

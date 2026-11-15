@@ -1306,6 +1306,7 @@
     <string name="arc_home_edit">Edit Home</string>
     <string name="arc_home_hide">Hide</string>
     <string name="arc_home_module_hidden">%1$s hidden</string>
+    <string name="arc_home_reset_done">Home reset</string>
     <string name="arc_home_your_playlists">Your playlists</string>
     <string name="arc_update_downloading">Downloading…</string>
     <string name="arc_update_downloading_percent">Downloading %1$d%%</string>
