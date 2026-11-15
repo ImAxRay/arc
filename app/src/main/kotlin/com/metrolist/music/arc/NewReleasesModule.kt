@@ -1,5 +1,23 @@
 package com.metrolist.music.arc
 
+import android.content.Context
+import android.util.LruCache
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.toBitmap
+import com.materialkolor.hct.Hct
+import com.metrolist.music.ui.theme.extractThemeColor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -124,7 +142,8 @@ private fun ReleaseRadarTile(album: AlbumItem, viewModel: ReleaseRadarViewModel,
         item = album,
         coroutineScope = scope,
         fillMaxWidth = fillMaxWidth,
-        badges = { if (kind != null) ReleaseTag(kind) },
+        badges = {},
+        coverOverlay = { if (kind != null) ReleaseTag(kind, album.thumbnail, Modifier.align(Alignment.TopStart).padding(6.dp)) },
         modifier =
             Modifier.homeTile(
                 cover = album.thumbnail,
@@ -158,8 +177,13 @@ private fun ReleaseRadarTile(album: AlbumItem, viewModel: ReleaseRadarViewModel,
     )
 }
 
+/** Single, EP or album, on the cover's top corner in the cover's own hue: light over a dark corner, dark over a light one. */
 @Composable
-private fun ReleaseTag(kind: ReleaseKind) {
+private fun ReleaseTag(kind: ReleaseKind, cover: String?, modifier: Modifier) {
+    val context = LocalContext.current
+    var colors by remember(cover) { mutableStateOf(cover?.let { TagColors.cached(it) }) }
+    LaunchedEffect(cover) { if (colors == null && cover != null) colors = TagColors.load(context, cover) }
+    val (ground, ink) = colors ?: (Color.Black.copy(alpha = 0.55f) to Color.White)
     Text(
         text =
             stringResource(
@@ -170,14 +194,36 @@ private fun ReleaseTag(kind: ReleaseKind) {
                 },
             ),
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        color = ink,
         modifier =
-            Modifier
-                .padding(end = 4.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 4.dp, vertical = 1.dp),
+            modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(ground)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     )
+}
+
+private object TagColors {
+    private val seen = LruCache<String, Pair<Color, Color>>(64)
+
+    fun cached(url: String): Pair<Color, Color>? = seen.get(url)
+
+    suspend fun load(context: Context, url: String): Pair<Color, Color>? =
+        withContext(Dispatchers.IO) {
+            val request = ImageRequest.Builder(context).data(url).size(64, 64).allowHardware(false).build()
+            val bitmap = runCatching { context.imageLoader.execute(request).image?.toBitmap() }.getOrNull() ?: return@withContext null
+            val hue = Hct.fromInt(bitmap.extractThemeColor().toArgb())
+            // How light the corner under the tag is: the top-left quarter of the cover.
+            var sum = 0.0
+            val w = bitmap.width / 2
+            val h = bitmap.height / 4
+            for (y in 0 until h) for (x in 0 until w) sum += Color(bitmap.getPixel(x, y)).luminance()
+            val darkCorner = sum / (w * h) < 0.4
+            val chroma = if (hue.chroma < 8.0) 0.0 else 36.0
+            val ground = Color(Hct.from(hue.hue, chroma, if (darkCorner) 92.0 else 22.0).toInt())
+            val ink = Color(Hct.from(hue.hue, chroma / 2, if (darkCorner) 20.0 else 94.0).toInt())
+            (ground to ink).also { seen.put(url, it) }
+        }
 }
 
 /** One square button inside speed dial that opens a screen instead of playing something. */

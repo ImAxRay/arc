@@ -18,6 +18,7 @@ import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import com.metrolist.music.arc.LocalMarqueeTouches
+import com.metrolist.music.arc.MarqueeText
 import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -54,7 +55,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -1271,32 +1271,28 @@ fun YouTubeGridItem(
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     fillMaxWidth: Boolean = false,
+    coverOverlay: @Composable BoxScope.() -> Unit = {},
 ) = GridItem(
     title = {
-        val touches = LocalMarqueeTouches.current
-        val seen = remember { touches?.intValue }
-        // key restarts the scroll on each touch
-        key(touches?.intValue) {
+        val name = if (item is ArtistItem) {
+            ArtistNameAliases.resolve(LocalArtistNameAliases.current, item.id, item.title)
+        } else {
+            item.title
+        }
+        if (LocalMarqueeTouches.current != null) {
+            // Home: a touch starts a still name rolling but leaves a rolling one alone.
+            Box(Modifier.fillMaxWidth(), contentAlignment = if (item is ArtistItem) Alignment.TopCenter else Alignment.TopStart) {
+                MarqueeText(name, MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+            }
+        } else {
             Text(
-                text = if (item is ArtistItem) {
-                    ArtistNameAliases.resolve(LocalArtistNameAliases.current, item.id, item.title)
-                } else {
-                    item.title
-                },
+                text = name,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-                modifier = Modifier
-                    .basicMarquee(
-                        iterations = when {
-                            touches == null -> MARQUEE_LOOPS
-                            touches.intValue != seen -> 1
-                            else -> 0
-                        },
-                        initialDelayMillis = if (touches == null) 1_200 else 300,
-                    ).fillMaxWidth()
+                modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
             )
         }
     },
@@ -1353,6 +1349,7 @@ fun YouTubeGridItem(
                 }
             }
         )
+        coverOverlay()
     },
     thumbnailRatio = thumbnailRatio,
     fillMaxWidth = fillMaxWidth,
