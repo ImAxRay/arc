@@ -219,9 +219,9 @@ private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: 
     val artists = current?.artists?.joinToString { it.name } ?: fallback?.artists?.joinToString { it.name }
     val left =
         remember(current?.id, playing) {
-            val player = env.playerConnection.player
-            val duration = player.duration
-            if (current != null && !playing && duration > 0) makeTimeString(duration - player.currentPosition) else null
+            val player = if (env.playerConnection.service.isPlayerReady.value) env.playerConnection.player else null
+            val duration = player?.duration ?: 0L
+            if (player != null && current != null && !playing && duration > 0) makeTimeString(duration - player.currentPosition) else null
         }
     PickCard(
         label = stringResource(if (current != null && playing) R.string.arc_home_now_playing else R.string.arc_home_continue),

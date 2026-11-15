@@ -65,12 +65,15 @@ private val SongInset = 22.dp
  */
 @Composable
 fun Modifier.homeLine(connection: PlayerConnection, track: Color, line: Color, uprightFromEnd: Dp): Modifier {
-    val player = connection.player
     val isPlaying by connection.isPlaying.collectAsState()
     val song by connection.mediaMetadata.collectAsState()
+    // On a slow cold start Home shows before the service has its player.
+    val ready by connection.service.isPlayerReady.collectAsState()
     var progress by remember { mutableFloatStateOf(0f) }
     val songLengthPx = remember { floatArrayOf(0f) }
-    LaunchedEffect(isPlaying, song?.id) {
+    LaunchedEffect(isPlaying, song?.id, ready) {
+        if (!ready) return@LaunchedEffect
+        val player = connection.player
         while (true) {
             val duration = player.duration
             progress = if (duration > 0) (player.currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f
