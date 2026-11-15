@@ -108,3 +108,4 @@ app/src/main/java/com/metrolist/music/listentogether/proto/*
 app/src/main/cpp/coverart/
 
 *.har
+/demo/

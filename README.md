@@ -2,7 +2,7 @@
 
 # Arc
 
-### A music player for Android that plays from many sources
+### A thumb-first music player for Android
 
 [![Latest release](https://img.shields.io/github/v/release/ImAxRay/arc?style=for-the-badge&labelColor=0d1117)](https://github.com/ImAxRay/arc/releases)
 [![License](https://img.shields.io/github/license/ImAxRay/arc?style=for-the-badge&labelColor=0d1117)](LICENSE)
@@ -13,16 +13,26 @@
 
 ---
 
-## What it does
+## What it is
 
-- **One player, many sources:** YouTube Music, music on your phone, Google Drive (FLAC) and more
-- **Vinyl player** with a turntable mode
-- **Speed dial home** with New releases from your artists and animated backgrounds
-- **Snippets:** record, trim, mix and share parts of songs
-- **Sorting your own files** with a swipe deck
-- **Spotify import** for playlists and links
-- **Widgets** for the home screen
-- Lyrics, equalizer, sleep timer, alarms, backup and the rest of what Metrolist offers
+Arc is a [Metrolist](https://github.com/MetrolistGroup/Metrolist) fork where I wanted to try some gimmicky thumb-oriented designs and some other dumb ideas. I guess my goal with this app is to never need any other media player and to have quick access to whatever music I wanna listen to on the go.
+
+Some features are:
+
+- A *slick futuristic mind-blowing* thumb-oriented design that lets you use one finger to tap pause!!
+- Google Drive support (for now you can only add files one by one, cuz Google needs a paid yearly review to grant wider Drive permission)
+- [untitled] support (Beta, it could break at any point)
+- VINYL VIEW (I think [Mochy](https://github.com/realidkroo/Mochy-Music) has a really good vinyl view as well!)
+- Snippets: a way to record yourself singing over a song and quickly share it
+- Tinder-style sorting of local files
+- Assigning real artists to local files
+- Speed dial from YouTube Music, with features I thought it was missing
+- Working on a pure performance mode and full aesthetic freedom
+- Some other dumb ¿semi-secret? features you might randomly stumble on (like doing a knob-spinning gesture on the Now Playing screen to change the volume, like in the Sonos app)
+
+There are probably more selling features, but I don't think they matter as much.
+
+I'm very keen on trying random ideas and more customization options, so the list above will grow. One feature I really want is a BPM-based playlist that matches your walking speed, but that idea is for later.
 
 Arc updates itself from this repository's releases.
 
