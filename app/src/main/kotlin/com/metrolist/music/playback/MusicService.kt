@@ -3947,6 +3947,8 @@ class MusicService :
     }
 
     fun warmStreams(mediaIds: List<String>, why: String = "queue") {
+        // Screens can ask before the service has finished starting; reading ahead is only a head start, so skip it then.
+        if (!::connectivityManager.isInitialized) return
         if (getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return
         @Suppress("NAME_SHADOWING") val mediaIds = mediaIds.filterNot { DeviceMusic.isDeviceSong(it) || com.metrolist.music.arc.UntitledMusic.isUntitledSong(it) || com.metrolist.music.arc.BundledTracks.isBundled(it) }
         val metered = connectivityManager.isActiveNetworkMetered
