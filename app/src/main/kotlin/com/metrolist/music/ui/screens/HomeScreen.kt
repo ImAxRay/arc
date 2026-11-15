@@ -41,7 +41,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +48,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -86,6 +87,8 @@ import com.metrolist.music.arc.home.LocalHomeEdit
 import com.metrolist.music.arc.home.ModuleSettingsSheet
 import com.metrolist.music.arc.home.encode
 import com.metrolist.music.arc.home.parseHomeSlots
+import com.metrolist.music.arc.home.YT_ROW
+import com.metrolist.music.arc.home.youTubeRowModules
 import com.metrolist.music.arc.home.rememberWobbleClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -147,7 +150,9 @@ fun HomeScreen(
 
     val context = LocalContext.current
     var savedModules by rememberPreference(ArcHomeModulesKey, "")
-    var slots by remember { mutableStateOf(parseHomeSlots(savedModules)) }
+    // YouTube's own rows by their stored key; each is a module of its own
+    val youTubeRows = remember(homePage) { youTubeRowModules(homePage) }
+    var slots by remember { mutableStateOf(parseHomeSlots(savedModules, youTubeRows.keys)) }
     var editing by rememberSaveable { mutableStateOf(false) }
     BackHandler(editing) { editing = false }
     val wobble = rememberWobbleClock(editing)
@@ -170,8 +175,8 @@ fun HomeScreen(
     var moved by remember { mutableStateOf(false) }
     val reorder =
         rememberReorderableLazyListState(lazylistState, scrollThresholdPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()) { from, to ->
-            val f = slots.indexOfFirst { it.id.key == from.key }
-            val t = slots.indexOfFirst { it.id.key == to.key }
+            val f = slots.indexOfFirst { it.key == from.key }
+            val t = slots.indexOfFirst { it.key == to.key }
             if (f >= 0 && t >= 0) {
                 slots = slots.toMutableList().apply { add(t, removeAt(f)) }
                 moved = true
@@ -184,7 +189,7 @@ fun HomeScreen(
             save(slots)
         }
     }
-    LaunchedEffect(savedModules) { if (!reorder.isAnyItemDragging) slots = parseHomeSlots(savedModules) }
+    LaunchedEffect(savedModules, youTubeRows.keys) { if (!reorder.isAnyItemDragging) slots = parseHomeSlots(savedModules, youTubeRows.keys) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
     val wrappedDismissed by backStackEntry
@@ -205,16 +210,6 @@ fun HomeScreen(
         if (scrollToTop?.value == true) {
             lazylistState.animateScrollToItem(0)
             backStackEntry?.savedStateHandle?.set("scrollToTop", false)
-        }
-    }
-
-    // more of YouTube's home loads near the end of the list; speed dial is topped up from it too
-    LaunchedEffect(Unit) {
-        snapshotFlow { lazylistState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }.collect { lastVisibleIndex ->
-            val len = lazylistState.layoutInfo.totalItemsCount
-            if (lastVisibleIndex != null && lastVisibleIndex >= len - 3) {
-                viewModel.loadMoreYouTubeItems(homePage?.continuation)
-            }
         }
     }
 
@@ -301,11 +296,13 @@ fun HomeScreen(
                         height = maxHeight,
                     )
                 }
-            val wrapped = key(HomeModuleId.WRAPPED) { HomeModules.getValue(HomeModuleId.WRAPPED).takeIf { !editing && it.available(env) } }
+            val wrapped = key(HomeModuleId.WRAPPED) { HomeModules.getValue(HomeModuleId.WRAPPED.key).takeIf { !editing && it.available(env) } }
+
+            // a saved YouTube row missing from today's page has no module and stays out of sight, but keeps its place
+            fun moduleFor(slot: HomeSlot) = HomeModules[slot.key] ?: youTubeRows[slot.key]
             val shown =
-                slots.filter { it.shown }.mapNotNull { slot ->
-                    key(slot.id) {
-                        val module = HomeModules.getValue(slot.id)
+                slots.filter { it.shown }.mapNotNull(::moduleFor).mapNotNull { module ->
+                    key(module.key) {
                         val available = module.available(env)
                         if (editing || available) module to available else null
                     }
@@ -320,14 +317,14 @@ fun HomeScreen(
             }
 
             fun hide(module: com.metrolist.music.arc.home.HomeModule) {
-                fun show(shown: Boolean) = save(slots.map { if (it.id == module.id) it.copy(shown = shown) else it })
+                fun show(shown: Boolean) = save(slots.map { if (it.key == module.key) it.copy(shown = shown) else it })
                 show(false)
-                offerUndo(context.getString(R.string.arc_home_module_hidden, context.getString(module.title))) { show(true) }
+                offerUndo(context.getString(R.string.arc_home_module_hidden, module.name(context))) { show(true) }
             }
 
             fun reset() {
                 val before = savedModules
-                slots = parseHomeSlots("")
+                slots = parseHomeSlots("", youTubeRows.keys)
                 savedModules = ""
                 offerUndo(context.getString(R.string.arc_home_reset_done)) { savedModules = before }
             }
@@ -340,10 +337,10 @@ fun HomeScreen(
                     item(key = "day", contentType = "day") {
                         Column(Modifier.homeLanding(0).pointerInput(Unit) { detectTapGestures(onLongPress = { homeEdit.enter() }) }) { HomeDayHeader(lazylistState) }
                     }
-                    wrapped?.let { module -> item(key = module.id.key, contentType = module.id.key) { module.content(env) } }
+                    wrapped?.let { module -> item(key = module.key, contentType = module.key) { module.content(env) } }
                     shown.forEachIndexed { index, (module, available) ->
-                        item(key = module.id.key, contentType = module.id.key) {
-                            ReorderableItem(reorder, key = module.id.key, enabled = editing) { dragging ->
+                        item(key = module.key, contentType = if (module.key.startsWith(YT_ROW)) YT_ROW else module.key) {
+                            ReorderableItem(reorder, key = module.key, enabled = editing) { dragging ->
                                 Column(Modifier.homeLanding(index + 1)) {
                                     if (editing) {
                                         EditFrame(
@@ -365,10 +362,13 @@ fun HomeScreen(
                     if (editing) {
                         item(key = "add", contentType = "add") {
                             AddModulesRow(
-                                hidden = slots.filterNot { it.shown }.map { HomeModules.getValue(it.id) },
-                                onAdd = { id -> save(slots.filterNot { it.id == id } + HomeSlot(id, true)) },
+                                env = env,
+                                hidden = slots.filterNot { it.shown }.mapNotNull(::moduleFor),
+                                onAdd = { key -> save(slots.filterNot { it.key == key } + HomeSlot(key, true)) },
                             )
                         }
+                        // room for Reset and Done, which float over the bottom
+                        item(key = "edit_buttons", contentType = "edit_buttons") { Spacer(Modifier.height(72.dp)) }
                     } else {
                         item(key = "edit", contentType = "edit") { EditHomeRow(homeEdit.enter) }
                     }

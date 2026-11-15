@@ -1298,7 +1298,8 @@
     <string name="arc_home_now_playing">Now playing</string>
     <string name="arc_home_time_left">%s left</string>
     <string name="arc_home_recents">Recents</string>
-    <string name="arc_home_youtube">From YouTube</string>
+    <string name="arc_home_mood_mixes">Mood mixes</string>
+    <string name="arc_home_from_youtube">From YouTube</string>
     <string name="arc_home_setting_rows">Rows</string>
     <string name="arc_home_setting_songs">Songs</string>
     <string name="arc_home_add_module">Add to Home</string>

@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,18 +24,27 @@ enum class HomeModuleId(val key: String) {
     ACCOUNT_PLAYLISTS("account_playlists"),
     FORGOTTEN_FAVORITES("forgotten_favorites"),
     SIMILAR_TO("similar_to"),
+    /** Now YouTube's mood chips alone; once all of YouTube's home, whose rows are now modules of their own. */
     YOUTUBE_HOME("youtube_home"),
     MOODS("moods"),
 }
 
 class HomeModule(
-    val id: HomeModuleId,
-    @StringRes val title: Int,
+    val key: String,
+    val name: (Context) -> String,
     /** Whether the module has anything to show right now. Read inside composition so it follows the data. */
     val available: @Composable (HomeEnv) -> Boolean,
     val setting: ModuleSetting? = null,
     val content: @Composable (HomeEnv) -> Unit,
-)
+) {
+    constructor(
+        id: HomeModuleId,
+        @StringRes title: Int,
+        available: @Composable (HomeEnv) -> Boolean,
+        setting: ModuleSetting? = null,
+        content: @Composable (HomeEnv) -> Unit,
+    ) : this(id.key, { it.getString(title) }, available, setting, content)
+}
 
 /** The one number a module lets you change from its gear in edit mode. */
 class ModuleSetting(@StringRes val label: Int, val key: androidx.datastore.preferences.core.Preferences.Key<Int>, val default: Int, val choices: List<Int>)
@@ -44,7 +54,7 @@ val RecentsRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPrefer
 val SimilarRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPreferencesKey("arcHomeSimilarRows"), 1, listOf(1, 2, 3))
 val ForgottenRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPreferencesKey("arcHomeForgottenRows"), 3, listOf(1, 2, 3))
 
-val HomeModules: Map<HomeModuleId, HomeModule> =
+val HomeModules: Map<String, HomeModule> =
     listOf(
         HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
         HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, { env -> speedDialAvailable(env) }, DialRowsSetting) { SpeedDialModule(it) },
@@ -57,20 +67,21 @@ val HomeModules: Map<HomeModuleId, HomeModule> =
         HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.arc_home_your_playlists, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
         HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, { env -> forgottenShown(env).isNotEmpty() }, ForgottenRowsSetting) { ForgottenFavoritesModule(it) },
         HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, { env -> env.viewModel.similarRecommendations.notEmpty() }, SimilarRowsSetting) { SimilarToModule(it) },
-        HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.arc_home_youtube, { true }) { YouTubeHomeModule(it) },
+        HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.arc_home_mood_mixes, { true }) { YouTubeHomeModule(it) },
         HomeModule(HomeModuleId.MOODS, R.string.mood_and_genres, { env -> moodsAvailable(env) }) { MoodsModule(it) },
-    ).associateBy { it.id }
+    ).associateBy { it.key }
 
 /** The user's modules in order, `-` before a hidden one, e.g. "speed_dial,new_releases,-moods". */
 val ArcHomeModulesKey = stringPreferencesKey("arcHomeModules")
 
-data class HomeSlot(val id: HomeModuleId, val shown: Boolean)
+data class HomeSlot(val key: String, val shown: Boolean)
 
 /** What a new install shows; every other module starts hidden. */
 val DefaultHomeModules =
     listOf(
         HomeModuleId.SPEED_DIAL,
         HomeModuleId.NEW_RELEASES,
+        HomeModuleId.YOUTUBE_HOME,
         HomeModuleId.RECENTS,
         HomeModuleId.QUICK_PICKS,
         HomeModuleId.FORGOTTEN_FAVORITES,
@@ -78,22 +89,28 @@ val DefaultHomeModules =
     )
 
 /** Wrapped is a seasonal card that shows itself first, so it isn't one the user arranges. */
-private val Arrangeable = HomeModuleId.entries - HomeModuleId.WRAPPED
+private val Arrangeable = (HomeModuleId.entries - HomeModuleId.WRAPPED).map { it.key }
 
-/** Every arrangeable module once: the saved ones in their order, then any the saved list doesn't name, hidden. */
-fun parseHomeSlots(saved: String): List<HomeSlot> {
-    val byKey = Arrangeable.associateBy { it.key }
+/**
+ * Every arrangeable module once: the saved ones in their order, then any the saved list doesn't name, hidden, then
+ * today's YouTube [rows] the list doesn't name, hidden. Saved YouTube rows are kept even when today's page lacks them.
+ */
+fun parseHomeSlots(saved: String, rows: Collection<String> = emptyList()): List<HomeSlot> {
     val slots =
         if (saved.isEmpty()) {
-            DefaultHomeModules.map { HomeSlot(it, true) }
+            DefaultHomeModules.map { HomeSlot(it.key, true) }
         } else {
-            saved.split(',').mapNotNull { key -> byKey[key.removePrefix("-")]?.let { HomeSlot(it, !key.startsWith('-')) } }.distinctBy { it.id }
+            saved.split(',').mapNotNull { raw ->
+                val key = raw.removePrefix("-")
+                if (key in Arrangeable || key.startsWith(YT_ROW)) HomeSlot(key, !raw.startsWith('-')) else null
+            }.distinctBy { it.key }
         }
-    val named = slots.mapTo(HashSet()) { it.id }
-    return slots + Arrangeable.filterNot { it in named }.map { HomeSlot(it, false) }
+    val named = slots.mapTo(HashSet()) { it.key }
+    return slots + (Arrangeable + rows).filterNot { it in named }.distinct().map { HomeSlot(it, false) }
 }
 
-fun List<HomeSlot>.encode(): String = joinToString(",") { if (it.shown) it.id.key else "-" + it.id.key }
+/** Hidden YouTube rows aren't written: hidden is their default, and the page names new ones every day. */
+fun List<HomeSlot>.encode(): String = filter { it.shown || !it.key.startsWith(YT_ROW) }.joinToString(",") { if (it.shown) it.key else "-" + it.key }
 
 @Composable
 private fun kotlinx.coroutines.flow.StateFlow<List<*>?>.notEmpty(): Boolean {

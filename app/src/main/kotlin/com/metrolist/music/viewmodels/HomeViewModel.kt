@@ -90,6 +90,7 @@ data class CommunityPlaylistItem(
 
 /** Most speed dial can hold: three full pages of the biggest grid. The screen trims it to whole pages. */
 internal const val SPEED_DIAL_MAX = 45
+private const val MAX_HOME_PAGES = 6
 
 private val bracketed = Regex("""\s*[(\[][^)\]]*[)\]]""")
 private val nonWord = Regex("""[^\p{L}\p{N}]+""")
@@ -196,7 +197,9 @@ class HomeViewModel @Inject constructor(
     val explorePage = MutableStateFlow<ExplorePage?>(null)
     val communityPlaylists = MutableStateFlow<List<CommunityPlaylistItem>?>(null)
     val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
-    private val previousHomePage = MutableStateFlow<HomePage?>(null)
+
+    /** The chosen chip's rows; [homePage] stays unfiltered, since YouTube's rows are modules of their own. */
+    val chipPage = MutableStateFlow<HomePage?>(null)
 
     // Official API data for podcast sections
     val savedPodcastShows = MutableStateFlow<List<com.metrolist.innertube.models.PodcastItem>>(emptyList())
@@ -516,6 +519,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun getCommunityPlaylists() {
+        val fresh = communityPlaylists.value == null
         val fromTimeStamp = LocalDateTime.now().minusWeeks(4)
         val artistSeeds = database.mostPlayedArtists(fromTimeStamp, limit = 10).first()
             .filter { it.artist.isYouTubeArtist }
@@ -581,13 +585,15 @@ class HomeViewModel @Inject constructor(
                             val songCountText = page.playlist.songCountText ?: playlist.songCountText
                             val updatedPlaylist = playlist.copy(songCountText = songCountText)
                             playlists.add(CommunityPlaylistItem(updatedPlaylist, songs))
+                            // on the first load each card shows as soon as it's in, instead of all after the slowest
+                            if (fresh) communityPlaylists.value = playlists.toList()
                         }
                     }
                 }
             }.forEach { it.join() }
         }
 
-        communityPlaylists.value = playlists.shuffled()
+        communityPlaylists.value = playlists.toList()
     }
 
     private suspend fun load() {
@@ -599,6 +605,8 @@ class HomeViewModel @Inject constructor(
 
         // Phase 1: Load essential sections in parallel — local DB (fast) + YouTube home page.
         // isLoading is set to false as soon as all Phase 1 tasks complete so the UI appears quickly.
+        // its own chain of requests, so it starts now rather than after YouTube's home
+        viewModelScope.launch(Dispatchers.IO) { getCommunityPlaylists() }
         coroutineScope {
             launch(Dispatchers.IO) { getQuickPicks() }
 
@@ -619,16 +627,10 @@ class HomeViewModel @Inject constructor(
 
             launch(Dispatchers.IO) {
                 YouTube.home().onSuccess { page ->
-                    homePage.value = page.copy(
-                        sections = page.sections.mapNotNull { section ->
-                            val filtered = section.items
-                                .filterOutNulls()
-                                .filterExplicit(hideExplicit)
-                                .filterVideoSongs(hideVideoSongs)
-                                .filterYoutubeShorts(hideYoutubeShorts)
-                            if (filtered.isEmpty()) null else section.copy(items = filtered)
-                        }
-                    )
+                    val first = page.copy(sections = page.sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts))
+                    // on a refresh the old full page stays until the new one is whole, so rows further down don't blink out
+                    if (homePage.value == null) homePage.value = first
+                    viewModelScope.launch(Dispatchers.IO) { loadRestOfHome(first, hideExplicit, hideVideoSongs, hideYoutubeShorts) }
                 }.onFailure { reportException(it) }
             }
 
@@ -646,8 +648,6 @@ class HomeViewModel @Inject constructor(
 
         // Phase 2: Heavy multi-request operations — run in background without blocking the UI.
         viewModelScope.launch(Dispatchers.IO) { getDailyDiscover() }
-
-        viewModelScope.launch(Dispatchers.IO) { getCommunityPlaylists() }
 
         viewModelScope.launch(Dispatchers.IO) {
             YouTube.explore().onSuccess { page ->
@@ -729,66 +729,42 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private val _isLoadingMore = MutableStateFlow(false)
-    fun loadMoreYouTubeItems(continuation: String?) {
-        if (continuation == null || _isLoadingMore.value) return
-        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoadingMore.value = true
-            val nextSections = YouTube.home(continuation).getOrNull() ?: run {
-                _isLoadingMore.value = false
-                return@launch
-            }
-
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
-                sections = (homePage.value?.sections.orEmpty() + nextSections.sections).mapNotNull { section ->
-                    val filteredItems = section.items
-                        .filterOutNulls()
-                        .filterExplicit(hideExplicit)
-                        .filterVideoSongs(hideVideoSongs)
-                        .filterYoutubeShorts(hideYoutubeShorts)
-                    if (filteredItems.isEmpty()) null else section.copy(items = filteredItems)
-                }
-            )
-            _isLoadingMore.value = false
+    /** YouTube's home comes in pages (five on a signed-in account); every row is a module, so all of them are fetched. */
+    private suspend fun loadRestOfHome(first: HomePage, hideExplicit: Boolean, hideVideoSongs: Boolean, hideYoutubeShorts: Boolean) {
+        val fresh = homePage.value === first
+        var page = first
+        repeat(MAX_HOME_PAGES) {
+            val next = page.continuation?.let { YouTube.home(it).getOrNull() } ?: return@repeat
+            page = HomePage(first.chips, page.sections + next.sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts), next.continuation)
+            if (fresh) homePage.value = page
         }
+        homePage.value = page
     }
 
+    private fun List<HomePage.Section>.filtered(hideExplicit: Boolean, hideVideoSongs: Boolean, hideYoutubeShorts: Boolean) =
+        mapNotNull { section ->
+            val items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts)
+            if (items.isEmpty()) null else section.copy(items = items)
+        }
+
     fun toggleChip(chip: HomePage.Chip?) {
-        if (chip == null || chip == selectedChip.value && previousHomePage.value != null) {
-            homePage.value = previousHomePage.value
-            previousHomePage.value = null
+        chipPage.value = null
+        if (chip == null || chip == selectedChip.value) {
             selectedChip.value = null
             return
         }
+        selectedChip.value = chip
+        viewModelScope.launch(Dispatchers.IO) { loadChip(chip) }
+    }
 
-        if (selectedChip.value == null) {
-            previousHomePage.value = homePage.value
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-            val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-            val nextSections = YouTube.home(params = chip.endpoint?.params).getOrNull() ?: return@launch
-
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
-                sections = nextSections.sections.mapNotNull { section ->
-                    section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
-                }
-            )
-            selectedChip.value = chip
-
-            // Fetch podcast-specific data when podcasts chip is selected
-            if (chip.title.contains("Podcast", ignoreCase = true)) {
-                fetchPodcastData()
-            }
-        }
+    private suspend fun loadChip(chip: HomePage.Chip) {
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+        val page = YouTube.home(params = chip.endpoint?.params).getOrNull() ?: return
+        if (selectedChip.value != chip) return
+        chipPage.value = page.copy(sections = page.sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts))
+        if (chip.title.contains("Podcast", ignoreCase = true)) fetchPodcastData()
     }
 
     private suspend fun fetchPodcastData() {
@@ -845,24 +821,8 @@ class HomeViewModel @Inject constructor(
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onPullToRefresh(context, database) }
         viewModelScope.launch(Dispatchers.IO) {
-            // If a chip is selected, reload the chip's content instead of the default home
-            val currentChip = selectedChip.value
-            if (currentChip != null) {
-                val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-                val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-                val nextSections = YouTube.home(params = currentChip.endpoint?.params).getOrNull()
-                if (nextSections != null) {
-                    homePage.value = nextSections.copy(
-                        chips = homePage.value?.chips,
-                        sections = nextSections.sections.mapNotNull { section ->
-                            section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
-                        }
-                    )
-                }
-            } else {
-                load()
-            }
+            selectedChip.value?.let { launch { loadChip(it) } }
+            load()
             if (fromUser) dialGeneration.value++
             isRefreshing.value = false
         }

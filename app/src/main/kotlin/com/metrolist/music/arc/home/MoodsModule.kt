@@ -21,8 +21,7 @@ import com.metrolist.music.ui.screens.MoodAndGenresButtonHeight
 @Composable
 internal fun moodsAvailable(env: HomeEnv): Boolean {
     val explorePage by env.viewModel.explorePage.collectAsStateWithLifecycle()
-    val selectedChip by env.viewModel.selectedChip.collectAsStateWithLifecycle()
-    return explorePage?.moodAndGenres != null && !selectedChip.isPodcasts()
+    return explorePage?.moodAndGenres != null
 }
 
 @Composable
