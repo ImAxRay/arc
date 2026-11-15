@@ -75,8 +75,6 @@ fun SpeedDialModule(env: HomeEnv) {
     val scope = rememberCoroutineScope()
     var randomizeJob by remember { mutableStateOf<Job?>(null) }
 
-    ModuleHeader(title = stringResource(R.string.speed_dial))
-
     val targetItemSize = 160.dp
     val availableWidth = env.width - 32.dp
     val columns = (availableWidth / targetItemSize).toInt().coerceAtLeast(3)
@@ -88,8 +86,8 @@ fun SpeedDialModule(env: HomeEnv) {
         }
     val itemsPerPage = columns * rows
     val insets = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-    // Home's day header and the dial's title above, and page dots below, stay on screen with the grid
-    val gridHeight = env.height - insets.calculateTopPadding() - insets.calculateBottomPadding() - DayHeaderHeight - ModuleHeaderHeight - 24.dp
+    // Home's day header above and page dots below stay on screen with the grid
+    val gridHeight = env.height - insets.calculateTopPadding() - insets.calculateBottomPadding() - DayHeaderHeight - 24.dp
     val itemWidth = speedDialCellSize(availableWidth, columns, rows, gridHeight)
     val tiltEye = rememberTiltEye()
 

@@ -226,7 +226,6 @@ fun ModuleSkeleton(title: String) {
 @Composable
 fun SpeedDialSkeleton(rows: Int = 3) {
     Column {
-        ModuleHeader(title = stringResource(R.string.speed_dial))
         ShimmerHost(modifier = Modifier.padding(horizontal = 16.dp)) {
             repeat(rows) {
                 androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth()) {
