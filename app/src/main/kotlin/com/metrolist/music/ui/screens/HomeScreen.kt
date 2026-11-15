@@ -91,6 +91,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.Button
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -163,14 +164,23 @@ fun HomeScreen(
     }
 
     val lazylistState = rememberLazyListState()
+    var moved by remember { mutableStateOf(false) }
     val reorder =
-        rememberReorderableLazyListState(lazylistState) { from, to ->
+        rememberReorderableLazyListState(lazylistState, scrollThresholdPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()) { from, to ->
             val f = slots.indexOfFirst { it.id.key == from.key }
             val t = slots.indexOfFirst { it.id.key == to.key }
-            if (f >= 0 && t >= 0) slots = slots.toMutableList().apply { add(t, removeAt(f)) }
+            if (f >= 0 && t >= 0) {
+                slots = slots.toMutableList().apply { add(t, removeAt(f)) }
+                moved = true
+            }
         }
     // a drag only reorders the screen's copy; it's written once the module is let go
-    LaunchedEffect(reorder.isAnyItemDragging) { if (!reorder.isAnyItemDragging && slots.encode() != savedModules) save(slots) }
+    LaunchedEffect(reorder.isAnyItemDragging) {
+        if (!reorder.isAnyItemDragging && moved) {
+            moved = false
+            save(slots)
+        }
+    }
     LaunchedEffect(savedModules) { if (!reorder.isAnyItemDragging) slots = parseHomeSlots(savedModules) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
@@ -298,13 +308,16 @@ fun HomeScreen(
                     }
                 }
             val undo = stringResource(R.string.undo)
+            // the app's own snackbar sits above the player sheet, off screen here, so Undo gets its own spot over Done
+            val editSnackbar = remember { SnackbarHostState() }
 
             fun hide(module: com.metrolist.music.arc.home.HomeModule) {
-                val before = slots
-                save(slots.map { if (it.id == module.id) it.copy(shown = false) else it })
+                fun show(shown: Boolean) = save(slots.map { if (it.id == module.id) it.copy(shown = shown) else it })
+                show(false)
+                editSnackbar.currentSnackbarData?.dismiss()
                 scope.launch {
                     val hidden = context.getString(R.string.arc_home_module_hidden, context.getString(module.title))
-                    if (snackbarHostState.showSnackbar(hidden, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) save(before)
+                    if (editSnackbar.showSnackbar(hidden, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) show(true)
                 }
             }
 
@@ -343,7 +356,10 @@ fun HomeScreen(
                             AddModulesRow(
                                 hidden = slots.filterNot { it.shown }.map { HomeModules.getValue(it.id) },
                                 onAdd = { id -> save(slots.filterNot { it.id == id } + HomeSlot(id, true)) },
-                                onReset = { save(parseHomeSlots("")) },
+                                onReset = {
+                                    slots = parseHomeSlots("")
+                                    savedModules = ""
+                                },
                             )
                         }
                     } else {
@@ -363,6 +379,13 @@ fun HomeScreen(
                             .padding(bottom = 12.dp),
                 ) { Text(stringResource(R.string.arc_home_done)) }
             }
+            SnackbarHost(
+                editSnackbar,
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
+                    .padding(bottom = 64.dp),
+            )
         }
     }
 }
