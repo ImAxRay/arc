@@ -1299,4 +1299,8 @@
     <string name="arc_home_time_left">%s left</string>
     <string name="arc_home_recents">Recents</string>
     <string name="arc_home_your_playlists">Your playlists</string>
+    <string name="arc_update_downloading">Downloading…</string>
+    <string name="arc_update_downloading_percent">Downloading %1$d%%</string>
+    <string name="arc_update_installing">Installing…</string>
+    <string name="arc_update_failed">Update failed: %1$s</string>
 </resources>

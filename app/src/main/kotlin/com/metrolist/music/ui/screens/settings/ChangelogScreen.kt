@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,11 +30,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.R
+import com.metrolist.music.arc.MarkdownText
 import com.metrolist.music.BuildConfig
 import com.metrolist.music.utils.ReleaseInfo
 import com.metrolist.music.utils.Updater
-
-private val markdownLinkRegex = Regex("(@[a-zA-Z0-9_-]+)|(https?://[\\w-]+(\\.[\\w-]+)+[\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -184,95 +182,6 @@ fun ReleaseItem(release: ReleaseInfo) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 MarkdownText(release.description)
-            }
-        }
-    }
-}
-
-@Suppress("DEPRECATION")
-@Composable
-fun MarkdownText(text: String) {
-    val lines = text.split("\n")
-    val uriHandler = LocalUriHandler.current
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        lines.filter { it.isNotBlank() }.forEach { line ->
-            val trimmedLine = line.trim()
-
-            if (trimmedLine.startsWith("#")) {
-                val level = trimmedLine.takeWhile { it == '#' }.length
-                val headerText = trimmedLine.substring(level).trim()
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = headerText,
-                        style = when (level) {
-                            1 -> MaterialTheme.typography.headlineMedium
-                            2 -> MaterialTheme.typography.headlineSmall
-                            else -> MaterialTheme.typography.titleMedium
-                        },
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                val isListItem = trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ")
-                val contentText = if (isListItem) {
-                    trimmedLine.substring(2).trim()
-                } else {
-                    trimmedLine
-                }
-
-                val annotatedString = buildAnnotatedString {
-                    var lastIndex = 0
-                    markdownLinkRegex.findAll(contentText).forEach { result ->
-                        append(contentText.substring(lastIndex, result.range.first))
-                        
-                        val match = result.value
-                        val link = if (match.startsWith("@")) "https://github.com/${match.substring(1)}" else match
-                        
-                        pushStringAnnotation(tag = "URL", annotation = link)
-                        withStyle(style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary, 
-                            fontWeight = if (match.startsWith("@")) FontWeight.Bold else FontWeight.Normal,
-                            textDecoration = if (match.startsWith("@")) TextDecoration.None else TextDecoration.Underline
-                        )) {
-                            append(match)
-                        }
-                        pop()
-                        lastIndex = result.range.last + 1
-                    }
-                    append(contentText.substring(lastIndex))
-                }
-
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        if (isListItem) {
-                            Text(
-                                text = stringResource(R.string.list_bullet),
-                                modifier = Modifier.padding(end = 8.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                        ClickableText(
-                            text = annotatedString,
-                            style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                            onClick = { offset ->
-                                annotatedString.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                                    .firstOrNull()?.let { annotation ->
-                                        uriHandler.openUri(annotation.item)
-                                    }
-                            }
-                        )
-                    }
-                    
-                    if (isListItem) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                        )
-                    }
-                }
             }
         }
     }

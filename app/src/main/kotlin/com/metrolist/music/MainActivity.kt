@@ -83,6 +83,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -540,8 +541,14 @@ class MainActivity : FragmentActivity() {
                         it.release.tagName == preferences[it.dismissalKey]
                     }
 
-                    if (update != null && notificationsEnabled) {
-                        val intent = Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri())
+                    if (update != null && availableUpdate != null && notificationsEnabled) {
+                        // Arc downloads its own updates, so the notification just opens the app and its update dialog.
+                        val intent =
+                            if (update.isKmp) {
+                                Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri())
+                            } else {
+                                Intent(this@MainActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            }
                         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                         val pending = PendingIntent.getActivity(this@MainActivity, 1001, intent, flags)
                         val notificationText =
@@ -1439,8 +1446,10 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
                             }
+                            val updateState by com.metrolist.music.arc.AppUpdate.state.collectAsState()
                             AlertDialog(
-                                onDismissRequest = dismissUpdate,
+                                // Only "Later" remembers the dismissal; tapping outside just hides it until the next check.
+                                onDismissRequest = { availableUpdate = null },
                                 title = { Text(stringResource(R.string.update_available_title)) },
                                 text = {
                                     Column(
@@ -1474,22 +1483,32 @@ class MainActivity : FragmentActivity() {
                                             style = MaterialTheme.typography.titleSmall,
                                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                                         )
-                                        Text(
-                                            text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
-                                            style = MaterialTheme.typography.bodySmall,
+                                        com.metrolist.music.arc.AppUpdateProgress(Modifier.padding(bottom = 12.dp))
+                                        com.metrolist.music.arc.MarkdownText(
+                                            update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
                                         )
                                     }
                                 },
                                 confirmButton = {
                                     TextButton(
+                                        enabled = updateState !is com.metrolist.music.arc.AppUpdate.State.Downloading &&
+                                            updateState !is com.metrolist.music.arc.AppUpdate.State.Installing,
                                         onClick = {
-                                            dismissUpdate()
-                                            startActivity(Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri()))
+                                            if (update.isKmp) {
+                                                dismissUpdate()
+                                                startActivity(Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri()))
+                                            } else {
+                                                com.metrolist.music.arc.AppUpdate.start(this@MainActivity, update.downloadUrl)
+                                            }
                                         },
                                     ) {
                                         Text(
                                             stringResource(
-                                                if (update.isKmp) R.string.kmp_upgrade_action else R.string.update_action,
+                                                when {
+                                                    update.isKmp -> R.string.kmp_upgrade_action
+                                                    updateState is com.metrolist.music.arc.AppUpdate.State.Failed -> R.string.try_again
+                                                    else -> R.string.update_action
+                                                },
                                             ),
                                         )
                                     }

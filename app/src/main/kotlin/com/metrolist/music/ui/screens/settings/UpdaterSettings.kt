@@ -21,10 +21,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import com.metrolist.music.arc.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -216,8 +218,25 @@ fun UpdaterScreen(
         }
 
         if (updateAvailable && latestVersion != null) {
+            val updateState by com.metrolist.music.arc.AppUpdate.state.collectAsState()
             Spacer(Modifier.height(16.dp))
             Button(
+                enabled = updateState !is com.metrolist.music.arc.AppUpdate.State.Downloading &&
+                    updateState !is com.metrolist.music.arc.AppUpdate.State.Installing,
+                onClick = {
+                    Updater.getCachedLatestRelease()?.let(Updater::getDownloadUrlForCurrentVariant)?.let {
+                        com.metrolist.music.arc.AppUpdate.start(context, it)
+                    }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            ) {
+                Text(stringResource(if (updateState is com.metrolist.music.arc.AppUpdate.State.Failed) R.string.try_again else R.string.update_action))
+            }
+            com.metrolist.music.arc.AppUpdateProgress(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
+            OutlinedButton(
                 onClick = { showChangelog = !showChangelog },
                 modifier =
                     Modifier
@@ -229,9 +248,8 @@ fun UpdaterScreen(
 
             if (showChangelog && changelogContent != null) {
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    text = changelogContent!!,
-                    style = MaterialTheme.typography.bodySmall,
+                com.metrolist.music.arc.MarkdownText(
+                    changelogContent!!,
                     modifier =
                         Modifier
                             .fillMaxWidth()
