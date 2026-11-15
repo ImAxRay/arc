@@ -171,7 +171,6 @@ import com.metrolist.music.constants.SkipSilenceInstantKey
 import com.metrolist.music.constants.SkipSilenceKey
 import com.metrolist.music.constants.StopMusicOnTaskClearKey
 import com.metrolist.music.db.MusicDatabase
-import com.metrolist.music.arc.AutoSpeedDial
 import com.metrolist.music.arc.DeviceMusic
 import com.metrolist.music.arc.DriveMusic
 import com.metrolist.music.arc.Addons
@@ -4650,23 +4649,11 @@ class MusicService :
             MusicWidgetReceiver.ACTION_NEXT -> player.seekToNext()
 
             MusicWidgetReceiver.ACTION_PREVIOUS -> player.seekToPrevious()
-
-            MusicWidgetReceiver.ACTION_SHUFFLE -> player.shuffleModeEnabled = !player.shuffleModeEnabled
-
-            MusicWidgetReceiver.ACTION_PLAY_TILE -> playSpeedDialTile(intent)
         }
 
         return super.onStartCommand(intent, flags, startId)
     }
 
-
-    private fun playSpeedDialTile(intent: Intent) {
-        val path = intent.getStringExtra(MusicWidgetReceiver.EXTRA_TILE)?.split("/") ?: return
-        scope.launch {
-            val (songs, start) = withContext(Dispatchers.IO) { AutoSpeedDial.queue(database, path) } ?: return@launch
-            playQueue(ListQueue(items = songs.map { it.toMediaItem() }, startIndex = start), playWhenReady = true)
-        }
-    }
 
     private fun handleAlarmTrigger(intent: Intent) {
         scope.launch(Dispatchers.IO) {
@@ -4810,7 +4797,6 @@ class MusicService :
                             artist = metadata?.artists?.joinToArtistString(getArtistSeparator(this@MusicService)) { it.name },
                             artworkUri = metadata?.thumbnailUrl,
                             isPlaying = player.isPlaying,
-                            shuffle = player.shuffleModeEnabled,
                             durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
                             positionMs = player.currentPosition,
                         ),
