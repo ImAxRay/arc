@@ -105,7 +105,7 @@ private fun PinMark(modifier: Modifier) {
     )
 }
 
-/** Artists: their round photo filling a tile, the name over its foot and an arrow saying the tile opens a page. */
+/** Artists: their round photo alone, no square behind it, the name over its foot and an arrow saying the tile opens a page. */
 @Composable
 private fun ArtistDialTile(
     item: ArtistItem,
@@ -119,8 +119,6 @@ private fun ArtistDialTile(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(DialCornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         ItemThumbnail(
             thumbnailUrl = item.thumbnail?.resize(thumbnailSize, thumbnailSize),
@@ -129,7 +127,6 @@ private fun ArtistDialTile(
             shape = CircleShape,
             modifier = Modifier.fillMaxSize(),
         )
-        NameFade()
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -137,7 +134,12 @@ private fun ArtistDialTile(
                 .fillMaxWidth()
                 .padding(start = 10.dp, end = 4.dp, bottom = 8.dp),
         ) {
-            MarqueeText(text = item.title, style = DialNameStyle, modifier = Modifier.weight(1f))
+            // no square fade behind a round photo, so a stronger halo carries the name
+            MarqueeText(
+                text = item.title,
+                style = DialNameStyle.copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.8f), androidx.compose.ui.geometry.Offset(0f, 1f), blurRadius = 14f)),
+                modifier = Modifier.weight(1f),
+            )
             Icon(painterResource(R.drawable.navigate_next), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         }
         if (isPinned) PinMark(Modifier.align(Alignment.TopEnd))
