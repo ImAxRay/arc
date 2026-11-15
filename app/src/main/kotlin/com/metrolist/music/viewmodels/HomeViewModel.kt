@@ -423,7 +423,9 @@ class HomeViewModel @Inject constructor(
     }
     private suspend fun getDailyDiscover() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        val likedSongs = database.likedSongsByCreateDateAsc().first()
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        // own files have no YouTube id, so they can't seed related songs
+        val likedSongs = database.likedSongsByCreateDateAsc().first().filterNot { it.song.isLocal }
         if (likedSongs.isEmpty()) return
 
         val seeds = likedSongs.shuffled().distinctBy { it.id }.take(5)
@@ -440,7 +442,7 @@ class HomeViewModel @Inject constructor(
                             val recommendations = page.songs
                                 .filter { item ->
                                     if (hideVideoSongs && item.isVideoSong) return@filter false
-                                    if (item.explicit) return@filter false
+                                    if (hideExplicit && item.explicit) return@filter false
                                     true
                                 }
                                 .shuffled()

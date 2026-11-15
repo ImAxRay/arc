@@ -1,5 +1,7 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.constants.DialCornerRadius
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -159,7 +161,7 @@ fun SpeedDialModule(env: HomeEnv) {
                                             isPlaying = env.isPlaying.value,
                                             tiltEye = tiltEye,
                                             thumbnailSize = if (slot.span > 1) 544 else 200,
-                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail).fillMaxSize(),
+                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
                                         )
                                     }
                                 }
@@ -242,6 +244,7 @@ private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: 
                 },
                 onLongClick = fallback?.takeIf { current == null }?.let { song -> { env.showSongMenu(song) } },
                 cover = current?.thumbnailUrl ?: fallback?.thumbnailUrl,
+                glowCorner = DialCornerRadius,
             ),
     )
 }

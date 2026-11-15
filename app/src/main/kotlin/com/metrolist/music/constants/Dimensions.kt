@@ -35,6 +35,9 @@ val AlbumThumbnailSize = 144.dp
 
 val ThumbnailCornerRadius = 3.dp
 
+/** Speed dial tiles and Home's cover cards: softer than list thumbnails. */
+val DialCornerRadius = 12.dp
+
 val PlayerHorizontalPadding = 32.dp
 
 val NavigationBarAnimationSpec = spring<Dp>(

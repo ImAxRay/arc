@@ -21,7 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.arc.home.homeTile
-import com.metrolist.music.constants.ThumbnailCornerRadius
+import com.metrolist.music.constants.DialCornerRadius
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -47,9 +47,9 @@ fun RandomizeGridItem(
     Box(
         modifier =
             modifier
-                .homeTile(onClick = onClick)
+                .homeTile(onClick = onClick, glowCorner = DialCornerRadius)
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                .clip(RoundedCornerShape(DialCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {

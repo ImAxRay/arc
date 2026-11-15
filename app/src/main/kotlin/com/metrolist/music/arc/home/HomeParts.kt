@@ -197,7 +197,7 @@ internal fun PickCard(
     modifier: Modifier = Modifier,
     big: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(ThumbnailCornerRadius)
+    val shape = RoundedCornerShape(com.metrolist.music.constants.DialCornerRadius)
     Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
         AsyncImage(
             model = thumbnail?.resize(if (big) 720 else 360, if (big) 720 else 360),

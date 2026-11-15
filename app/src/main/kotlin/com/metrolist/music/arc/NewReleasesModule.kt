@@ -234,9 +234,9 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         modifier =
             modifier
-                .homeTile(onClick = onClick)
+                .homeTile(onClick = onClick, glowCorner = com.metrolist.music.constants.DialCornerRadius)
                 .fillMaxSize()
-                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                .clip(RoundedCornerShape(com.metrolist.music.constants.DialCornerRadius))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(8.dp),
     ) {
