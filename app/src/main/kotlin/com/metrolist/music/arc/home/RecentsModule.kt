@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.utils.rememberPreference
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -11,12 +12,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.R
 import com.metrolist.music.db.entities.Song
 
-private const val RECENTS_SHOWN = 5
-
 @Composable
 internal fun recentsShown(env: HomeEnv): List<Song> {
     val recent by env.viewModel.recentSongs.collectAsStateWithLifecycle()
-    return recent.notOnDial(env).take(RECENTS_SHOWN)
+    val count by rememberPreference(RecentsCountSetting.key, RecentsCountSetting.default)
+    return recent.notOnDial(env).take(count)
 }
 
 /** The last few songs played that the dial doesn't already hold, as rows; the title opens the whole history. */

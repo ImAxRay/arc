@@ -59,7 +59,6 @@ import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.arc.ARC_HOME_SPEED_DIAL_ONLY
 import com.metrolist.music.arc.ArcHomeBackgroundKey
 import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.CapsuleGap
@@ -73,14 +72,35 @@ import com.metrolist.music.arc.rememberPressGlow
 import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.TopBarEndPadding
 import com.metrolist.music.arc.home.HomeEnv
-import com.metrolist.music.arc.home.HomeModuleOrder
 import com.metrolist.music.arc.home.HomeDayHeader
 import com.metrolist.music.arc.home.HomeModules
-import com.metrolist.music.arc.home.playLuckyItem
+import com.metrolist.music.arc.home.AddModulesRow
+import com.metrolist.music.arc.home.ArcHomeModulesKey
+import com.metrolist.music.arc.home.EditFrame
+import com.metrolist.music.arc.home.EditHomeRow
+import com.metrolist.music.arc.home.EmptyModuleStub
+import com.metrolist.music.arc.home.HomeEdit
+import com.metrolist.music.arc.home.HomeModuleId
+import com.metrolist.music.arc.home.HomeSlot
+import com.metrolist.music.arc.home.LocalHomeEdit
+import com.metrolist.music.arc.home.ModuleSettingsSheet
+import com.metrolist.music.arc.home.encode
+import com.metrolist.music.arc.home.parseHomeSlots
+import com.metrolist.music.arc.home.rememberWobbleClock
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.Button
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import com.metrolist.music.arc.homeLine
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
-import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -116,14 +136,42 @@ fun HomeScreen(
     }
 
     val homePage by viewModel.homePage.collectAsStateWithLifecycle()
-    val allLocalItems by viewModel.allLocalItems.collectAsStateWithLifecycle()
-    val allYtItems by viewModel.allYtItems.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
 
+    val context = LocalContext.current
+    var savedModules by rememberPreference(ArcHomeModulesKey, "")
+    var slots by remember { mutableStateOf(parseHomeSlots(savedModules)) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    BackHandler(editing) { editing = false }
+    val wobble = rememberWobbleClock(editing)
+    val homeEdit =
+        remember {
+            HomeEdit {
+                if (!editing) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    editing = true
+                }
+            }
+        }
+
+    fun save(new: List<HomeSlot>) {
+        slots = new
+        savedModules = new.encode()
+    }
+
     val lazylistState = rememberLazyListState()
+    val reorder =
+        rememberReorderableLazyListState(lazylistState) { from, to ->
+            val f = slots.indexOfFirst { it.id.key == from.key }
+            val t = slots.indexOfFirst { it.id.key == to.key }
+            if (f >= 0 && t >= 0) slots = slots.toMutableList().apply { add(t, removeAt(f)) }
+        }
+    // a drag only reorders the screen's copy; it's written once the module is let go
+    LaunchedEffect(reorder.isAnyItemDragging) { if (!reorder.isAnyItemDragging && slots.encode() != savedModules) save(slots) }
+    LaunchedEffect(savedModules) { if (!reorder.isAnyItemDragging) slots = parseHomeSlots(savedModules) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
     val wrappedDismissed by backStackEntry
@@ -240,28 +288,81 @@ fun HomeScreen(
                         height = maxHeight,
                     )
                 }
-            val shown = HomeModuleOrder.mapNotNull { id -> key(id) { HomeModules.getValue(id).takeIf { it.available(env) } } }
+            val wrapped = key(HomeModuleId.WRAPPED) { HomeModules.getValue(HomeModuleId.WRAPPED).takeIf { !editing && it.available(env) } }
+            val shown =
+                slots.filter { it.shown }.mapNotNull { slot ->
+                    key(slot.id) {
+                        val module = HomeModules.getValue(slot.id)
+                        val available = module.available(env)
+                        if (editing || available) module to available else null
+                    }
+                }
+            val undo = stringResource(R.string.undo)
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches) {
+            fun hide(module: com.metrolist.music.arc.home.HomeModule) {
+                val before = slots
+                save(slots.map { if (it.id == module.id) it.copy(shown = false) else it })
+                scope.launch {
+                    val hidden = context.getString(R.string.arc_home_module_hidden, context.getString(module.title))
+                    if (snackbarHostState.showSnackbar(hidden, undo, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) save(before)
+                }
+            }
+
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
-                    item(key = "day", contentType = "day") { Column(Modifier.homeLanding(0)) { HomeDayHeader(lazylistState) } }
-                    shown.forEachIndexed { index, module ->
-                        item(key = module.id.key, contentType = module.id.key) { Column(Modifier.homeLanding(index + 1)) { module.content(env) } }
+                    item(key = "day", contentType = "day") {
+                        Column(Modifier.homeLanding(0).pointerInput(Unit) { detectTapGestures(onLongPress = { homeEdit.enter() }) }) { HomeDayHeader(lazylistState) }
+                    }
+                    wrapped?.let { module -> item(key = module.id.key, contentType = module.id.key) { module.content(env) } }
+                    shown.forEachIndexed { index, (module, available) ->
+                        item(key = module.id.key, contentType = module.id.key) {
+                            ReorderableItem(reorder, key = module.id.key, enabled = editing) { dragging ->
+                                Column(Modifier.homeLanding(index + 1)) {
+                                    if (editing) {
+                                        EditFrame(
+                                            module = module,
+                                            index = index,
+                                            clock = wobble,
+                                            dragging = dragging,
+                                            cover = Modifier.longPressDraggableHandle(onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }),
+                                            onHide = { hide(module) },
+                                            onSettings = { menuState.show { ModuleSettingsSheet(module) } },
+                                        ) { if (available) module.content(env) else EmptyModuleStub(module) }
+                                    } else {
+                                        module.content(env)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (editing) {
+                        item(key = "add", contentType = "add") {
+                            AddModulesRow(
+                                hidden = slots.filterNot { it.shown }.map { HomeModules.getValue(it.id) },
+                                onAdd = { id -> save(slots.filterNot { it.id == id } + HomeSlot(id, true)) },
+                                onReset = { save(parseHomeSlots("")) },
+                            )
+                        }
+                    } else {
+                        item(key = "edit", contentType = "edit") { EditHomeRow(homeEdit.enter) }
                     }
                 }
             }
             PressGlowLayer(pressGlow)
 
-            HideOnScrollFAB(
-                visible = !ARC_HOME_SPEED_DIAL_ONLY && (allLocalItems.isNotEmpty() || allYtItems.isNotEmpty()),
-                lazyListState = lazylistState,
-                icon = R.drawable.shuffle,
-                onClick = { env.playLuckyItem(allLocalItems, allYtItems) },
-                onRecognitionClick = { navController.navigate("recognition") },
-            )
+            if (editing) {
+                Button(
+                    onClick = { editing = false },
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
+                            .padding(bottom = 12.dp),
+                ) { Text(stringResource(R.string.arc_home_done)) }
+            }
         }
     }
 }

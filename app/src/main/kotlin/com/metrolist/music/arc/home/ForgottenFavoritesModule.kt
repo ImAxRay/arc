@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.utils.rememberPreference
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ fun ForgottenFavoritesModule(env: HomeEnv) {
             title = title,
             onPlay = if (env.isListenTogetherGuest) null else { { env.playAll(title, songs.map { it.toMediaItem() }) } },
         )
-        HomeSongRows(env, songs, rows = minOf(3, songs.size))
+        val rows by rememberPreference(ForgottenRowsSetting.key, ForgottenRowsSetting.default)
+        HomeSongRows(env, songs, rows = minOf(rows, songs.size))
     }
 }

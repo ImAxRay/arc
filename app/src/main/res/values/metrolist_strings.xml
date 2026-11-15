@@ -1298,6 +1298,14 @@
     <string name="arc_home_now_playing">Now playing</string>
     <string name="arc_home_time_left">%s left</string>
     <string name="arc_home_recents">Recents</string>
+    <string name="arc_home_youtube">From YouTube</string>
+    <string name="arc_home_setting_rows">Rows</string>
+    <string name="arc_home_setting_songs">Songs</string>
+    <string name="arc_home_add_module">Add to Home</string>
+    <string name="arc_home_done">Done</string>
+    <string name="arc_home_edit">Edit Home</string>
+    <string name="arc_home_hide">Hide</string>
+    <string name="arc_home_module_hidden">%1$s hidden</string>
     <string name="arc_home_your_playlists">Your playlists</string>
     <string name="arc_update_downloading">Downloading…</string>
     <string name="arc_update_downloading_percent">Downloading %1$d%%</string>

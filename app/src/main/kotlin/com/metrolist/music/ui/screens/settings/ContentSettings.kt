@@ -87,7 +87,6 @@ import com.metrolist.music.constants.ProxyUrlKey
 import com.metrolist.music.constants.ProxyUsernameKey
 import com.metrolist.music.constants.QuickPicks
 import com.metrolist.music.constants.QuickPicksKey
-import com.metrolist.music.constants.RandomizeHomeOrderKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
 import com.metrolist.music.constants.ShowArtistDescriptionKey
 import com.metrolist.music.constants.ShowMostStatsPlaylistsKey
@@ -172,10 +171,6 @@ fun ContentSettings(
     val (showWrappedCard, onShowWrappedCardChange) = rememberPreference(key = ShowWrappedCardKey, defaultValue = false)
     val (showMostStatsPlaylists, onShowMostStatsPlaylistsChange) =
         rememberPreference(key = ShowMostStatsPlaylistsKey, defaultValue = true)
-    val (randomizeHomeOrder, onRandomizeHomeOrderChange) = rememberPreference(
-        RandomizeHomeOrderKey,
-        defaultValue = true
-    )
     val (addToPlaylistPosition, onAddToPlaylistPositionChange) = rememberEnumPreference(
         AddToPlaylistPositionKey,
         AddToPlaylistPosition.BEGINNING,
@@ -1234,27 +1229,6 @@ fun ContentSettings(
             Material3SettingsGroup(
                 title = stringResource(R.string.misc),
                 items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.shuffle),
-                        title = { Text(stringResource(R.string.randomize_home_order)) },
-                        description = { Text(stringResource(R.string.randomize_home_order_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = randomizeHomeOrder,
-                                onCheckedChange = onRandomizeHomeOrderChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (randomizeHomeOrder) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onRandomizeHomeOrderChange(!randomizeHomeOrder) }
-                    ),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.trending_up),
                         title = { Text(stringResource(R.string.top_length)) },

@@ -261,7 +261,6 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.lyrics_romanization, "settings/lyrics", R.string.lyrics),
     SettingsEntry(R.string.show_most_stats_playlists, "settings/library", R.string.arc_settings_library),
     SettingsEntry(R.string.show_wrapped_card, "settings/library", R.string.arc_settings_library),
-    SettingsEntry(R.string.randomize_home_order, "settings/library", R.string.arc_settings_library),
     SettingsEntry(R.string.set_quick_picks, "settings/library", R.string.arc_settings_library),
     SettingsEntry(R.string.general, "settings/region", R.string.arc_settings_region),
     SettingsEntry(R.string.playlists, "settings/library", R.string.arc_settings_library),

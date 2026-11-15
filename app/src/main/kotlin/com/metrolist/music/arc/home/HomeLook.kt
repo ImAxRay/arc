@@ -179,13 +179,20 @@ fun ModuleHeader(
     onClick: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
+    val edit = LocalHomeEdit.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(ModuleHeaderHeight)
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .then(
+                    when {
+                        edit != null -> Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = edit.enter)
+                        onClick != null -> Modifier.clickable(onClick = onClick)
+                        else -> Modifier
+                    },
+                )
                 .padding(start = 20.dp, end = 12.dp),
     ) {
         Text(
