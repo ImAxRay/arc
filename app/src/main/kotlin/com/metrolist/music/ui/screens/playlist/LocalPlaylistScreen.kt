@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.models.toMediaMetadata
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsetsSides
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -136,6 +140,9 @@ import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.ui.menu.CustomThumbnailMenu
 import com.metrolist.music.ui.menu.LocalPlaylistMenu
 import com.metrolist.music.ui.menu.SelectionSongMenu
+import com.metrolist.music.arc.SongSelectionBar
+import com.metrolist.music.arc.rememberSongSelection
+import com.metrolist.music.arc.selectableSong
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.backToMain
@@ -220,25 +227,14 @@ fun LocalPlaylistScreen(
         }
     }
 
-    var inSelectMode by remember { mutableStateOf(false) }
-    val selection =
-        remember {
-            mutableStateListOf<Int>()
-        }
-    var selectionAnchorMapId by remember { mutableStateOf<Int?>(null) }
-    val onExitSelectionMode = {
-        inSelectMode = false
-        selection.clear()
-        selectionAnchorMapId = null
-    }
+    // Picks are playlist entries (map ids), so a song that's in the playlist twice can be removed once.
+    val selection = rememberSongSelection()
 
     if (isSearching) {
         BackHandler {
             isSearching = false
             query = TextFieldValue()
         }
-    } else if (inSelectMode) {
-        BackHandler(onBack = onExitSelectionMode)
     }
 
     val downloadUtil = LocalDownloadUtil.current
@@ -249,15 +245,8 @@ fun LocalPlaylistScreen(
     val editable: Boolean = playlist?.playlist?.isEditable == true
 
     LaunchedEffect(songs) {
-        selection.fastForEachReversed { mapId ->
-            if (songs.find { it.map.id == mapId } == null) {
-                selection.remove(Integer.valueOf(mapId))
-            }
-        }
-
-        if (selectionAnchorMapId != null && songs.none { it.map.id == selectionAnchorMapId }) {
-            selectionAnchorMapId = songs.firstOrNull { it.map.id in selection }?.map?.id
-        }
+        val present = songs.mapTo(HashSet()) { it.map.id.toString() }
+        selection.ids.retainAll(present)
     }
 
     LaunchedEffect(songs) {
@@ -603,14 +592,6 @@ fun LocalPlaylistScreen(
                         }
                     }
 
-                    val onCheckedChange: (Boolean) -> Unit = {
-                        if (it) {
-                            selection.add(song.map.id)
-                        } else {
-                            selection.remove(Integer.valueOf(song.map.id))
-                        }
-                    }
-
                     val content: @Composable () -> Unit = {
                         SongListItem(
                             song = song.song,
@@ -618,12 +599,7 @@ fun LocalPlaylistScreen(
                             isPlaying = isPlaying,
                             showInLibraryIcon = true,
                             trailingContent = {
-                                if (inSelectMode) {
-                                    Checkbox(
-                                        checked = selection.contains(song.map.id),
-                                        onCheckedChange = onCheckedChange,
-                                    )
-                                } else {
+                                run {
                                     IconButton(
                                         onClick = {
                                             menuState.show {
@@ -642,7 +618,7 @@ fun LocalPlaylistScreen(
                                         )
                                     }
 
-                                    if (sortType == PlaylistSongSortType.CUSTOM && !locked && !inSelectMode && !isSearching && editable) {
+                                    if (sortType == PlaylistSongSortType.CUSTOM && !locked && !selection.active && !isSearching && editable) {
                                         IconButton(
                                             onClick = { },
                                             modifier = Modifier.draggableHandle(),
@@ -658,52 +634,24 @@ fun LocalPlaylistScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (inSelectMode) {
-                                                onCheckedChange(!selection.contains(song.map.id))
-                                            } else if (song.song.id == mediaMetadata?.id) {
-                                                playerConnection.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = playlist!!.playlist.name,
-                                                        items = songs.map { it.song.toMediaItem() },
-                                                        startIndex = songs.indexOfFirst { it.map.id == song.map.id },
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!inSelectMode) {
-                                                inSelectMode = true
-                                                onCheckedChange(true)
-                                                selectionAnchorMapId = song.map.id
-                                            } else {
-                                                val anchorIndex =
-                                                    selectionAnchorMapId?.let { anchorMapId ->
-                                                        displayedSongs.indexOfFirst { it.map.id == anchorMapId }
-                                                    } ?: -1
-
-                                                if (anchorIndex == -1) {
-                                                    onCheckedChange(true)
-                                                    selectionAnchorMapId = song.map.id
-                                                } else {
-                                                    val range = if (anchorIndex <= index) anchorIndex..index else index..anchorIndex
-                                                    for (rangeIndex in range) {
-                                                        val rangeMapId = displayedSongs[rangeIndex].map.id
-                                                        if (rangeMapId !in selection) {
-                                                            selection.add(rangeMapId)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    ),
+                                    .background(if (song.map.id.toString() in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                                    .selectableSong(song.map.id.toString(), selection, warmId = song.song.id) {
+                                        if (song.song.id == mediaMetadata?.id) {
+                                            playerConnection.togglePlayPause()
+                                        } else {
+                                            playerConnection.playQueue(
+                                                ListQueue(
+                                                    title = playlist!!.playlist.name,
+                                                    items = songs.map { it.song.toMediaItem() },
+                                                    startIndex = songs.indexOfFirst { it.map.id == song.map.id },
+                                                ),
+                                            )
+                                        }
+                                    },
                         )
                     }
 
-                    if (locked || inSelectMode || !swipeRemoveEnabled) {
+                    if (locked || selection.active || !swipeRemoveEnabled) {
                         Box(modifier = Modifier.animateItem()) {
                             content()
                         }
@@ -723,9 +671,7 @@ fun LocalPlaylistScreen(
 
         TopAppBar(
             title = {
-                if (inSelectMode) {
-                    Text(pluralStringResource(R.plurals.n_selected, selection.size, selection.size))
-                } else if (isSearching) {
+                if (isSearching) {
                     TextField(
                         value = query,
                         onValueChange = { query = it },
@@ -756,14 +702,7 @@ fun LocalPlaylistScreen(
                 }
             },
             navigationIcon = {
-                if (inSelectMode) {
-                    IconButton(onClick = onExitSelectionMode) {
-                        Icon(
-                            painter = painterResource(R.drawable.close),
-                            contentDescription = null,
-                        )
-                    }
-                } else {
+                run {
                     IconButton(
                         onClick = {
                             if (isSearching) {
@@ -787,43 +726,7 @@ fun LocalPlaylistScreen(
                 }
             },
             actions = {
-                if (inSelectMode) {
-                    Checkbox(
-                        checked = selection.size == songs.size && selection.isNotEmpty(),
-                        onCheckedChange = {
-                            if (selection.size == songs.size) {
-                                selection.clear()
-                            } else {
-                                selection.clear()
-                                selection.addAll(songs.map { it.map.id })
-                            }
-                        },
-                    )
-                    IconButton(
-                        enabled = selection.isNotEmpty(),
-                        onClick = {
-                            menuState.show {
-                                SelectionSongMenu(
-                                    songSelection =
-                                        selection.mapNotNull { mapId ->
-                                            songs.find { it.map.id == mapId }?.song
-                                        },
-                                    songPosition =
-                                        selection.mapNotNull { mapId ->
-                                            songs.find { it.map.id == mapId }?.map
-                                        },
-                                    onDismiss = menuState::dismiss,
-                                    clearAction = onExitSelectionMode,
-                                )
-                            }
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.more_vert),
-                            contentDescription = null,
-                        )
-                    }
-                } else if (!isSearching) {
+                if (!isSearching) {
                     // Only search button remains in TopAppBar
                     IconButton(
                         onClick = { isSearching = true },
@@ -835,6 +738,28 @@ fun LocalPlaylistScreen(
                     }
                 }
             },
+        )
+
+        SongSelectionBar(
+            selection = selection,
+            all = { (if (isSearching) filteredSongs else mutableSongs).map { it.map.id.toString() } },
+            picked = { (if (isSearching) filteredSongs else mutableSongs).filter { it.map.id.toString() in selection.ids }.map { it.song.toMediaMetadata() } },
+            onMore = {
+                val picked = songs.filter { it.map.id.toString() in selection.ids }
+                menuState.show {
+                    SelectionSongMenu(
+                        songSelection = picked.map { it.song },
+                        songPosition = picked.map { it.map },
+                        onDismiss = menuState::dismiss,
+                        clearAction = selection::clear,
+                        compact = true,
+                    )
+                }
+            },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom)),
         )
 
         SnackbarHost(

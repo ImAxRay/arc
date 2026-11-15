@@ -116,7 +116,7 @@ fun rememberSongSelection(): SongSelection {
  * row; holding starts selecting; holding and dragging up or down picks every row the finger passes.
  */
 @Composable
-fun Modifier.selectableSong(id: String, selection: SongSelection, onClick: () -> Unit): Modifier {
+fun Modifier.selectableSong(id: String, selection: SongSelection, warmId: String = id, onClick: () -> Unit): Modifier {
     val haptics = LocalHapticFeedback.current
     val currentClick by rememberUpdatedState(onClick)
     val service = LocalPlayerConnection.current?.service
@@ -127,10 +127,10 @@ fun Modifier.selectableSong(id: String, selection: SongSelection, onClick: () ->
         onDispose { selection.rows.remove(token) }
     }
     return onGloballyPositioned { place[0] = it }
-        .pointerInput(id, selection) {
+        .pointerInput(id, warmId, selection) {
             detectTapGestures(
                 // the finger is down a good 100 ms before the tap counts: start fetching the song then
-                onPress = { if (!selection.active) service?.warmStreams(listOf(id), "press") },
+                onPress = { if (!selection.active) service?.warmStreams(listOf(warmId), "press") },
                 onTap = { if (selection.active) selection.toggle(id) else currentClick() },
                 onLongPress = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
