@@ -27,12 +27,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -61,6 +66,7 @@ import com.metrolist.music.arc.CapsuleGap
 import com.metrolist.music.arc.CapsuleSize
 import com.metrolist.music.arc.HomeBackdrop
 import com.metrolist.music.arc.ArcPressGlowKey
+import com.metrolist.music.arc.LocalMarqueeTouches
 import com.metrolist.music.arc.LocalPressGlow
 import com.metrolist.music.arc.PressGlowLayer
 import com.metrolist.music.arc.rememberPressGlow
@@ -187,12 +193,19 @@ fun HomeScreen(
                 dark = MaterialTheme.colorScheme.background.luminance() < 0.5f,
                 fallback = MaterialTheme.colorScheme.primary,
             )
+        val marqueeTouches = remember { mutableIntStateOf(0) }
         HomeBackdrop(homeBackground, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.primary)
         BoxWithConstraints(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .then(
+                    // Names on Home stay still until a touch, so a resting Home draws nothing for them.
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            marqueeTouches.intValue++
+                        }
+                    }.then(
                         if (showHomeLine) {
                             Modifier.homeLine(
                                 connection = playerConnection,
@@ -229,7 +242,7 @@ fun HomeScreen(
                 }
             val shown = HomeModuleOrder.mapNotNull { id -> key(id) { HomeModules.getValue(id).takeIf { it.available(env) } } }
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow) {
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),

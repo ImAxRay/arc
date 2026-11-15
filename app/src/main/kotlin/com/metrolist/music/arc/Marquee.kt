@@ -2,12 +2,15 @@ package com.metrolist.music.arc
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -34,20 +37,29 @@ internal const val MARQUEE_PAUSE_MS = 2500L
 /** Long names scroll this many times after they appear, then stay still. */
 const val MARQUEE_LOOPS = 3
 
+/**
+ * Touches on a screen whose names stay still until touched (Home): each touch counts up, and the long names on
+ * screen then scroll once. Null elsewhere, where names scroll [MARQUEE_LOOPS] times after they appear.
+ */
+val LocalMarqueeTouches = staticCompositionLocalOf<IntState?> { null }
+
+// A touched name starts moving after this beat instead of the full rest.
+private const val TOUCH_REST_MS = 300L
+
 private fun marqueeCycle(loop: Float, speed: Float) = MARQUEE_PAUSE_MS + (loop / speed * 1000f).toLong()
 
 /** How far a name of [loop] (its width plus the gap) has scrolled at [clockMs]: still for a pause, then one full loop, [MARQUEE_LOOPS] times. */
-internal fun marqueeScroll(clockMs: Long, loop: Float, speed: Float): Float {
+internal fun marqueeScroll(clockMs: Long, loop: Float, speed: Float, loops: Int = MARQUEE_LOOPS): Float {
     val cycle = marqueeCycle(loop, speed)
-    if (clockMs >= cycle * MARQUEE_LOOPS) return 0f
+    if (clockMs >= cycle * loops) return 0f
     val t = clockMs % cycle
     return if (t < MARQUEE_PAUSE_MS) 0f else (t - MARQUEE_PAUSE_MS) / 1000f * speed
 }
 
 /** How long a name of [loop] still rests before it moves again at [clockMs], 0 while it's moving, or null once it has finished. */
-private fun marqueeRest(clockMs: Long, loop: Float, speed: Float): Long? {
+private fun marqueeRest(clockMs: Long, loop: Float, speed: Float, loops: Int): Long? {
     val cycle = marqueeCycle(loop, speed)
-    if (clockMs >= cycle * MARQUEE_LOOPS) return null
+    if (clockMs >= cycle * loops) return null
     val t = clockMs % cycle
     return if (t < MARQUEE_PAUSE_MS) MARQUEE_PAUSE_MS - t else 0L
 }
@@ -57,12 +69,12 @@ private fun marqueeRest(clockMs: Long, loop: Float, speed: Float): Long? {
  * rest it sleeps until the first one moves again instead of asking for a new frame each refresh,
  * which keeps the screen from redrawing 120 times a second over still text.
  */
-internal suspend fun runMarqueeClock(loops: () -> List<Float>, speed: Float, onTime: (Long) -> Unit) {
-    val start = withFrameMillis { it }
+internal suspend fun runMarqueeClock(loops: () -> List<Float>, speed: Float, times: Int = MARQUEE_LOOPS, fromMs: Long = 0L, onTime: (Long) -> Unit) {
+    val start = withFrameMillis { it } - fromMs
     while (true) {
         val now = withFrameMillis { it } - start
         onTime(now)
-        val rest = loops().mapNotNull { marqueeRest(now, it, speed) }.minOrNull() ?: return
+        val rest = loops().mapNotNull { marqueeRest(now, it, speed, times) }.minOrNull() ?: return
         if (rest > MIN_SLEEP_MS) delay(rest - FRAME_MS)
     }
 }
@@ -94,10 +106,23 @@ internal fun MarqueeText(
     val loopPx = remember { mutableFloatStateOf(0f) }
     val speed = with(LocalDensity.current) { MarqueeSpeed.toPx() }
     val shift = { if (overflows) scroll else 0f }
+    val touches = LocalMarqueeTouches.current
 
     if (overflows) {
         LaunchedEffect(text, textWidth, boxWidth) {
-            runMarqueeClock({ listOf(loopPx.floatValue) }, speed) { scroll = marqueeScroll(it, loopPx.floatValue, speed) }
+            if (touches == null) {
+                runMarqueeClock({ listOf(loopPx.floatValue) }, speed) { scroll = marqueeScroll(it, loopPx.floatValue, speed) }
+                return@LaunchedEffect
+            }
+            // Touches before this name appeared don't count, and ones during a pass are let go.
+            var seen = touches.intValue
+            snapshotFlow { touches.intValue }.collect { now ->
+                if (now == seen) return@collect
+                runMarqueeClock({ listOf(loopPx.floatValue) }, speed, times = 1, fromMs = MARQUEE_PAUSE_MS - TOUCH_REST_MS) {
+                    scroll = marqueeScroll(it, loopPx.floatValue, speed, loops = 1)
+                }
+                seen = touches.intValue
+            }
         }
     }
 

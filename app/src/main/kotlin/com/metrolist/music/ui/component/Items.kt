@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.LocalMarqueeTouches
 import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -53,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -1271,19 +1273,32 @@ fun YouTubeGridItem(
     fillMaxWidth: Boolean = false,
 ) = GridItem(
     title = {
-        Text(
-            text = if (item is ArtistItem) {
-                ArtistNameAliases.resolve(LocalArtistNameAliases.current, item.id, item.title)
-            } else {
-                item.title
-            },
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
-        )
+        val touches = LocalMarqueeTouches.current
+        val seen = remember { touches?.intValue }
+        // key restarts the scroll on each touch
+        key(touches?.intValue) {
+            Text(
+                text = if (item is ArtistItem) {
+                    ArtistNameAliases.resolve(LocalArtistNameAliases.current, item.id, item.title)
+                } else {
+                    item.title
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier
+                    .basicMarquee(
+                        iterations = when {
+                            touches == null -> MARQUEE_LOOPS
+                            touches.intValue != seen -> 1
+                            else -> 0
+                        },
+                        initialDelayMillis = if (touches == null) 1_200 else 300,
+                    ).fillMaxWidth()
+            )
+        }
     },
      subtitle = {
          val artistNameAliases = LocalArtistNameAliases.current
