@@ -365,7 +365,18 @@ private fun PlayerSheet(
     // The line bends around the corner controls, with the title beside it, in lyrics mode and in the corner layout.
     val lyricsLine = (showInlineLyrics || cornerArc) && !isFullScreen
 
-    DisposableEffect(playerBackground, state.isExpanded, appDark, keepScreenOn, isFullScreen, bareCover) {
+    // Apart from the status bar, so switching between song and video doesn't flash the bar in and out again.
+    DisposableEffect(state.isExpanded, keepScreenOn) {
+        val window = (context as? android.app.Activity)?.window
+        if (keepScreenOn && state.isExpanded) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+
+    DisposableEffect(playerBackground, state.isExpanded, appDark, isFullScreen, bareCover) {
         val window = (context as? android.app.Activity)?.window
         if (window != null && state.isExpanded) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -387,12 +398,6 @@ private fun PlayerSheet(
             } else {
                 insetsController.show(WindowInsetsCompat.Type.statusBars())
             }
-
-            if (keepScreenOn && state.isExpanded) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            } else {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
         }
 
         onDispose {
@@ -400,7 +405,6 @@ private fun PlayerSheet(
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 insetsController.isAppearanceLightStatusBars = !appDark
                 insetsController.show(WindowInsetsCompat.Type.statusBars())
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
     }
