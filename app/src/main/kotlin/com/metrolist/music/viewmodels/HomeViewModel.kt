@@ -761,7 +761,12 @@ class HomeViewModel @Inject constructor(
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-        val page = YouTube.home(params = chip.endpoint?.params).getOrNull() ?: return
+        val page =
+            YouTube.home(params = chip.endpoint?.params).getOrNull() ?: run {
+                // no rows to show, so the chip lets go rather than leave a shimmer up
+                selectedChip.compareAndSet(chip, null)
+                return
+            }
         if (selectedChip.value != chip) return
         chipPage.value = page.copy(sections = page.sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts))
         if (chip.title.contains("Podcast", ignoreCase = true)) fetchPodcastData()

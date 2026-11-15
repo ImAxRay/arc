@@ -317,9 +317,12 @@ fun HomeScreen(
             }
 
             fun hide(module: com.metrolist.music.arc.home.HomeModule) {
-                fun show(shown: Boolean) = save(slots.map { if (it.key == module.key) it.copy(shown = shown) else it })
-                show(false)
-                offerUndo(context.getString(R.string.arc_home_module_hidden, module.name(context))) { show(true) }
+                // a hidden YouTube row isn't saved, so Undo puts it back by position rather than by flipping it
+                val at = slots.indexOfFirst { it.key == module.key }
+                save(slots.map { if (it.key == module.key) it.copy(shown = false) else it })
+                offerUndo(context.getString(R.string.arc_home_module_hidden, module.name(context))) {
+                    save(slots.filterNot { it.key == module.key }.toMutableList().apply { add(at.coerceIn(0, size), HomeSlot(module.key, true)) })
+                }
             }
 
             fun reset() {
