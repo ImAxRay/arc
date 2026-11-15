@@ -1902,9 +1902,13 @@ private fun PlayerSheet(
                             } else {
                                 val item = player.getMediaItemAt(index)
                                 val meta = item.mediaMetadata
-                                NextUp(item.mediaId, meta.title?.toString().orEmpty(), meta.artist?.toString().orEmpty(), meta.artworkUri?.toString()) {
-                                    player.removeMediaItem(index)
-                                }
+                                NextUp(
+                                    item.mediaId,
+                                    meta.title?.toString().orEmpty(),
+                                    meta.artist?.toString().orEmpty(),
+                                    meta.artworkUri?.toString(),
+                                    onOpen = queueSheetState::expandSoft,
+                                ) { player.removeMediaItem(index) }
                             }
                         }
                     val showAudioDetails by rememberPreference(ArcAudioDetailsKey, true)

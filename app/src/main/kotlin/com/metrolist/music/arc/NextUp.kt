@@ -5,6 +5,7 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,10 +49,10 @@ private val DropDistance = 56.dp
 private val ThrowDistance = 480.dp
 private const val THROW_SPEED = 1400f
 
-/** The song after this one. [onDrop] takes it out of the queue. */
-class NextUp(val key: String, val title: String, val artist: String, val artwork: String?, val onDrop: () -> Unit)
+/** The song after this one. [onDrop] takes it out of the queue; [onOpen] shows the queue. */
+class NextUp(val key: String, val title: String, val artist: String, val artwork: String?, val onOpen: () -> Unit, val onDrop: () -> Unit)
 
-/** The next song as a small bar like the mini player. Flicking it away in any direction drops that song from the queue. */
+/** The next song as a small bar like the mini player. Tapping it opens the queue; flicking it away in any direction drops that song. */
 @Composable
 internal fun NextUpCard(next: NextUp, color: Color, modifier: Modifier = Modifier) {
     val haptics = LocalHapticFeedback.current
@@ -115,7 +116,8 @@ internal fun NextUpCard(next: NextUp, color: Color, modifier: Modifier = Modifie
                         },
                         onDragCancel = { scope.launch { drag.animateTo(Offset.Zero, ArcMotion.springy()) } },
                     )
-                },
+                }
+                .pointerInput(next.key) { detectTapGestures(onTap = { next.onOpen() }) },
     ) {
         Box(
             contentAlignment = Alignment.Center,
