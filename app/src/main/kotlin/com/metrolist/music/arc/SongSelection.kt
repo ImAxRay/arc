@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.Dispatchers
 import com.metrolist.music.utils.SyncUtils
 import com.metrolist.music.playback.queues.ListQueue
+import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.db.entities.SongEntity
@@ -218,9 +219,17 @@ fun SongSelectionBar(
                     playerConnection?.playQueue(ListQueue(items = queueOf(picked())))
                     selection.clear()
                 }
-                SelectionAction(R.drawable.shuffle, R.string.shuffle, !none) {
-                    playerConnection?.playQueue(ListQueue(items = queueOf(picked().shuffled())))
-                    selection.clear()
+                // Shuffling one song is just playing it, so a single online song gets Radio in that place.
+                if (selection.ids.singleOrNull()?.let { !isOwnFile(it) } == true) {
+                    SelectionAction(R.drawable.radio, R.string.arc_tile_radio, true) {
+                        picked().firstOrNull()?.let { playerConnection?.playQueue(YouTubeQueue.radio(it)) }
+                        selection.clear()
+                    }
+                } else {
+                    SelectionAction(R.drawable.shuffle, R.string.shuffle, !none) {
+                        playerConnection?.playQueue(ListQueue(items = queueOf(picked().shuffled())))
+                        selection.clear()
+                    }
                 }
                 SelectionAction(R.drawable.playlist_play, R.string.arc_next, !none) {
                     playerConnection?.playNext(queueOf(picked()))
