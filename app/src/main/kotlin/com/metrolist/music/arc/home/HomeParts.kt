@@ -141,7 +141,8 @@ fun HomeLocalGridItem(env: HomeEnv, item: LocalItem) {
 @Composable
 fun HomeSongRows(env: HomeEnv, songs: List<Song>, rows: Int) {
     val gridState = rememberLazyGridState()
-    LaunchedEffect(songs) { gridState.scrollToItem(0) }
+    // keyed on ids: a like or download re-emits the list but must not throw the grid back to the start
+    LaunchedEffect(songs.map { it.id }) { gridState.scrollToItem(0) }
     val factor = env.rowGridFactor
     val snap =
         remember(gridState, factor) {
