@@ -60,9 +60,10 @@ internal fun speedDialAvailable(env: HomeEnv): Boolean {
 fun SpeedDialModule(env: HomeEnv) {
     val dialItems by env.viewModel.speedDialItems.collectAsStateWithLifecycle()
     val continueSong by env.viewModel.continueSong.collectAsStateWithLifecycle()
+    val continueReady by env.viewModel.continueReady.collectAsStateWithLifecycle()
     val isRandomizing by env.viewModel.isRandomizing.collectAsStateWithLifecycle()
     val speedDialRows by rememberPreference(SpeedDialRowsKey, 3)
-    if (dialItems.isEmpty()) {
+    if (dialItems.isEmpty() || !continueReady) {
         SpeedDialSkeleton(speedDialRows)
         return
     }

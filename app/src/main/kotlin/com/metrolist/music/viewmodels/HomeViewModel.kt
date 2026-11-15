@@ -53,6 +53,12 @@ import com.metrolist.music.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.onEach
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import java.io.File
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -152,6 +158,15 @@ internal fun keepDialInPlace(
     return result.take(SPEED_DIAL_MAX)
 }
 
+private val dialCacheJson = Json { ignoreUnknownKeys = true }
+
+/** The dial as saved for the next cold start, in the form pinned tiles are already stored in. */
+internal fun encodeDialCache(items: List<YTItem>): String =
+    dialCacheJson.encodeToString(ListSerializer(SpeedDialItem.serializer()), items.map(SpeedDialItem::fromYTItem))
+
+internal fun decodeDialCache(text: String): List<YTItem> =
+    runCatching { dialCacheJson.decodeFromString(ListSerializer(SpeedDialItem.serializer()), text).map { it.toYTItem() } }.getOrDefault(emptyList())
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext val context: Context,
@@ -192,6 +207,7 @@ class HomeViewModel @Inject constructor(
     val continueSong: StateFlow<Song?> =
         combine(database.latestEvent(), database.song(BundledTracks.firstSongId)) { last, bundled -> last?.song ?: bundled }
             .distinctUntilChanged()
+            .onEach { continueReady.value = true }
             .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     /** What the speed dial shows right now, so the modules under it skip those. */
@@ -216,6 +232,14 @@ class HomeViewModel @Inject constructor(
     private var dialShown: List<YTItem> = emptyList()
     private var dialPinned: Set<String> = emptySet()
     private var dialBuiltFor = 0
+
+    /** Next cold start's dial: the latest full build, so Home opens with tiles at once and they still change per launch. */
+    private val dialCache = File(context.filesDir, "arc-home-dial.json")
+    private var dialCacheJob: Job? = null
+    private var homeLoaded = false
+
+    /** Whether the Continue tile's song lookup has answered once; until then page 1 can't be laid out. */
+    val continueReady = MutableStateFlow(false)
 
     /**
      * The song the dial leaves out because the Continue tile shows it, fixed when the dial is built, so a tile tapped
@@ -282,8 +306,22 @@ class HomeViewModel @Inject constructor(
                 }
             dialBuiltFor = generation
             dialPinned = pinned
+            if (homeLoaded) saveDialCache(fresh)
             dialShown
         }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private fun saveDialCache(fresh: List<YTItem>) {
+        dialCacheJob?.cancel()
+        dialCacheJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(3_000L)
+                val part = File(dialCache.path + ".part")
+                runCatching {
+                    part.writeText(encodeDialCache(fresh))
+                    part.renameTo(dialCache)
+                }
+            }
+    }
 
     private fun Song.toSpeedDialSong() =
         SongItem(
@@ -599,6 +637,7 @@ class HomeViewModel @Inject constructor(
         allLocalItems.value = (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
             .filter { it is Song || it is Album }
         isLoading.value = false
+        homeLoaded = true
         dialGeneration.compareAndSet(0, 1)
 
         // Phase 2: Heavy multi-request operations — run in background without blocking the UI.
@@ -835,6 +874,14 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            val cached = withContext(Dispatchers.IO) { if (dialCache.exists()) decodeDialCache(dialCache.readText()) else emptyList() }
+            if (cached.isNotEmpty() && dialGeneration.value == 0) {
+                dialShown = cached
+                dialBuiltFor = 1
+                dialGeneration.value = 1
+            }
+        }
         // a slow network must not keep the dial a skeleton
         viewModelScope.launch {
             delay(2_500L)

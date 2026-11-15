@@ -10,6 +10,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import android.os.PowerManager
+import android.os.SystemClock
+import android.provider.Settings
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.platform.LocalContext
+import com.metrolist.music.arc.ArcMotion
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -226,9 +234,9 @@ fun HomeScreen(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
-                    item(key = "day", contentType = "day") { HomeDayHeader(lazylistState) }
-                    shown.forEach { module ->
-                        item(key = module.id.key, contentType = module.id.key) { module.content(env) }
+                    item(key = "day", contentType = "day") { Column(Modifier.homeLanding(0)) { HomeDayHeader(lazylistState) } }
+                    shown.forEachIndexed { index, module ->
+                        item(key = module.id.key, contentType = module.id.key) { Column(Modifier.homeLanding(index + 1)) { module.content(env) } }
                     }
                 }
             }
@@ -242,5 +250,31 @@ fun HomeScreen(
                 onRecognitionClick = { navController.navigate("recognition") },
             )
         }
+    }
+}
+
+private var homeFirstShown = 0L
+
+/** On a cold start Home's parts land one after another; coming back to Home later shows them in place. */
+@Composable
+private fun Modifier.homeLanding(index: Int): Modifier {
+    val context = LocalContext.current
+    val land =
+        remember {
+            if (homeFirstShown == 0L) homeFirstShown = SystemClock.uptimeMillis()
+            SystemClock.uptimeMillis() - homeFirstShown < 800 &&
+                context.getSystemService(PowerManager::class.java)?.isPowerSaveMode != true &&
+                Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
+        }
+    val progress = remember { Animatable(if (land) 0f else 1f) }
+    if (land) {
+        LaunchedEffect(Unit) {
+            delay(40L * index)
+            progress.animateTo(1f, ArcMotion.landing())
+        }
+    }
+    return graphicsLayer {
+        alpha = progress.value.coerceIn(0f, 1f)
+        translationY = (1f - progress.value) * 40.dp.toPx()
     }
 }

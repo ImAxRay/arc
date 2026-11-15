@@ -2,6 +2,7 @@ package com.metrolist.music.db.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.Artist
 import com.metrolist.innertube.models.ArtistItem
@@ -11,6 +12,7 @@ import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.YTItem
 
+@Serializable
 @Entity(tableName = "speed_dial_item")
 data class SpeedDialItem(
     @PrimaryKey val id: String,

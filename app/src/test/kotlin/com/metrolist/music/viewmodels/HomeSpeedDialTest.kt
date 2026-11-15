@@ -75,6 +75,16 @@ class HomeSpeedDialTest {
         assertEquals(listOf("p1", "p3", "n1", "s1", "s2"), result.map { it.id })
     }
 
+    @Test
+    fun `a cached dial comes back in order and stays put while first sources arrive`() {
+        val cached = listOf(song("a", artist = "A"), song("b"), song("c"))
+        val restored = decodeDialCache(encodeDialCache(cached))
+
+        assertEquals(cached.map { it.id to it.title }, restored.map { it.id to it.title })
+        assertEquals(restored, keepDialInPlace(restored, listOf(song("x")), emptySet(), emptySet()).take(3))
+        assertEquals(emptyList<Any>(), decodeDialCache("not json"))
+    }
+
     private fun song(
         id: String,
         title: String = id,
