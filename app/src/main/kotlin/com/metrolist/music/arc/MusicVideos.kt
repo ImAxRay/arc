@@ -49,7 +49,7 @@ enum class VideoQuality(val height: Int, @StringRes val label: Int) {
     P2160(2160, R.string.arc_video_2160),
 }
 
-class VideoStream(
+data class VideoStream(
     val videoId: String,
     val url: String,
     val height: Int,
@@ -116,20 +116,36 @@ object MusicVideos {
     suspend fun stream(videoId: String, quality: VideoQuality, metered: Boolean): VideoStream? {
         val formats = formats(videoId) ?: return null
         val target = if (quality == VideoQuality.AUTO) (if (metered) 720 else 1080) else quality.height
-        val (videoOnly, muxed) = formats.formats.filter { it.mimeType.startsWith("video/") }.partition { "mp4a" !in it.mimeType && "opus" !in it.mimeType }
-        val usable = videoOnly.filter { (it.height ?: 0) > 0 && decodes(it.mimeType) }
+        val usable = usable(formats)
         val picked =
-            usable.filter { it.height!! <= target }
-                .sortedWith(compareByDescending<Fmt> { it.height }.thenBy { codecRank(it.mimeType) })
+            usable.filter { it.level() <= target }
+                .sortedWith(compareByDescending<Fmt> { it.level() }.thenBy { codecRank(it.mimeType) })
                 .firstOrNull()
-                ?: usable.minByOrNull { it.height!! }
-                ?: muxed.firstOrNull { decodes(it.mimeType) }
+                ?: usable.minByOrNull { it.level() }
+                ?: formats.formats.firstOrNull { it.mimeType.startsWith("video/") && it !in usable && decodes(it.mimeType) }
                 ?: return null
         val url = picked.url ?: return null
         val length = picked.contentLength?.takeIf { it > 0 }
             ?: YouTube.extractionTransport().innerTube.mediaContentLength(url, formats.headers + ("User-Agent" to formats.userAgent))
             ?: return null
-        return VideoStream(videoId, url, picked.height ?: 0, length, formats.userAgent, formats.headers)
+        return VideoStream(videoId, url, picked.level(), length, formats.userAgent, formats.headers)
+    }
+
+    /** Auto and the listed qualities the video has, for the player's quality menu. */
+    suspend fun qualities(videoId: String): List<VideoQuality> {
+        val levels = usable(formats(videoId) ?: return listOf(VideoQuality.AUTO)).mapTo(HashSet()) { it.level() }
+        return VideoQuality.entries.filter { it == VideoQuality.AUTO || it.height in levels }
+    }
+
+    private fun usable(formats: InnerTubeXPlayer.VideoFormats) = formats.formats.filter {
+        it.mimeType.startsWith("video/") && "mp4a" !in it.mimeType && "opus" !in it.mimeType && it.level() > 0 && decodes(it.mimeType)
+    }
+
+    /** YouTube's own class, so a wide 1920×800 film counts as 1080p rather than 800. */
+    private fun Fmt.level() = when (quality) {
+        "large" -> 480
+        "medium" -> 360
+        else -> quality?.removePrefix("hd")?.toIntOrNull() ?: height ?: 0
     }
 
     @OptIn(UnstableApi::class)

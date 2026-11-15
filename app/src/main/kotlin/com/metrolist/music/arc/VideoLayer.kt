@@ -74,6 +74,8 @@ object VideoState {
     /** Where the video in the cover spot ends, in root pixels, so the arc's names can sit below it. */
     val videoBottom = mutableStateOf<Float?>(null)
     val watching = mutableStateOf(false)
+    /** Height of the stream on screen, for the quality menu's Auto row. */
+    val height = mutableStateOf(0)
     var seekLead = 600L
     var startLag = 60L
     private var shownFor: String? = null
@@ -220,6 +222,7 @@ fun MusicVideoLayer(
             if (report) VideoState.videoBottom.value = null
         }
     }
+    LaunchedEffect(source) { VideoState.height.value = source.height }
     LaunchedEffect(player) { follow(player, playerConnection.player) { mapTime(it) } }
     val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(500), label = "videoAlpha")
     val groundColor by VideoState.ground

@@ -9,7 +9,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,24 +72,36 @@ private const val CONTROLS_FOR_MS = 3_000L
 private const val SEEK_STEP_MS = 10_000L
 private val CLOSE_PULL = 120.dp
 
-/** Opens the watch view: the playing video full screen, sideways. */
+/** Opens the watch view: the playing video full screen, sideways. A hold picks the video quality. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WatchButton(modifier: Modifier = Modifier) {
     val haptics = LocalHapticFeedback.current
     val press = remember { MutableInteractionSource() }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .pressBounce(press)
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.28f))
-            .clickable(press, indication = null) {
-                haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
-                VideoState.watching.value = true
-            },
-    ) {
-        Icon(painterResource(R.drawable.fullscreen), stringResource(R.string.arc_watch), tint = Color.White, modifier = Modifier.size(22.dp))
+    var picking by remember { mutableStateOf(false) }
+    Box(modifier) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .pressBounce(press)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.28f))
+                .combinedClickable(
+                    interactionSource = press,
+                    indication = null,
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        picking = true
+                    },
+                ) {
+                    haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    VideoState.watching.value = true
+                },
+        ) {
+            Icon(painterResource(R.drawable.fullscreen), stringResource(R.string.arc_watch), tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+        VideoState.current.value?.let { VideoQualityMenu(it.videoId, picking) { picking = false } }
     }
 }
 
@@ -143,8 +157,9 @@ fun WatchHost() {
         }
         var shown by remember { mutableStateOf(true) }
         var touched by remember { mutableIntStateOf(0) }
-        LaunchedEffect(shown, touched) {
-            if (shown) {
+        var held by remember { mutableStateOf(false) }
+        LaunchedEffect(shown, touched, held) {
+            if (shown && !held) {
                 delay(CONTROLS_FOR_MS)
                 shown = false
             }
@@ -233,9 +248,11 @@ fun WatchHost() {
             }
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
                 WatchControls(
+                    videoId = videoId,
                     title = metadata?.title.orEmpty(),
                     artist = metadata?.artists?.joinToString { it.name }.orEmpty(),
                     onTouch = { touched++ },
+                    onHold = { held = it },
                 )
             }
         }
@@ -243,7 +260,7 @@ fun WatchHost() {
 }
 
 @Composable
-private fun WatchControls(title: String, artist: String, onTouch: () -> Unit) {
+private fun WatchControls(videoId: String, title: String, artist: String, onTouch: () -> Unit, onHold: (Boolean) -> Unit) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val player = playerConnection.player
     val playing by playerConnection.isPlaying.collectAsStateWithLifecycle()
@@ -267,10 +284,11 @@ private fun WatchControls(title: String, artist: String, onTouch: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.TopStart).fillMaxWidth()) {
             WatchIcon(R.drawable.close, stringResource(R.string.arc_watch_close)) { VideoState.watching.value = false }
             Spacer(Modifier.width(12.dp))
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(artist, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            QualityPill(videoId, onHold)
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(40.dp),
@@ -310,6 +328,30 @@ private fun WatchControls(title: String, artist: String, onTouch: () -> Unit) {
             )
             Text(if (known) makeTimeString(duration) else "", color = Color.White, fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun QualityPill(videoId: String, onHold: (Boolean) -> Unit) {
+    val press = remember { MutableInteractionSource() }
+    var picking by remember { mutableStateOf(false) }
+    val height by VideoState.height
+    DisposableEffect(picking) {
+        onHold(picking)
+        onDispose { onHold(false) }
+    }
+    Box {
+        Text(
+            if (height > 0) heightName(height) else stringResource(R.string.audio_quality_auto),
+            color = Color.White,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .pressBounce(press)
+                .clip(CircleShape)
+                .clickable(press, indication = null) { picking = true }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        )
+        VideoQualityMenu(videoId, picking) { picking = false }
     }
 }
 
