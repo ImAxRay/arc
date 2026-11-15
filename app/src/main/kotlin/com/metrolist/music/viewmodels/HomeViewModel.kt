@@ -17,6 +17,8 @@ import com.metrolist.innertube.models.SongItem
 import kotlinx.coroutines.flow.combine
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.BrowseEndpoint
+import com.metrolist.innertube.models.EpisodeItem
+import com.metrolist.innertube.models.PodcastItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
@@ -162,7 +164,7 @@ private val dialCacheJson = Json { ignoreUnknownKeys = true }
 
 /** The dial as saved for the next cold start, in the form pinned tiles are already stored in. */
 internal fun encodeDialCache(items: List<YTItem>): String =
-    dialCacheJson.encodeToString(ListSerializer(SpeedDialItem.serializer()), items.map(SpeedDialItem::fromYTItem))
+    dialCacheJson.encodeToString(ListSerializer(SpeedDialItem.serializer()), items.filterNot { it is PodcastItem || it is EpisodeItem }.map(SpeedDialItem::fromYTItem))
 
 internal fun decodeDialCache(text: String): List<YTItem> =
     runCatching { dialCacheJson.decodeFromString(ListSerializer(SpeedDialItem.serializer()), text).map { it.toYTItem() } }.getOrDefault(emptyList())
@@ -236,7 +238,7 @@ class HomeViewModel @Inject constructor(
     /** Next cold start's dial: the latest full build, so Home opens with tiles at once and they still change per launch. */
     private val dialCache = File(context.filesDir, "arc-home-dial.json")
     private var dialCacheJob: Job? = null
-    private var homeLoaded = false
+    private val homeLoaded = MutableStateFlow(false)
 
     /** Whether the Continue tile's song lookup has answered once; until then page 1 can't be laid out. */
     val continueReady = MutableStateFlow(false)
@@ -295,7 +297,7 @@ class HomeViewModel @Inject constructor(
      * load (a skeleton holds its place), then keeps each tile's item until the user refreshes or Arc restarts.
      */
     val speedDialItems: StateFlow<List<YTItem>> =
-        combine(freshSpeedDial, dialGeneration) { (pinned, fresh), generation ->
+        combine(freshSpeedDial, dialGeneration, homeLoaded) { (pinned, fresh), generation, loaded ->
             if (generation == 0) return@combine emptyList()
             dialShown =
                 if (generation != dialBuiltFor) {
@@ -306,7 +308,7 @@ class HomeViewModel @Inject constructor(
                 }
             dialBuiltFor = generation
             dialPinned = pinned
-            if (homeLoaded) saveDialCache(fresh)
+            if (loaded) saveDialCache(fresh)
             dialShown
         }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -637,7 +639,7 @@ class HomeViewModel @Inject constructor(
         allLocalItems.value = (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
             .filter { it is Song || it is Album }
         isLoading.value = false
-        homeLoaded = true
+        homeLoaded.value = true
         dialGeneration.compareAndSet(0, 1)
 
         // Phase 2: Heavy multi-request operations — run in background without blocking the UI.
