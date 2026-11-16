@@ -22,14 +22,22 @@ sealed interface DialPanel {
 
 data class DialCell(val page: Int, val row: Int, val col: Int)
 
-/** Where Continue and the buttons sit until the user moves something: Continue top left, the rest in the far corner. */
+/** Where Continue and the buttons sit until the user moves something: Continue top left, the rest in the far corner, Sleep and radio on later pages. */
 internal fun defaultDialPanels(columns: Int, rows: Int): Map<DialCell, DialPanel> =
     buildMap {
         put(DialCell(0, 0, 0), DialPanel.Continue)
         put(DialCell(0, rows - 1, columns - 1), DialPanel.Dice)
         if (columns >= 2) put(DialCell(0, rows - 1, columns - 2), DialPanel.Moods)
         if (rows >= 2) put(DialCell(0, rows - 2, columns - 1), DialPanel.Plus)
+        // big Sleep on page two, big discovery radio on page three
+        if (rows >= 3 && columns >= 3) {
+            put(DialCell(1, 1, columns - 2), DialPanel.Mood("Sleep", null))
+            put(DialCell(2, rows - 2, columns - 2), DialPanel.Radio)
+        }
     }
+
+internal fun defaultDialSizes(columns: Int, rows: Int): Map<DialCell, Int> =
+    if (rows >= 3 && columns >= 3) mapOf(DialCell(1, 1, columns - 2) to 2, DialCell(2, rows - 2, columns - 2) to 2) else emptyMap()
 
 internal fun encodeDialPanels(panels: Map<DialCell, DialPanel>): String =
     panels.entries.joinToString("\n") { (cell, panel) ->

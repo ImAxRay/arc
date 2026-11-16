@@ -19,6 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import com.metrolist.music.playback.queues.YouTubeQueue
+import com.metrolist.innertube.models.WatchEndpoint
+import com.metrolist.innertube.models.PlaylistItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import com.metrolist.music.arc.LocalTiltEye
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,7 +92,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val store = remember { DialStore.get(env.viewModel.context) }
     val storedPanels by store.panels.collectAsStateWithLifecycle()
     val hiddenItems by store.hidden.collectAsStateWithLifecycle()
-    val sizes by store.sizes.collectAsStateWithLifecycle()
+    val storedSizes by store.sizes.collectAsStateWithLifecycle()
     val dialMood by env.viewModel.dialMood.collectAsStateWithLifecycle()
     val moodMixes by env.viewModel.dialMoodMixes.collectAsStateWithLifecycle()
     val edit = LocalDialEdit.current
@@ -107,6 +115,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val cellPx = with(LocalDensity.current) { itemWidth.toPx() }
 
     val panels = storedPanels ?: remember(columns, rows) { defaultDialPanels(columns, rows) }
+    val sizes = if (storedPanels != null) storedSizes else remember(columns, rows) { defaultDialSizes(columns, rows) }
     val hasContinue = DialPanel.Continue in panels.values
     val hiddenId = (env.viewModel.dialHiddenId ?: continueId).takeIf { hasContinue }
     val byId = remember(dialItems) { dialItems.associateBy { it.id } }
@@ -164,17 +173,40 @@ fun SpeedDialModule(env: HomeEnv) {
         save(if (panel == null) kept else kept + (cell to panel))
     }
 
-    /** Grows or shrinks the tile at [at] to [span] cells across; whatever it grows over moves to free cells, on another page if need be. */
-    fun resize(at: DialCell, panel: DialPanel, span: Int) {
-        val anchor = DialCell(at.page, minOf(at.row, rows - span), minOf(at.col, columns - span))
-        val displaced = panels.filterKeys { it != at && it.page == anchor.page && it.row in anchor.row until anchor.row + span && it.col in anchor.col until anchor.col + span }
-        var next = panels - at - displaced.keys + (anchor to panel)
-        val nextSizes = sizes - at - displaced.keys + (anchor to span)
+    fun spanIn(sizes: Map<DialCell, Int>, cell: DialCell, panel: DialPanel) = sizes[cell] ?: if (panel == DialPanel.Continue && big) 2 else 1
+
+    fun fit(cell: DialCell, span: Int) = DialCell(cell.page, cell.row.coerceIn(0, rows - span), cell.col.coerceIn(0, columns - span))
+
+    fun overlaps(a: DialCell, sa: Int, b: DialCell, sb: Int) =
+        a.page == b.page && a.row < b.row + sb && b.row < a.row + sa && a.col < b.col + sb && b.col < a.col + sa
+
+    /**
+     * Puts [panel] at [to] as a tile [span] cells across, kept whole on the page. Panels it lands on go to where it came
+     * from ([from]) when they fit there whole, else to free cells, on another page if need be.
+     */
+    fun place(from: DialCell, panel: DialPanel, span: Int, to: DialCell) {
+        val anchor = fit(to, span)
+        val base = panels - from
+        val baseSizes = sizes - from
+        val covered = base.filter { (c, p) -> overlaps(c, spanIn(baseSizes, c, p), anchor, span) }
+        var next = base - covered.keys + (anchor to panel)
+        var nextSizes = baseSizes - covered.keys + (anchor to span)
+        val homeless = mutableListOf<DialPanel>()
+        covered.forEach { (c, p) ->
+            val s = spanIn(baseSizes, c, p)
+            val home = fit(from, s)
+            if (next.none { (oc, op) -> overlaps(oc, spanIn(nextSizes, oc, op), home, s) }) {
+                next = next + (home to p)
+                if (s > 1) nextSizes = nextSizes + (home to s)
+            } else {
+                homeless += p
+            }
+        }
         // this page's free cells first, then the other pages'
-        val free = (listOf(at.page) + (0 until 3).filter { it != at.page }).flatMap { page ->
+        val free = (listOf(anchor.page) + (0 until 3).filter { it != anchor.page }).flatMap { page ->
             dialPageSlots(page, columns, rows, big, next, sizes = nextSizes).filter { it.panel == null && it.span == 1 }.map { DialCell(page, it.row, it.col) }
         }
-        displaced.values.zip(free).forEach { (p, cell) -> next = next + (cell to p) }
+        homeless.zip(free).forEach { (p, cell) -> next = next + (cell to p) }
         save(next, nextSizes)
     }
 
@@ -274,9 +306,9 @@ fun SpeedDialModule(env: HomeEnv) {
                         .associate { (rank, pair) -> pair.first to (pair.second to rank) }
                 }
             // the tile under a dragged one on its own page slides into the dragged tile's cell meanwhile
-            val lifted = dragFrom?.takeIf { it.page == page }?.slot
+            val lifted = dragFrom?.takeIf { it.page == page && it.span == 1 }?.slot
             val over = overCell?.takeIf { lifted != null && pagerState.currentPage == page }?.let { (col, row) ->
-                pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }?.takeIf { it != lifted }
+                pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }?.takeIf { it != lifted && it.span == 1 }
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(itemWidth * columns, itemWidth * rows)) {
@@ -308,7 +340,7 @@ fun SpeedDialModule(env: HomeEnv) {
                                                     isActive = env.isActive(mixItem.id),
                                                     isPlaying = env.isPlaying.value,
                                                     thumbnailSize = if (slot.span > 1) 544 else 200,
-                                                    modifier = Modifier.homeTile(onClick = { env.openYtItem(mixItem) }, onLongClick = { env.showYtItemMenu(mixItem) }, cover = mixItem.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
+                                                    modifier = Modifier.homeTile(onClick = { playMix(env, mixItem) }, onLongClick = { env.showYtItemMenu(mixItem) }, cover = mixItem.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
                                                 )
                                             }
                                         }
@@ -368,7 +400,7 @@ fun SpeedDialModule(env: HomeEnv) {
                                                     { span: Int ->
                                                         change {
                                                             if (current == null) item?.let(::pin)
-                                                            resize(at, panel, span)
+                                                            place(at, panel, span, at)
                                                         }
                                                         env.menuState.dismiss()
                                                     }
@@ -381,25 +413,20 @@ fun SpeedDialModule(env: HomeEnv) {
                                     if (travel == null) {
                                         dragFrom = null
                                     } else {
-                                        if (dragFrom == null) dragFrom = DialDrag(page, slot, item)
+                                        if (dragFrom == null) dragFrom = DialDrag(page, slot, item, slot.panel?.let { spanIn(sizes, at, it) } ?: slot.span)
                                         dragTravel = travel
                                     }
                                 },
                                 onDrop = { travel ->
-                                    // it lands on whichever page is showing now, under the tile's centre
-                                    val toPage = pagerState.currentPage
-                                    val (col, row) = cellUnder(centreOf(slot, travel))
-                                    val target = pages[toPage].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }
-                                        ?.takeIf { toPage != page || it != slot } ?: return@DialEditCell
-                                    val to = DialCell(toPage, target.row, target.col)
-                                    landings[to] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
+                                    // it lands whole on whichever page is showing now, where its top left corner is
+                                    val moving = current ?: item?.let { DialPanel.Item(it.id) } ?: return@DialEditCell
+                                    val span = if (current != null) spanIn(sizes, at, current) else slot.span
+                                    val anchor = fit(DialCell(pagerState.currentPage, (slot.row + travel.y / cellPx).roundToInt(), (slot.col + travel.x / cellPx).roundToInt()), span)
+                                    if (anchor == at) return@DialEditCell
+                                    landings[anchor] = Offset((slot.col - anchor.col) * cellPx + travel.x, (slot.row - anchor.row) * cellPx + travel.y)
                                     change {
-                                        val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@change
-                                        // whatever sat there swaps back; a size goes with its tile
-                                        save(
-                                            panels - at - to + (to to moving) + listOfNotNull(panels[to]?.let { at to it }),
-                                            sizes - at - to + listOfNotNull(sizes[at]?.let { to to it }, sizes[to]?.let { at to it }),
-                                        )
+                                        if (current == null) item?.let(::pin)
+                                        place(at, moving, span, anchor)
                                     }
                                 },
                                 shift = { landings[at] ?: shift.value },
@@ -410,6 +437,18 @@ fun SpeedDialModule(env: HomeEnv) {
             }
         }
         dragFrom?.let { drag ->
+            // where it would land, at its own size
+            val ghost = MaterialTheme.colorScheme.primary
+            Box(
+                Modifier
+                    .offset {
+                        val a = fit(DialCell(0, (drag.slot.row + dragTravel.y / cellPx).roundToInt(), (drag.slot.col + dragTravel.x / cellPx).roundToInt()), drag.span)
+                        IntOffset((16.dp.toPx() + a.col * cellPx).roundToInt(), (a.row * cellPx).roundToInt())
+                    }.size(itemWidth * drag.span)
+                    .padding(4.dp)
+                    .background(ghost.copy(alpha = 0.12f), RoundedCornerShape(DialCornerRadius))
+                    .border(2.dp, ghost, RoundedCornerShape(DialCornerRadius)),
+            )
             Box(
                 Modifier
                     .offset(16.dp + itemWidth * drag.slot.col, itemWidth * drag.slot.row)
@@ -444,8 +483,14 @@ fun SpeedDialModule(env: HomeEnv) {
     }
 }
 
+/** A mood's mix plays at once from the dial instead of opening its page. */
+private fun playMix(env: HomeEnv, mix: YTItem) {
+    if (env.isListenTogetherGuest) return env.openYtItem(mix)
+    env.playerConnection.playQueue(YouTubeQueue((mix as? PlaylistItem)?.playEndpoint ?: WatchEndpoint(playlistId = mix.id)))
+}
+
 /** A tile being dragged in dial edit: where it came from and what it shows. */
-private data class DialDrag(val page: Int, val slot: DialSlot, val item: YTItem?)
+private data class DialDrag(val page: Int, val slot: DialSlot, val item: YTItem?, val span: Int)
 
 // a dragged tile's centre within this share of a cell from the dial's side turns the page after a short hold
 private const val EDGE_ZONE = 0.3f

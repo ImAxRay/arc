@@ -18,12 +18,14 @@ class DialPageSlotsTest {
     }
 
     @Test
-    fun `by default page one opens with Continue and keeps three buttons, later pages are plain`() {
+    fun `by default page one opens with Continue and keeps three buttons, Sleep sits big on page two`() {
         val first = dialPageSlots(0, 3, 3, big = true, panels = defaultDialPanels(3, 3))
         assertEquals(DialSlot(0, 0, span = 2, panel = DialPanel.Continue), first.first())
         assertEquals(3, first.count { it.panel in setOf(DialPanel.Dice, DialPanel.Moods, DialPanel.Plus) })
         assertEquals(2, first.count { it.panel == null })
-        assertEquals(9, dialPageSlots(1, 3, 3, big = true, panels = defaultDialPanels(3, 3)).count { it.panel == null && it.span == 1 })
+        val second = dialPageSlots(1, 3, 3, big = true, panels = defaultDialPanels(3, 3), sizes = defaultDialSizes(3, 3))
+        assertEquals(DialSlot(1, 1, span = 2, panel = DialPanel.Mood("Sleep", null)), second.first())
+        assertEquals(5, second.count { it.panel == null })
     }
 
     @Test
