@@ -711,6 +711,6 @@ class BackupRestoreViewModel @Inject constructor(
             "sync_snapshot_library_songs",
             "sync_snapshot_liked_albums",
         )
-        private val BACKED_UP_PREFS = listOf("nanosonic_eq_profiles", "arc_release_dates", "arc_release_tracks", "arc_ignored_artists", "arc_hidden_releases")
+        private val BACKED_UP_PREFS = listOf("nanosonic_eq_profiles", "arc_release_dates", "arc_release_tracks", "arc_ignored_artists", "arc_hidden_releases", "arc_dial")
     }
 }

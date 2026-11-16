@@ -1359,4 +1359,14 @@
     <string name="arc_update_downloading_percent">Downloading %1$d%%</string>
     <string name="arc_update_installing">Installing…</string>
     <string name="arc_update_failed">Update failed: %1$s</string>
+    <string name="arc_dial_edit">Edit dial</string>
+    <string name="arc_dial_put_here">Put here</string>
+    <string name="arc_dial_pin_here">Pin here</string>
+    <string name="arc_dial_unpin">Unpin</string>
+    <string name="arc_dial_remove">Remove</string>
+    <string name="arc_dial_dice">Dice</string>
+    <string name="arc_dial_radio">Discover radio</string>
+    <string name="arc_dial_plus">Guided playlist</string>
+    <string name="arc_dial_mood">Mood</string>
+    <string name="arc_dial_changing">Changing tile</string>
 </resources>

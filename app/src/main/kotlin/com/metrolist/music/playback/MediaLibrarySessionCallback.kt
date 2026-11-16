@@ -375,7 +375,7 @@ constructor(
         val request = androidAutoPageRequest(page, pageSize)
         return when {
             parentId == AutoSpeedDial.ID ->
-                if (page > 0) emptyList() else AutoSpeedDial.tiles(database).map { tile ->
+                if (page > 0) emptyList() else AutoSpeedDial.tiles(database, com.metrolist.music.arc.home.DialStore.get(context).pinnedOrder()).map { tile ->
                     MediaItem.Builder()
                         .setMediaId(tile.mediaId)
                         .setMediaMetadata(

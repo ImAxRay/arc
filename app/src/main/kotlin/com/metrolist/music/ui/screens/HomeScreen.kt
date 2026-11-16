@@ -84,6 +84,8 @@ import com.metrolist.music.arc.home.EditFrame
 import com.metrolist.music.arc.home.EditHomeRow
 import com.metrolist.music.arc.home.EmptyModuleStub
 import com.metrolist.music.arc.home.HomeEdit
+import com.metrolist.music.arc.home.DialEdit
+import com.metrolist.music.arc.home.LocalDialEdit
 import com.metrolist.music.arc.home.HomeModuleId
 import com.metrolist.music.arc.home.HomeSlot
 import com.metrolist.music.arc.home.LocalHomeEdit
@@ -165,6 +167,10 @@ fun HomeScreen(
     val untitled by rememberPreference(ArcHomeUntitledKey, emptySet())
     BackHandler(editing) { editing = false }
     val wobble = rememberWobbleClock(editing)
+    var dialEditing by rememberSaveable { mutableStateOf(false) }
+    BackHandler(dialEditing) { dialEditing = false }
+    val dialWobble = rememberWobbleClock(dialEditing)
+    val dialEdit = remember(dialWobble) { DialEdit(dialWobble) }
     val homeEdit =
         remember {
             HomeEdit {
@@ -342,7 +348,7 @@ fun HomeScreen(
                 offerUndo(context.getString(R.string.arc_home_preset_applied, name)) { savedModules = before }
             }
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled) {
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled, LocalDialEdit provides dialEdit.takeIf { dialEditing }) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -364,6 +370,15 @@ fun HomeScreen(
                                             cover = Modifier.longPressDraggableHandle(onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }),
                                             onHide = { hide(module) },
                                             onSettings = { menuState.show { ModuleSettingsSheet(module) } },
+                                            onEditInside =
+                                                if (module.key == HomeModuleId.SPEED_DIAL.key) {
+                                                    {
+                                                        editing = false
+                                                        dialEditing = true
+                                                    }
+                                                } else {
+                                                    null
+                                                },
                                         ) { if (available) module.content(env) else EmptyModuleStub(module) }
                                     } else {
                                         module.content(env)
@@ -415,6 +430,16 @@ fun HomeScreen(
                     }
                     Button(onClick = { editing = false }) { Text(stringResource(R.string.arc_home_done)) }
                 }
+            }
+            if (dialEditing) {
+                Button(
+                    onClick = { dialEditing = false },
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
+                            .padding(bottom = 12.dp),
+                ) { Text(stringResource(R.string.arc_home_done)) }
             }
             SwipeSnackbarHost(
                 editSnackbar,

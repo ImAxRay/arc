@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Switch
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
@@ -119,6 +120,7 @@ fun EditFrame(
     cover: Modifier,
     onHide: () -> Unit,
     onSettings: () -> Unit,
+    onEditInside: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -146,6 +148,13 @@ fun EditFrame(
             if (empty) EmptyModuleStub(module)
         }
         Box(Modifier.matchParentSize().then(cover))
+        // the dial's own tiles get their edit mode one level down
+        if (onEditInside != null) {
+            FilledTonalButton(onClick = onEditInside, modifier = Modifier.align(Alignment.Center)) {
+                Icon(painterResource(R.drawable.edit), contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+                Text(stringResource(R.string.arc_dial_edit))
+            }
+        }
         val badge = 28.dp
         Badge(R.drawable.remove, stringResource(R.string.arc_home_hide), colors.error, colors.onError, Modifier.align(Alignment.TopStart).offset(x = -badge / 3, y = -badge / 3), onHide)
         if (module.setting != null || module.nameToggle) {

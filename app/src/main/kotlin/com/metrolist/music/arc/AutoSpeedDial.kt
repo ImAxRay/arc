@@ -15,8 +15,10 @@ object AutoSpeedDial {
     }
 
     /** Pinned items first, where the user put them, then songs Arc expects you to want, refreshed each visit. */
-    suspend fun tiles(database: MusicDatabase): List<Tile> {
-        val pinned = database.speedDialDao.getAll().first().mapNotNull { item ->
+    suspend fun tiles(database: MusicDatabase, order: List<String> = emptyList()): List<Tile> {
+        // pins placed on the phone's dial come in its reading order, the rest after them
+        val rank = order.withIndex().associate { it.value to it.index }
+        val pinned = database.speedDialDao.getAll().first().sortedBy { rank[it.id] ?: Int.MAX_VALUE }.mapNotNull { item ->
             when (item.type) {
                 "SONG" -> database.song(item.id).first()?.let { Tile("song", it.id, it.song.title, item.subtitle, it.song.thumbnailUrl) }
                 // only what can play from the library, so no tile is a dead end

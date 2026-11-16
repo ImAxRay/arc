@@ -72,6 +72,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.metrolist.music.arc.home.DialPanel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -90,6 +91,19 @@ data class CommunityPlaylistItem(
 
 /** Most speed dial can hold: three full pages of the biggest grid. The screen trims it to whole pages. */
 internal const val SPEED_DIAL_MAX = 45
+
+/**
+ * The die's faces as energy, calm to wild, like the arousal axis of Russell's circumplex (tempo and loudness drive how
+ * stirring music is). Each face lists chip titles to try in order, as accounts get different chips.
+ */
+internal val DICE_MOODS = listOf(
+    listOf("Sleep", "Relax"),
+    listOf("Relax", "Chill"),
+    listOf("Focus", "Commute"),
+    listOf("Feel good", "Romance"),
+    listOf("Energize", "Workout"),
+    listOf("Party", "Workout", "Energize"),
+)
 private const val MAX_HOME_PAGES = 6
 
 /** Fewer songs than this and Quick picks or Forgotten favourites get topped up with liked songs. */
@@ -773,19 +787,61 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadChip(chip: HomePage.Chip) {
-        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-        val sections = YouTube.home(params = chip.endpoint?.params).getOrNull()?.sections?.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
-        // the mood's page also repeats Listen again, Song mixes and so on, which aren't about the mood; accounts with
-        // little history get no Mixed for you, so the mood's first row of playlists stands in
-        val mixes =
-            (sections.orEmpty().filter { it.endpoint?.browseId == "FEmusic_mixed_for_you" }.ifEmpty { null }
-                ?: listOfNotNull(sections.orEmpty().firstOrNull { section -> section.items.all { it is PlaylistItem } }))
-                .flatMap { it.items }.distinctBy { it.id }
+        val mixes = moodMixes(chip.endpoint?.params)
         if (selectedChip.value != chip) return
         // nothing to show, so the chip lets go rather than leave a shimmer up
         if (mixes.isEmpty()) selectedChip.compareAndSet(chip, null) else chipMixes.value = mixes
+    }
+
+    /** One mood's mixes: its page's Mixed for you, else the page's first row of playlists. */
+    private suspend fun moodMixes(params: String?): List<YTItem> {
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+        val sections = YouTube.home(params = params).getOrNull()?.sections?.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
+        // the mood's page also repeats Listen again, Song mixes and so on, which aren't about the mood; accounts with
+        // little history get no Mixed for you, so the mood's first row of playlists stands in
+        return (sections.orEmpty().filter { it.endpoint?.browseId == "FEmusic_mixed_for_you" }.ifEmpty { null }
+            ?: listOfNotNull(sections.orEmpty().firstOrNull { section -> section.items.all { it is PlaylistItem } }))
+            .flatMap { it.items }.distinctBy { it.id }
+    }
+
+    /** The account's mood chips, Podcasts left out (it isn't a mood). */
+    fun moodChips(): List<HomePage.Chip> = homePage.value?.chips.orEmpty().filterNot { it.title.equals("Podcasts", ignoreCase = true) }
+
+    /** A mood panel on the dial that is switched on: the dial's free tiles show [dialMoodMixes] until it's tapped again. */
+    val dialMood = MutableStateFlow<DialPanel.Mood?>(null)
+    val dialMoodMixes = MutableStateFlow<List<YTItem>?>(null)
+
+    fun toggleDialMood(mood: DialPanel.Mood) {
+        dialMoodMixes.value = null
+        if (dialMood.value == mood) {
+            dialMood.value = null
+            return
+        }
+        dialMood.value = mood
+        viewModelScope.launch(Dispatchers.IO) {
+            val mixes = moodMixes(resolveMood(mood.title, mood.params)?.endpoint?.params ?: mood.params)
+            if (dialMood.value != mood) return@launch
+            if (mixes.isEmpty()) dialMood.compareAndSet(mood, null) else dialMoodMixes.value = mixes
+        }
+    }
+
+    /** A stored mood found again among today's chips: by params, then by title. */
+    fun resolveMood(title: String, params: String?): HomePage.Chip? {
+        val chips = moodChips()
+        return chips.firstOrNull { params != null && it.endpoint?.params == params } ?: chips.firstOrNull { it.title.equals(title, ignoreCase = true) }
+    }
+
+    private var lastDiceMix: String? = null
+
+    /** A mix for the die's [face]: each face is a step up in energy (see [DICE_MOODS]); never the same mix twice in a row. */
+    suspend fun diceMix(face: Int): PlaylistItem? {
+        val titles = DICE_MOODS.getOrNull(face - 1) ?: return null
+        val chips = moodChips()
+        val chip = titles.firstNotNullOfOrNull { title -> chips.firstOrNull { it.title.equals(title, ignoreCase = true) } } ?: chips.randomOrNull() ?: return null
+        val mixes = moodMixes(chip.endpoint?.params).filterIsInstance<PlaylistItem>()
+        return (mixes.filterNot { it.id == lastDiceMix }.randomOrNull() ?: mixes.randomOrNull())?.also { lastDiceMix = it.id }
     }
 
     private suspend fun loadAccountInfo() {
