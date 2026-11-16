@@ -355,8 +355,6 @@ class HomeViewModel @Inject constructor(
     suspend fun getRandomItem(): YTItem? {
         try {
             isRandomizing.value = true
-            // Visual feedback for the animation
-            kotlinx.coroutines.delay(1000)
 
             val userSongs = mutableListOf<YTItem>()
             val otherSources = mutableListOf<YTItem>()

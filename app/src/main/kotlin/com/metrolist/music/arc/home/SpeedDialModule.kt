@@ -99,17 +99,21 @@ fun SpeedDialModule(env: HomeEnv) {
     val hiddenId = (env.viewModel.dialHiddenId ?: continueId).takeIf { hasContinue }
     val byId = remember(dialItems) { dialItems.associateBy { it.id } }
     val placedIds = remember(panels) { panels.values.mapNotNullTo(HashSet()) { (it as? DialPanel.Item)?.id } }
-    val allItems = remember(dialItems, hiddenId, placedIds, hiddenItems) { dialItems.filterNot { it.id == hiddenId || it.id in placedIds || it.id in hiddenItems } }
-    // a switched-on mood fills the free tiles with its mixes; the dial's own items wait underneath
-    val freeItems = moodMixes?.takeIf { dialMood != null && edit == null } ?: allItems
+    val pinned = env.pinnedTypes.value
+    // an item taken off the dial comes back if the user pins it again later
+    val allItems = remember(dialItems, hiddenId, placedIds, hiddenItems, pinned) { dialItems.filterNot { it.id == hiddenId || it.id in placedIds || (it.id in hiddenItems && it.id !in pinned) } }
+    // a switched-on mood fills the free tiles with its mixes first; the dial's own items fill the rest and wait underneath
+    val freeItems = remember(moodMixes, dialMood, edit, allItems) { moodMixes?.takeIf { dialMood != null && edit == null }?.let { it + allItems } ?: allItems }
+    // a cell whose pinned item was unpinned from a menu is free again
+    val livePanels = remember(panels, byId) { panels.filterValues { it !is DialPanel.Item || it.id in byId } }
 
     val big = rows >= 3 && columns >= 3
-    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, panels, continueTile = continueId != null) }
+    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, livePanels, continueTile = continueId != null) }
     val capacities = pages.map { page -> page.count { it.panel == null } }
     // only whole pages, at most three; a half-empty last page looks broken; pages holding panels always show
     // a val, so the pager's page count lambda stays the same object; a captured var made a new one each composition,
     // and the pager re-reading it recomposed the dial every frame
-    val panelPages = panels.keys.filter { it.row < rows && it.col < columns }.maxOfOrNull { it.page + 1 } ?: 1
+    val panelPages = livePanels.keys.filter { it.row < rows && it.col < columns }.maxOfOrNull { it.page + 1 } ?: 1
     val pageCount = maxOf(panelPages, (1 until pages.size).takeWhile { capacities.take(it + 1).sum() <= allItems.size }.lastOrNull()?.plus(1) ?: 1).coerceAtMost(pages.size)
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
     val pagerState = rememberPagerState(pageCount = { pageCount })

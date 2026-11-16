@@ -57,7 +57,6 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.CapsLabel
 import com.metrolist.music.constants.DialCornerRadius
 import com.metrolist.music.playback.queues.YouTubeQueue
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.sin
@@ -67,6 +66,8 @@ import kotlin.random.Random
 class DialEdit(val clock: MutableLongState)
 
 val LocalDialEdit = staticCompositionLocalOf<DialEdit?> { null }
+
+private const val ROLL_MS = 750L
 
 /** Pip spots on a 3x3 grid (0..2, 0..2) for faces 1 to 6. */
 private val PIPS =
@@ -103,8 +104,19 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                         shown = face
                         rolling = true
                         val landed = Random.nextInt(1, 7)
+                        // the mix is fetched and played on the screen's scope, so scrolling the die away doesn't drop it
+                        env.scope.launch {
+                            val start = System.currentTimeMillis()
+                            store.setDice(landed)
+                            val mix = env.viewModel.diceMix(landed)
+                            delay(ROLL_MS - (System.currentTimeMillis() - start))
+                            when {
+                                mix != null -> env.playerConnection.playQueue(YouTubeQueue(mix.playEndpoint ?: WatchEndpoint(playlistId = mix.id)))
+                                // offline or no moods on this account: something of the user's own, as the old random button did
+                                else -> env.viewModel.getRandomItem()?.let(env::openYtItem)
+                            }
+                        }
                         scope.launch {
-                            val mix = async { env.viewModel.diceMix(landed) }
                             // faces flick by fast, then slower, like a die running out of push
                             val flick =
                                 launch {
@@ -116,12 +128,10 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                                     }
                                 }
                             spin.snapTo(0f)
-                            spin.animateTo(1f, tween(750, easing = FastOutSlowInEasing))
+                            spin.animateTo(1f, tween(ROLL_MS.toInt(), easing = FastOutSlowInEasing))
                             flick.cancel()
                             shown = landed
-                            store.setDice(landed)
                             rolling = false
-                            mix.await()?.let { item -> env.playerConnection.playQueue(YouTubeQueue(item.playEndpoint ?: WatchEndpoint(playlistId = item.id))) }
                         }
                     },
                     glowCorner = DialCornerRadius,

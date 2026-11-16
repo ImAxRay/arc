@@ -239,9 +239,9 @@ fun ModuleHeader(
  * Reads the pager's position while drawing, so a swipe redraws this without recomposing anything.
  */
 /**
- * Pager fling that settles on the nearest page when let go slowly, at once and slowing down. Compose's own picks the
- * side by the last drag direction, so a finger lifting with a tiny roll back sent a nearly turned page back a whole
- * page, and its spring from rest looked like the settle came late. Real flings keep Compose's behaviour.
+ * Pager fling that settles on the nearest page when let go slowly, at once and slowing down. On the phone Compose's own
+ * sent a page turned 97% back a whole page now and then, and its spring from rest looked like the settle came late.
+ * Real flings keep Compose's snap, but hand no speed on afterwards, where it played as a late stretch of the page.
  */
 @Composable
 fun rememberPageFling(state: PagerState): TargetedFlingBehavior {
@@ -250,7 +250,10 @@ fun rememberPageFling(state: PagerState): TargetedFlingBehavior {
     return remember(state, fling, minVelocity) {
         object : TargetedFlingBehavior {
             override suspend fun ScrollScope.performFling(initialVelocity: Float, onRemainingDistanceUpdated: (Float) -> Unit): Float {
-                if (abs(initialVelocity) >= minVelocity) return with(fling) { performFling(initialVelocity, onRemainingDistanceUpdated) }
+                if (abs(initialVelocity) >= minVelocity) {
+                    with(fling) { performFling(initialVelocity, onRemainingDistanceUpdated) }
+                    return 0f
+                }
                 val info = state.layoutInfo
                 val distance = -state.currentPageOffsetFraction * (info.pageSize + info.pageSpacing)
                 var done = 0f
