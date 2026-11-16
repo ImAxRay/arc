@@ -141,14 +141,17 @@ fun SpeedDialModule(env: HomeEnv) {
         save(if (panel == null) kept else kept + (cell to panel))
     }
 
-    /** Grows or shrinks the tile at [at] to [span] cells across; whatever it grows over moves to the page's free cells. */
+    /** Grows or shrinks the tile at [at] to [span] cells across; whatever it grows over moves to free cells, on another page if need be. */
     fun resize(at: DialCell, panel: DialPanel, span: Int) {
         val anchor = DialCell(at.page, minOf(at.row, rows - span), minOf(at.col, columns - span))
         val displaced = panels.filterKeys { it != at && it.page == anchor.page && it.row in anchor.row until anchor.row + span && it.col in anchor.col until anchor.col + span }
         var next = panels - at - displaced.keys + (anchor to panel)
         val nextSizes = sizes - at - displaced.keys + (anchor to span)
-        val free = dialPageSlots(at.page, columns, rows, big, next, sizes = nextSizes).filter { it.panel == null && it.span == 1 }
-        displaced.values.zip(free).forEach { (p, slot) -> next = next + (DialCell(at.page, slot.row, slot.col) to p) }
+        // this page's free cells first, then the other pages'
+        val free = (listOf(at.page) + (0 until 3).filter { it != at.page }).flatMap { page ->
+            dialPageSlots(page, columns, rows, big, next, sizes = nextSizes).filter { it.panel == null && it.span == 1 }.map { DialCell(page, it.row, it.col) }
+        }
+        displaced.values.zip(free).forEach { (p, cell) -> next = next + (cell to p) }
         save(next, nextSizes)
     }
 

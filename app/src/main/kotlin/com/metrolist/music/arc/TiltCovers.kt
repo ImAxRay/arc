@@ -144,7 +144,7 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, seed: Any? = nul
     var spot by remember { mutableStateOf(Offset.Zero) }
     var rootWidth by remember { mutableFloatStateOf(0f) }
     var tileSize by remember { mutableStateOf(Size.Zero) }
-    val feel = remember(seed) { TileFeel(seed.hashCode()) }
+    val feel = remember(seed) { seed?.let { TileFeel(it.hashCode()) } ?: TileFeel.Plain }
     fun shift(): Offset {
         if (rootWidth == 0f) return Offset.Zero
         val max = tileSize.width * MAX_SHIFT
@@ -210,10 +210,17 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, seed: Any? = nul
 }
 
 /** Per-cover depth (more across than up and down) and how far it trails the eye, from a hash. */
-private class TileFeel(hash: Int) {
-    val depthX = 0.55f + 0.9f * ((hash and 0xFF) / 255f)
-    val depthY = 0.8f + 0.4f * (((hash ushr 8) and 0xFF) / 255f)
-    val lag = ((hash ushr 16) and 0xFF) / 255f
+private class TileFeel(val depthX: Float, val depthY: Float, val lag: Float) {
+    constructor(hash: Int) : this(
+        0.55f + 0.9f * ((hash and 0xFF) / 255f),
+        0.8f + 0.4f * (((hash ushr 8) and 0xFF) / 255f),
+        ((hash ushr 16) and 0xFF) / 255f,
+    )
+
+    companion object {
+        /** A lone cover (the album page) keeps the plain depth. */
+        val Plain = TileFeel(1f, 1f, 0f)
+    }
 }
 
 // an inner wall that fades out softly instead of ending on a straight edge
