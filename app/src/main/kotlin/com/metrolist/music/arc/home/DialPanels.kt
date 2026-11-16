@@ -10,7 +10,9 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -20,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -290,11 +293,22 @@ fun DialCellSheet(
     onPin: (() -> Unit)?,
     onPut: (DialPanel?) -> Unit,
     onRemove: (() -> Unit)?,
+    size: Int = 1,
+    maxSize: Int = 1,
+    onSize: ((Int) -> Unit)? = null,
 ) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
         if (itemTitle != null) CapsLabel(itemTitle, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
         onPin?.let { SheetRow(stringResource(if (current is DialPanel.Item) R.string.arc_dial_unpin else R.string.arc_dial_pin_here), R.drawable.ic_push_pin, it) }
         onRemove?.let { SheetRow(stringResource(R.string.arc_dial_remove), R.drawable.remove, it) }
+        if (onSize != null && maxSize > 1) {
+            CapsLabel(stringResource(R.string.arc_dial_size), Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                (1..maxSize).forEach { span ->
+                    FilterChip(selected = span == size, onClick = { if (span != size) onSize(span) }, label = { Text("$span × $span") })
+                }
+            }
+        }
         CapsLabel(stringResource(R.string.arc_dial_put_here), Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
         if (current != null && current !is DialPanel.Item) SheetRow(stringResource(R.string.arc_dial_changing), R.drawable.shuffle) { onPut(null) }
         if (current != DialPanel.Continue) SheetRow(stringResource(R.string.arc_home_continue), R.drawable.play) { onPut(DialPanel.Continue) }

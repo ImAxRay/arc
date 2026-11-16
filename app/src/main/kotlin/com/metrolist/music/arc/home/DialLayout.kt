@@ -46,6 +46,16 @@ internal fun encodeDialPanels(panels: Map<DialCell, DialPanel>): String =
         "${cell.page}.${cell.row}.${cell.col}=$value"
     }
 
+/** Tile sizes in cells across, by the cell a panel sits at; a panel without one takes its default. */
+internal fun encodeDialSizes(sizes: Map<DialCell, Int>): String = sizes.entries.joinToString("\n") { (cell, span) -> "${cell.page}.${cell.row}.${cell.col}=$span" }
+
+internal fun parseDialSizes(text: String): Map<DialCell, Int> =
+    text.lineSequence().mapNotNull { line ->
+        val (place, value) = line.split("=", limit = 2).takeIf { it.size == 2 } ?: return@mapNotNull null
+        val (page, row, col) = place.split(".").mapNotNull { it.toIntOrNull() }.takeIf { it.size == 3 } ?: return@mapNotNull null
+        DialCell(page, row, col) to (value.toIntOrNull()?.takeIf { it in 1..3 } ?: return@mapNotNull null)
+    }.toMap()
+
 /** Lines it can't read are dropped, so an older or newer Arc never breaks the dial. */
 internal fun parseDialPanels(text: String): Map<DialCell, DialPanel> =
     text.lineSequence().mapNotNull { line ->
@@ -72,11 +82,13 @@ internal fun parseDialPanels(text: String): Map<DialCell, DialPanel> =
 class DialStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     private val _panels = MutableStateFlow(prefs.getString(PANELS, null)?.let(::parseDialPanels))
+    private val _sizes = MutableStateFlow(prefs.getString(SIZES, null)?.let(::parseDialSizes).orEmpty())
     private val _hidden = MutableStateFlow(prefs.getStringSet(HIDDEN, null).orEmpty().toSet())
     private val _dice = MutableStateFlow(prefs.getInt(DICE, 0))
 
     /** Null until the user edits the dial. */
     val panels: StateFlow<Map<DialCell, DialPanel>?> = _panels
+    val sizes: StateFlow<Map<DialCell, Int>> = _sizes
     val hidden: StateFlow<Set<String>> = _hidden
     /** The die's last face, 1 to 6; 0 before the first roll. */
     val dice: StateFlow<Int> = _dice
@@ -87,9 +99,14 @@ class DialStore(context: Context) {
             .sortedWith(compareBy({ it.key.page }, { it.key.row }, { it.key.col }))
             .mapNotNull { (it.value as? DialPanel.Item)?.id }
 
-    fun setPanels(panels: Map<DialCell, DialPanel>) {
+    fun setPanels(panels: Map<DialCell, DialPanel>, sizes: Map<DialCell, Int> = _sizes.value) {
+        val kept = sizes.filterKeys { it in panels }
         _panels.value = panels
-        prefs.edit { putString(PANELS, encodeDialPanels(panels)) }
+        _sizes.value = kept
+        prefs.edit {
+            putString(PANELS, encodeDialPanels(panels))
+            putString(SIZES, encodeDialSizes(kept))
+        }
     }
 
     fun hide(id: String) {
@@ -105,6 +122,7 @@ class DialStore(context: Context) {
     companion object {
         const val FILE = "arc_dial"
         private const val PANELS = "panels"
+        private const val SIZES = "sizes"
         private const val HIDDEN = "hidden"
         private const val DICE = "dice"
 

@@ -43,7 +43,6 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.SpeedDialShortcut
 import com.metrolist.music.arc.SpeedDialSkeleton
-import com.metrolist.music.arc.rememberTiltEye
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.SpeedDialGridItem
@@ -78,6 +77,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val store = remember { DialStore.get(env.viewModel.context) }
     val storedPanels by store.panels.collectAsStateWithLifecycle()
     val hiddenItems by store.hidden.collectAsStateWithLifecycle()
+    val sizes by store.sizes.collectAsStateWithLifecycle()
     val dialMood by env.viewModel.dialMood.collectAsStateWithLifecycle()
     val moodMixes by env.viewModel.dialMoodMixes.collectAsStateWithLifecycle()
     val edit = LocalDialEdit.current
@@ -97,7 +97,6 @@ fun SpeedDialModule(env: HomeEnv) {
         }
     // full-width cells: more rows make the dial taller, never thinner
     val itemWidth = availableWidth / columns
-    val tiltEye = rememberTiltEye()
     val cellPx = with(LocalDensity.current) { itemWidth.toPx() }
 
     val panels = storedPanels ?: remember(columns, rows) { defaultDialPanels(columns, rows) }
@@ -114,7 +113,7 @@ fun SpeedDialModule(env: HomeEnv) {
     val livePanels = remember(panels, byId) { panels.filterValues { it !is DialPanel.Item || it.id in byId } }
 
     val big = rows >= 3 && columns >= 3
-    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, livePanels, continueTile = continueId != null) }
+    val pages = (0 until 3).map { dialPageSlots(it, columns, rows, big, livePanels, continueTile = continueId != null, sizes = sizes) }
     val capacities = pages.map { page -> page.count { it.panel == null } }
     // only whole pages, at most three; a half-empty last page looks broken; pages holding panels always show
     // a val, so the pager's page count lambda stays the same object; a captured var made a new one each composition,
@@ -127,7 +126,7 @@ fun SpeedDialModule(env: HomeEnv) {
     SideEffect { if (!preview) env.viewModel.dialShownIds.value = shownIds }
     val radioSeeds = remember(dialItems) { dialItems.filter { it is SongItem && !isOwnFile(it.id) }.map { it.id } }
 
-    fun save(new: Map<DialCell, DialPanel>) = store.setPanels(new)
+    fun save(new: Map<DialCell, DialPanel>, newSizes: Map<DialCell, Int> = sizes) = store.setPanels(new, newSizes)
 
     fun pin(item: YTItem) {
         if (item.id !in env.pinnedTypes.value) env.scope.launch(Dispatchers.IO) { env.database.speedDialDao.insert(SpeedDialItem.fromYTItem(item)) }
@@ -140,6 +139,17 @@ fun SpeedDialModule(env: HomeEnv) {
         val single = panel != null && panel !is DialPanel.Mood && panel !is DialPanel.Item
         val kept = panels.filter { (c, p) -> c != cell && !(single && p == panel) }
         save(if (panel == null) kept else kept + (cell to panel))
+    }
+
+    /** Grows or shrinks the tile at [at] to [span] cells across; whatever it grows over moves to the page's free cells. */
+    fun resize(at: DialCell, panel: DialPanel, span: Int) {
+        val anchor = DialCell(at.page, minOf(at.row, rows - span), minOf(at.col, columns - span))
+        val displaced = panels.filterKeys { it != at && it.page == anchor.page && it.row in anchor.row until anchor.row + span && it.col in anchor.col until anchor.col + span }
+        var next = panels - at - displaced.keys + (anchor to panel)
+        val nextSizes = sizes - at - displaced.keys + (anchor to span)
+        val free = dialPageSlots(at.page, columns, rows, big, next, sizes = nextSizes).filter { it.panel == null && it.span == 1 }
+        displaced.values.zip(free).forEach { (p, slot) -> next = next + (DialCell(at.page, slot.row, slot.col) to p) }
+        save(next, nextSizes)
     }
 
     Column(Modifier.fillMaxWidth()) {
@@ -203,7 +213,6 @@ fun SpeedDialModule(env: HomeEnv) {
                                                     isPinned = item.id in env.pinnedTypes.value,
                                                     isActive = env.isActive(item.id),
                                                     isPlaying = env.isPlaying.value,
-                                                    tiltEye = tiltEye,
                                                     thumbnailSize = if (slot.span > 1) 544 else 200,
                                                     modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
                                                 )
@@ -262,6 +271,16 @@ fun SpeedDialModule(env: HomeEnv) {
                                                 env.menuState.dismiss()
                                             },
                                             onRemove = if (current != null || item != null) { { remove(); env.menuState.dismiss() } } else null,
+                                            size = slot.span,
+                                            maxSize = minOf(rows, columns, 3),
+                                            onSize =
+                                                (current ?: item?.let { DialPanel.Item(it.id) })?.let { panel ->
+                                                    { span: Int ->
+                                                        if (current == null) item?.let(::pin)
+                                                        resize(at, panel, span)
+                                                        env.menuState.dismiss()
+                                                    }
+                                                },
                                         )
                                     }
                                 },
@@ -275,7 +294,11 @@ fun SpeedDialModule(env: HomeEnv) {
                                     val to = DialCell(page, target.row, target.col)
                                     val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@DialEditCell
                                     landings[to] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
-                                    save(panels - at - to + (to to moving) + listOfNotNull(target.panel?.let { at to it }))
+                                    // a size goes with its tile
+                                    save(
+                                        panels - at - to + (to to moving) + listOfNotNull(target.panel?.let { at to it }),
+                                        sizes - at - to + listOfNotNull(sizes[at]?.let { to to it }, sizes[to]?.let { at to it }),
+                                    )
                                 },
                                 shift = { landings[at] ?: shift.value },
                             ) { Tile(cell) }
@@ -298,7 +321,15 @@ internal data class DialSlot(val col: Int, val row: Int, val span: Int = 1, val 
  * Where tiles sit on one dial page: the user's [panels] at their cells, Continue 2x2 when [big] and the 2x2 is clear
  * (the top item takes the spot when there is nothing to continue), every other cell left for items in reading order.
  */
-internal fun dialPageSlots(page: Int, columns: Int, rows: Int, big: Boolean, panels: Map<DialCell, DialPanel>, continueTile: Boolean = true): List<DialSlot> {
+internal fun dialPageSlots(
+    page: Int,
+    columns: Int,
+    rows: Int,
+    big: Boolean,
+    panels: Map<DialCell, DialPanel>,
+    continueTile: Boolean = true,
+    sizes: Map<DialCell, Int> = emptyMap(),
+): List<DialSlot> {
     val taken = Array(rows) { BooleanArray(columns) }
     val slots = mutableListOf<DialSlot>()
     fun place(slot: DialSlot) {
@@ -306,12 +337,17 @@ internal fun dialPageSlots(page: Int, columns: Int, rows: Int, big: Boolean, pan
         slots += slot
     }
     val here = panels.filterKeys { it.page == page && it.row < rows && it.col < columns }
-    here.entries.firstOrNull { it.value == DialPanel.Continue }?.key?.let { cell ->
-        val fits = big && cell.row + 1 < rows && cell.col + 1 < columns &&
-            here.keys.none { it != cell && it.row in cell.row..cell.row + 1 && it.col in cell.col..cell.col + 1 }
-        place(DialSlot(cell.col, cell.row, span = if (fits) 2 else 1, panel = DialPanel.Continue.takeIf { continueTile }))
+    // a big tile never covers another panel's cell; it shrinks instead, so nothing the user placed disappears
+    fun fits(cell: DialCell, span: Int) =
+        cell.row + span <= rows && cell.col + span <= columns &&
+            (cell.row until cell.row + span).all { r -> (cell.col until cell.col + span).all { c -> !taken[r][c] } } &&
+            here.keys.none { it != cell && it.row in cell.row until cell.row + span && it.col in cell.col until cell.col + span }
+    fun spanOf(cell: DialCell, panel: DialPanel) = sizes[cell] ?: if (panel == DialPanel.Continue && big) 2 else 1
+    here.entries.sortedByDescending { spanOf(it.key, it.value) }.forEach { (cell, panel) ->
+        var span = spanOf(cell, panel)
+        while (span > 1 && !fits(cell, span)) span--
+        if (!taken[cell.row][cell.col]) place(DialSlot(cell.col, cell.row, span, panel.takeIf { it != DialPanel.Continue || continueTile }))
     }
-    here.forEach { (cell, panel) -> if (panel != DialPanel.Continue && !taken[cell.row][cell.col]) place(DialSlot(cell.col, cell.row, panel = panel)) }
     for (r in 0 until rows) for (c in 0 until columns) if (!taken[r][c]) place(DialSlot(c, r))
     return slots
 }

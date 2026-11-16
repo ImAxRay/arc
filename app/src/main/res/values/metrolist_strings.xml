@@ -1024,7 +1024,8 @@
     <string name="arc_home_line_desc">The line behind Home that fills as the song plays</string>
     <string name="arc_home_background">Home background</string>
     <string name="arc_tilt_covers">Tilt covers</string>
-    <string name="arc_tilt_covers_desc">Speed dial and album covers sit behind the screen and shift as you tilt the phone. Paused in battery saver</string>
+    <string name="arc_tilt_covers_desc">Covers on Home and album pages sit behind the screen and shift as you tilt the phone. Paused in battery saver</string>
+    <string name="arc_tilt_covers_keywords">parallax, 3D, depth, gyroscope, motion, tilt</string>
     <string name="arc_press_glow">Glow on press</string>
     <string name="arc_press_glow_desc">Pressed tiles glow in their cover\'s colour, with a shimmer of dots along the edge. Off in battery saver</string>
     <string name="arc_speed_dial_rows">Speed dial size</string>
@@ -1364,6 +1365,7 @@
     <string name="arc_dial_pin_here">Pin here</string>
     <string name="arc_dial_unpin">Unpin</string>
     <string name="arc_dial_remove">Remove</string>
+    <string name="arc_dial_size">Size</string>
     <string name="arc_dial_dice">Dice</string>
     <string name="arc_dial_radio">Discover radio</string>
     <string name="arc_dial_plus">Guided playlist</string>

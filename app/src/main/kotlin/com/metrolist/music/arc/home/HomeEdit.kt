@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Switch
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
@@ -148,17 +147,29 @@ fun EditFrame(
             if (empty) EmptyModuleStub(module)
         }
         Box(Modifier.matchParentSize().then(cover))
-        // the dial's own tiles get their edit mode one level down
-        if (onEditInside != null) {
-            FilledTonalButton(onClick = onEditInside, modifier = Modifier.align(Alignment.Center)) {
-                Icon(painterResource(R.drawable.edit), contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
-                Text(stringResource(R.string.arc_dial_edit))
-            }
-        }
         val badge = 28.dp
         Badge(R.drawable.remove, stringResource(R.string.arc_home_hide), colors.error, colors.onError, Modifier.align(Alignment.TopStart).offset(x = -badge / 3, y = -badge / 3), onHide)
-        if (module.setting != null || module.nameToggle) {
+        val gear = module.setting != null || module.nameToggle
+        if (gear) {
             Badge(R.drawable.settings, stringResource(R.string.settings), colors.secondaryContainer, colors.onSecondaryContainer, Modifier.align(Alignment.TopEnd).offset(x = badge / 3, y = -badge / 3), onSettings)
+        }
+        // the dial's own tiles get their edit mode one level down, from a pill beside the gear
+        if (onEditInside != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = if (gear) badge / 3 - badge - 6.dp else badge / 3, y = -badge / 3)
+                        .height(badge)
+                        .clip(CircleShape)
+                        .background(colors.primary)
+                        .clickable(onClick = onEditInside)
+                        .padding(start = 10.dp, end = 12.dp),
+            ) {
+                Icon(painterResource(R.drawable.edit), contentDescription = null, tint = colors.onPrimary, modifier = Modifier.padding(end = 6.dp).size(16.dp))
+                Text(stringResource(R.string.arc_dial_edit), color = colors.onPrimary, style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }

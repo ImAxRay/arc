@@ -86,6 +86,8 @@ import com.metrolist.music.arc.home.EmptyModuleStub
 import com.metrolist.music.arc.home.HomeEdit
 import com.metrolist.music.arc.home.DialEdit
 import com.metrolist.music.arc.home.LocalDialEdit
+import com.metrolist.music.arc.LocalTiltEye
+import com.metrolist.music.arc.rememberTiltEye
 import com.metrolist.music.arc.home.HomeModuleId
 import com.metrolist.music.arc.home.HomeSlot
 import com.metrolist.music.arc.home.LocalHomeEdit
@@ -171,11 +173,15 @@ fun HomeScreen(
     BackHandler(dialEditing) { dialEditing = false }
     val dialWobble = rememberWobbleClock(dialEditing)
     val dialEdit = remember(dialWobble) { DialEdit(dialWobble) }
+    // one sensor for every cover on Home
+    val tiltEye = rememberTiltEye()
     val homeEdit =
         remember {
             HomeEdit {
                 if (!editing) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    // one edit at a time, so only one Done shows
+                    dialEditing = false
                     editing = true
                 }
             }
@@ -348,7 +354,7 @@ fun HomeScreen(
                 offerUndo(context.getString(R.string.arc_home_preset_applied, name)) { savedModules = before }
             }
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled, LocalDialEdit provides dialEdit.takeIf { dialEditing }) {
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled, LocalDialEdit provides dialEdit.takeIf { dialEditing }, LocalTiltEye provides tiltEye) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),

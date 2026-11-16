@@ -47,7 +47,8 @@ import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.rememberPreference
 
-private class SettingsEntry(val title: Int, val route: String, val section: Int)
+/** [keywords]: other words people search for this row by, comma separated. */
+private class SettingsEntry(val title: Int, val route: String, val section: Int, val keywords: Int? = null)
 
 private val RecentSettingsKey = stringPreferencesKey("arcRecentSettings")
 private const val RECENT_SETTINGS = 3
@@ -153,7 +154,10 @@ fun ArcSettingsSearch(navController: NavController): Boolean {
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
     val entries = remember {
-        SETTINGS_INDEX.map { Triple(context.getString(it.title), context.getString(it.section), it.route) }
+        SETTINGS_INDEX.map { entry ->
+            val keywords = entry.keywords?.let { context.getString(it).split(',').map(String::trim) }.orEmpty()
+            Triple(context.getString(entry.title), context.getString(entry.section), entry.route) to keywords
+        }
     }
     OutlinedTextField(
         value = query,
@@ -171,7 +175,8 @@ fun ArcSettingsSearch(navController: NavController): Boolean {
     )
     val trimmed = query.trim()
     if (trimmed.isEmpty()) return false
-    entries.filter { it.first.contains(trimmed, ignoreCase = true) }.forEach { (title, section, route) ->
+    entries.filter { (entry, keywords) -> entry.first.contains(trimmed, ignoreCase = true) || keywords.any { it.contains(trimmed, ignoreCase = true) } }.forEach { (entry) ->
+        val (title, section, route) = entry
         Column(
             modifier =
                 Modifier
@@ -380,7 +385,7 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.listen_together_choose_server, "settings/integrations/listen_together", R.string.integrations),
     SettingsEntry(R.string.settings, "settings/integrations/listen_together", R.string.integrations),
     SettingsEntry(R.string.arc_settings_look, "settings/appearance", R.string.appearance),
-    SettingsEntry(R.string.arc_tilt_covers, "settings/appearance", R.string.appearance),
+    SettingsEntry(R.string.arc_tilt_covers, "settings/appearance", R.string.appearance, R.string.arc_tilt_covers_keywords),
     SettingsEntry(R.string.arc_press_glow, "settings/appearance", R.string.appearance),
     SettingsEntry(R.string.home, "settings/appearance", R.string.appearance),
     SettingsEntry(R.string.arc_home_background, "settings/appearance", R.string.appearance),

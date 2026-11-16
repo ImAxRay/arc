@@ -29,8 +29,6 @@ import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.arc.MarqueeText
-import com.metrolist.music.arc.RecessedCover
-import com.metrolist.music.arc.TiltEye
 import com.metrolist.music.constants.DialCornerRadius
 import com.metrolist.music.ui.utils.resize
 
@@ -41,7 +39,6 @@ fun SpeedDialGridItem(
     modifier: Modifier = Modifier,
     isActive: Boolean = false,
     isPlaying: Boolean = false,
-    tiltEye: TiltEye? = null,
     thumbnailSize: Int = 200,
 ) {
     if (item is ArtistItem) {
@@ -56,15 +53,13 @@ fun SpeedDialGridItem(
             // a flat square the cover fades in over, so a tile never pops in from nothing
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
-        RecessedCover(tiltEye, Modifier.fillMaxSize()) {
-            ItemThumbnail(
-                thumbnailUrl = item.thumbnail?.resize(thumbnailSize, thumbnailSize),
-                isActive = isActive,
-                isPlaying = isPlaying,
-                shape = RoundedCornerShape(DialCornerRadius),
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        ItemThumbnail(
+            thumbnailUrl = item.thumbnail?.resize(thumbnailSize, thumbnailSize),
+            isActive = isActive,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(DialCornerRadius),
+            modifier = Modifier.fillMaxSize()
+        )
         NameFade()
         MarqueeText(
             text = item.title,
@@ -83,7 +78,7 @@ private val DialNameStyle =
         fontSize = 15.sp,
         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
         color = Color.White,
-        shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.5f), androidx.compose.ui.geometry.Offset(0f, 1f), blurRadius = 6f),
+        shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(0f, 1f), blurRadius = 8f),
     )
 
 @Composable
@@ -91,7 +86,7 @@ private fun BoxScope.NameFade() {
     Spacer(
         Modifier
             .matchParentSize()
-            .drawBehind { drawRect(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.55f))) },
+            .drawBehind { drawRect(Brush.verticalGradient(0.68f to Color.Transparent, 0.85f to Color.Black.copy(alpha = 0.12f), 1f to Color.Black.copy(alpha = 0.32f))) },
     )
 }
 

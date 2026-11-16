@@ -50,6 +50,8 @@ import com.metrolist.music.arc.GlowArea
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.metrolist.music.arc.LocalTiltEye
+import com.metrolist.music.arc.RecessedCover
 import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.R
 import com.metrolist.music.constants.ListItemHeight
@@ -208,17 +210,19 @@ internal fun PickCard(
 ) {
     val shape = RoundedCornerShape(com.metrolist.music.constants.DialCornerRadius)
     Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        AsyncImage(
-            model = thumbnail?.resize(if (big) 720 else 360, if (big) 720 else 360),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+        RecessedCover(LocalTiltEye.current, Modifier.fillMaxSize(), seed = thumbnail) {
+            AsyncImage(
+                model = thumbnail?.resize(if (big) 720 else 360, if (big) 720 else 360),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         // a dark fade under the words only, drawn once
         Spacer(
             Modifier.fillMaxSize().drawBehind {
                 drawRect(
-                    Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f)),
+                    Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f)),
                     topLeft = Offset.Zero,
                     size = size,
                 )

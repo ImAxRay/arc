@@ -50,6 +50,16 @@ class DialPageSlotsTest {
     }
 
     @Test
+    fun `a sized tile grows but shrinks around other panels`() {
+        val panels = mapOf(DialCell(0, 0, 0) to DialPanel.Dice, DialCell(0, 2, 2) to DialPanel.Continue)
+        val slots = dialPageSlots(0, 3, 3, big = true, panels = panels, sizes = mapOf(DialCell(0, 0, 0) to 3))
+        assertEquals(DialSlot(0, 0, span = 2, panel = DialPanel.Dice), slots.first())
+        assertEquals(DialSlot(2, 2, span = 1, panel = DialPanel.Continue), slots[1])
+        assertEquals(9, cells(slots).toSet().size)
+        assertEquals(mapOf(DialCell(0, 1, 2) to 2), parseDialSizes(encodeDialSizes(mapOf(DialCell(0, 1, 2) to 2)) + "\n0.0.0=9"))
+    }
+
+    @Test
     fun `the layout reads back what was written, dropping lines it doesn't know`() {
         val panels = mapOf(DialCell(0, 0, 0) to DialPanel.Continue, DialCell(0, 2, 1) to DialPanel.Mood("Relax", "ggMP"), DialCell(2, 1, 0) to DialPanel.Item("VLabc"), DialCell(0, 1, 2) to DialPanel.Radio)
         assertEquals(panels, parseDialPanels(encodeDialPanels(panels) + "\n0.1.1=futurepanel\nnonsense"))

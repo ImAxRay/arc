@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +41,13 @@ val ArcTiltCoversKey = booleanPreferencesKey("arcTiltCovers")
 class TiltEye {
     var x by mutableFloatStateOf(0f)
     var y by mutableFloatStateOf(0f)
+    // the same eye trailing behind, so covers that lean on it lag the others
+    var slowX by mutableFloatStateOf(0f)
+    var slowY by mutableFloatStateOf(0f)
 }
+
+/** One eye for a whole screen, so every cover on it shares one sensor; null when tilt covers are off. */
+val LocalTiltEye = staticCompositionLocalOf<TiltEye?> { null }
 
 /** Follows the phone's tilt while the caller is on screen, resumed and not under the open player; null when tilt covers are off. */
 @Composable
@@ -84,6 +91,10 @@ fun rememberTiltEye(): TiltEye? {
                     eye.x = x
                     eye.y = y
                 }
+                if (abs(x - eye.slowX) > EYE_STEP || abs(y - eye.slowY) > EYE_STEP) {
+                    eye.slowX += (x - eye.slowX) * SLOW_FOLLOW
+                    eye.slowY += (y - eye.slowY) * SLOW_FOLLOW
+                }
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -99,6 +110,8 @@ fun rememberTiltEye(): TiltEye? {
             baseX = Float.NaN
             eye.x = 0f
             eye.y = 0f
+            eye.slowX = 0f
+            eye.slowY = 0f
         }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -119,10 +132,11 @@ fun rememberTiltEye(): TiltEye? {
 /**
  * A cover sunk into the screen, seen from an eye above the screen's centre: covers away from the
  * centre show more depth and an inner wall on their outer side, and tilting the phone moves the eye.
+ * [seed] (the cover's id or URL) gives each cover its own depth and lag, so a grid doesn't swing as one.
  * The parent should clip; [content] is the image.
  */
 @Composable
-fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, seed: Any? = null, content: @Composable BoxScope.() -> Unit) {
     if (eye == null) {
         Box(modifier, content = content)
         return
@@ -130,11 +144,14 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Compos
     var spot by remember { mutableStateOf(Offset.Zero) }
     var rootWidth by remember { mutableFloatStateOf(0f) }
     var tileSize by remember { mutableStateOf(Size.Zero) }
+    val feel = remember(seed) { TileFeel(seed.hashCode()) }
     fun shift(): Offset {
         if (rootWidth == 0f) return Offset.Zero
         val max = tileSize.width * MAX_SHIFT
-        val dx = (eye.x - spot.x / rootWidth) * DEPTH * tileSize.width
-        val dy = (eye.y - spot.y / rootWidth) * DEPTH * tileSize.height
+        val ex = eye.x + (eye.slowX - eye.x) * feel.lag
+        val ey = eye.y + (eye.slowY - eye.y) * feel.lag
+        val dx = (ex - spot.x / rootWidth) * DEPTH * feel.depthX * tileSize.width
+        val dy = (ey - spot.y / rootWidth) * DEPTH * feel.depthY * tileSize.height
         return Offset(dx.coerceIn(-max, max), dy.coerceIn(-max, max))
     }
     Box(
@@ -157,7 +174,7 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Compos
                     val fromLeft = s.x > 0
                     drawRect(
                         Brush.horizontalGradient(
-                            listOf(Color.Black.copy(alpha = a), Color.Transparent),
+                            wallStops(a),
                             startX = if (fromLeft) 0f else size.width,
                             endX = if (fromLeft) wallX else size.width - wallX,
                         ),
@@ -169,7 +186,7 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Compos
                     val fromTop = s.y > 0
                     drawRect(
                         Brush.verticalGradient(
-                            listOf(Color.Black.copy(alpha = a), Color.Transparent),
+                            wallStops(a),
                             startY = if (fromTop) 0f else size.height,
                             endY = if (fromTop) wallY else size.height - wallY,
                         ),
@@ -192,6 +209,18 @@ fun RecessedCover(eye: TiltEye?, modifier: Modifier = Modifier, content: @Compos
     }
 }
 
+/** Per-cover depth (more across than up and down) and how far it trails the eye, from a hash. */
+private class TileFeel(hash: Int) {
+    val depthX = 0.55f + 0.9f * ((hash and 0xFF) / 255f)
+    val depthY = 0.8f + 0.4f * (((hash ushr 8) and 0xFF) / 255f)
+    val lag = ((hash ushr 16) and 0xFF) / 255f
+}
+
+// an inner wall that fades out softly instead of ending on a straight edge
+private fun wallStops(alpha: Float) =
+    listOf(Color.Black.copy(alpha = alpha), Color.Black.copy(alpha = alpha * 0.4f), Color.Black.copy(alpha = alpha * 0.1f), Color.Transparent)
+
+private const val SLOW_FOLLOW = 0.06f
 private const val REST_DRIFT = 0.012f
 private const val TILT_GAIN = 1.9f
 private const val MAX_EYE = 0.6f
@@ -199,5 +228,5 @@ private const val EYE_STEP = 0.002f
 private const val DEPTH = 0.13f
 private const val MAX_SHIFT = 0.08f
 private const val COVER_SCALE = 1f + 2 * MAX_SHIFT + 0.02f
-private const val WALL_WIDTH = 1.8f
-private const val WALL_ALPHA = 0.45f
+private const val WALL_WIDTH = 1.4f
+private const val WALL_ALPHA = 0.22f
