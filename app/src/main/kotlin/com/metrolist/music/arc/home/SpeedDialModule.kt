@@ -106,6 +106,7 @@ fun SpeedDialModule(env: HomeEnv) {
         if (LocalHomeEditing.current) ModuleHeader(stringResource(R.string.speed_dial))
         HorizontalPager(
             state = pagerState,
+            flingBehavior = rememberPageFling(pagerState),
             contentPadding = PaddingValues(horizontal = 16.dp),
             pageSpacing = 16.dp,
             modifier = Modifier.fillMaxWidth().height(itemWidth * rows),

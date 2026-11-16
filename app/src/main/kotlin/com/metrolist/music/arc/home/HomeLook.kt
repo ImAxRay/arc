@@ -1,6 +1,13 @@
 package com.metrolist.music.arc.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.abs
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -231,6 +238,29 @@ fun ModuleHeader(
  * Page dots: the current page's dot is stretched into a pill, and the pill flows into the next dot as the pager moves.
  * Reads the pager's position while drawing, so a swipe redraws this without recomposing anything.
  */
+/**
+ * Pager fling that settles on the nearest page when let go slowly, at once and slowing down. Compose's own picks the
+ * side by the last drag direction, so a finger lifting with a tiny roll back sent a nearly turned page back a whole
+ * page, and its spring from rest looked like the settle came late. Real flings keep Compose's behaviour.
+ */
+@Composable
+fun rememberPageFling(state: PagerState): TargetedFlingBehavior {
+    val fling = PagerDefaults.flingBehavior(state)
+    val minVelocity = with(LocalDensity.current) { 400.dp.toPx() }
+    return remember(state, fling, minVelocity) {
+        object : TargetedFlingBehavior {
+            override suspend fun ScrollScope.performFling(initialVelocity: Float, onRemainingDistanceUpdated: (Float) -> Unit): Float {
+                if (abs(initialVelocity) >= minVelocity) return with(fling) { performFling(initialVelocity, onRemainingDistanceUpdated) }
+                val info = state.layoutInfo
+                val distance = -state.currentPageOffsetFraction * (info.pageSize + info.pageSpacing)
+                var done = 0f
+                animate(0f, distance, animationSpec = tween(220, easing = LinearOutSlowInEasing)) { value, _ -> done += scrollBy(value - done) }
+                return 0f
+            }
+        }
+    }
+}
+
 @Composable
 fun PageDots(state: PagerState, modifier: Modifier = Modifier) {
     val idle = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
