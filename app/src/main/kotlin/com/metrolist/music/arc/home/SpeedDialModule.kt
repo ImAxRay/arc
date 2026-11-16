@@ -2,6 +2,10 @@ package com.metrolist.music.arc.home
 
 import com.metrolist.music.constants.DialCornerRadius
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -25,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -148,6 +154,18 @@ fun SpeedDialModule(env: HomeEnv) {
         ) { page ->
             val pageItems = freeItems.drop(pageStarts[page]).take(capacities[page])
             var next = 0
+            // the tile being dragged and the one it would swap with, which slides into its place meanwhile
+            var lifted by remember { mutableStateOf<DialSlot?>(null) }
+            var over by remember { mutableStateOf<DialSlot?>(null) }
+            // where a dropped tile was let go, relative to its new cell, so it settles from there
+            val landings = remember { mutableStateMapOf<DialCell, Offset>() }
+
+            fun targetOf(slot: DialSlot, travel: Offset): DialSlot? {
+                val col = ((slot.col + slot.span / 2f) + travel.x / cellPx).toInt().coerceIn(0, columns - 1)
+                val row = ((slot.row + slot.span / 2f) + travel.y / cellPx).toInt().coerceIn(0, rows - 1)
+                // a drop on any of a 2x2 tile's cells lands on the tile
+                return pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }?.takeIf { it != slot }
+            }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(itemWidth * columns, itemWidth * rows)) {
                     pages[page].forEachIndexed { index, slot ->
@@ -197,7 +215,18 @@ fun SpeedDialModule(env: HomeEnv) {
 
                         if (edit == null) {
                             Box(placed) { Tile(cell) }
-                        } else {
+                        } else key(slot.col, slot.row) {
+                            val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+                            val from = lifted
+                            val goal = if (from != null && over == slot) Offset((from.col - slot.col) * cellPx, (from.row - slot.row) * cellPx) else Offset.Zero
+                            val landing = landings[at]
+                            LaunchedEffect(goal, landing) {
+                                if (landing != null) {
+                                    shift.snapTo(landing)
+                                    landings.remove(at)
+                                }
+                                shift.animateTo(goal, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow))
+                            }
                             val current = slot.panel
                             fun remove() {
                                 when {
@@ -237,16 +266,18 @@ fun SpeedDialModule(env: HomeEnv) {
                                     }
                                 },
                                 onRemove = if (current != null || item != null) ::remove else null,
+                                onDrag = { travel ->
+                                    lifted = slot.takeIf { travel != null }
+                                    over = travel?.let { targetOf(slot, it) }
+                                },
                                 onDrop = { travel ->
-                                    val col = ((slot.col + slot.span / 2f) + travel.x / cellPx).toInt().coerceIn(0, columns - 1)
-                                    val row = ((slot.row + slot.span / 2f) + travel.y / cellPx).toInt().coerceIn(0, rows - 1)
-                                    // a drop on any of a 2x2 tile's cells lands on the tile
-                                    val target = pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span } ?: return@DialEditCell
-                                    if (target == slot) return@DialEditCell
+                                    val target = targetOf(slot, travel) ?: return@DialEditCell
                                     val to = DialCell(page, target.row, target.col)
                                     val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@DialEditCell
+                                    landings[to] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
                                     save(panels - at - to + (to to moving) + listOfNotNull(target.panel?.let { at to it }))
                                 },
+                                shift = { landings[at] ?: shift.value },
                             ) { Tile(cell) }
                         }
                     }

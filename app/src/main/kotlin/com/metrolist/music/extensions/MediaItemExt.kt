@@ -6,12 +6,12 @@
 package com.metrolist.music.extensions
 
 import android.os.Bundle
-import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata.MEDIA_TYPE_MUSIC
 import androidx.media3.session.MediaConstants.EXTRAS_KEY_IS_EXPLICIT
 import androidx.media3.session.MediaConstants.EXTRAS_VALUE_ATTRIBUTE_PRESENT
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.music.arc.ArtProvider
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
@@ -37,7 +37,7 @@ fun MediaMetadata.toMediaItem(): MediaItem {
                 .setTitle(resolvedMetadata.title)
                 .setSubtitle(artistNames)
                 .setArtist(artistNames)
-                .setArtworkUri(resolvedMetadata.thumbnailUrl?.toUri())
+                .setArtworkUri(ArtProvider.sharedUri(resolvedMetadata.thumbnailUrl))
                 .setAlbumTitle(resolvedMetadata.album?.title)
                 .setAlbumArtist(resolvedMetadata.artists.firstOrNull()?.name)
                 .setDisplayTitle(resolvedMetadata.title)
@@ -71,7 +71,7 @@ fun MediaItem.withUpdatedMetadata(updatedMetadata: MediaMetadata): MediaItem {
                 .setDisplayTitle(resolvedMetadata.title)
                 .setSubtitle(artistNames)
                 .setArtist(artistNames)
-                .setArtworkUri(resolvedMetadata.thumbnailUrl?.toUri())
+                .setArtworkUri(ArtProvider.sharedUri(resolvedMetadata.thumbnailUrl))
                 .setAlbumTitle(resolvedMetadata.album?.title)
                 .setAlbumArtist(resolvedMetadata.artists.firstOrNull()?.name)
                 .setExtras(Bundle().apply {

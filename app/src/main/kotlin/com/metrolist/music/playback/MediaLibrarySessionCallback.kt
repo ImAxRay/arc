@@ -383,7 +383,7 @@ constructor(
                                 .setTitle(tile.title)
                                 .setSubtitle(tile.subtitle)
                                 .setArtist(tile.subtitle)
-                                .setArtworkUri(tile.art?.toUri())
+                                .setArtworkUri(com.metrolist.music.arc.ArtProvider.sharedUri(tile.art))
                                 .setIsPlayable(true)
                                 .setIsBrowsable(false)
                                 .setMediaType(if (tile.type == "song") MediaMetadata.MEDIA_TYPE_MUSIC else MediaMetadata.MEDIA_TYPE_PLAYLIST)
@@ -414,7 +414,7 @@ constructor(
                         album.artists.joinToString {
                             ArtistNameAliases.resolve(it.id, it.name)
                         },
-                        album.album.thumbnailUrl?.toUri(),
+                        com.metrolist.music.arc.ArtProvider.sharedUri(album.album.thumbnailUrl),
                         MediaMetadata.MEDIA_TYPE_ALBUM,
                     )
                 }
@@ -971,7 +971,7 @@ constructor(
                      .setArtist(artists.joinToArtistString(getArtistSeparator(context)) {
                          ArtistNameAliases.resolve(it.id, it.name)
                      })
-                     .setArtworkUri(song.thumbnailUrl?.toUri())
+                     .setArtworkUri(com.metrolist.music.arc.ArtProvider.sharedUri(song.thumbnailUrl))
                     .setIsPlayable(isPlayable)
                     .setIsBrowsable(isBrowsable)
                     .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)

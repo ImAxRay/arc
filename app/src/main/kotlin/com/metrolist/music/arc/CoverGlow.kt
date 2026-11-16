@@ -128,18 +128,18 @@ private fun spill(bitmap: Bitmap, left: Int, top: Int, side: Int): FloatArray {
 }
 
 /**
- * The colour the player's ground carries on from: the main colour of the cover's lower edge, or of
- * the whole cover when that edge is close to grey, so a dark band along the bottom doesn't wash it out.
+ * The colour the player's ground carries on from: the main colour of the cover's lower edge or, when that edge
+ * is close to grey, the cover's largest clearly coloured part, so a pale or dark band doesn't wash it out.
  */
 internal fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int {
-    fun dominant(region: Boolean): Int? {
-        val builder = Palette.from(bitmap).maximumColorCount(8).clearFilters()
-        if (region) builder.setRegion(x0, y0, x1, y1)
-        return builder.generate().dominantSwatch?.rgb
-    }
-    val edge = dominant(region = true) ?: bitmap.getPixel((x0 + x1) / 2, (y0 + y1) / 2)
+    val edge = Palette.from(bitmap).maximumColorCount(8).clearFilters().setRegion(x0, y0, x1, y1).generate().dominantSwatch?.rgb
+        ?: bitmap.getPixel((x0 + x1) / 2, (y0 + y1) / 2)
     if (Hct.fromInt(edge).chroma >= GREY_CHROMA) return edge
-    return dominant(region = false)?.takeIf { Hct.fromInt(it).chroma >= GREY_CHROMA } ?: edge
+    val swatches = Palette.from(bitmap).maximumColorCount(8).clearFilters().generate().swatches
+    // one colour often splits into several swatches, so they count together
+    val coloured = swatches.filter { Hct.fromInt(it.rgb).chroma >= GREY_CHROMA }
+    if (coloured.sumOf { it.population } * 20 < swatches.sumOf { it.population }) return edge
+    return coloured.maxBy { it.population }.rgb
 }
 
 private const val GREY_CHROMA = 8.0

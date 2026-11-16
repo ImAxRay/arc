@@ -197,7 +197,8 @@ fun playDiscoverRadio(env: HomeEnv, seeds: List<String>) {
 
 /**
  * A dial tile while the dial is edited: bobbing, asleep under a cover that takes a tap (opens [onTap]) or a hold and
- * drag (moves it; [onDrop] gets the finger's travel), with a minus to take it off the dial.
+ * drag (moves it; [onDrag] follows the finger's travel, null once let go, [onDrop] gets the final travel), with a minus
+ * to take it off the dial. [shift] moves it while another tile is dragged.
  */
 @Composable
 fun DialEditCell(
@@ -206,20 +207,24 @@ fun DialEditCell(
     modifier: Modifier,
     onTap: () -> Unit,
     onRemove: (() -> Unit)?,
+    onDrag: (Offset?) -> Unit,
     onDrop: (Offset) -> Unit,
+    shift: () -> Offset,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var drag by remember { mutableStateOf<Offset?>(null) }
     // the gestures below live as long as the cell, while the dial around them changes
     val tap by rememberUpdatedState(onTap)
     val drop by rememberUpdatedState(onDrop)
+    val follow by rememberUpdatedState(onDrag)
     Box(
         modifier
             .graphicsLayer {
                 val d = drag
                 val t = edit.clock.longValue
-                translationX = d?.x ?: 0f
-                translationY = d?.y ?: if (t == 0L) 0f else sin(t / 1000f * 3.5f + index * 1.9f) * 1.5.dp.toPx()
+                val moved = if (d == null) shift() else Offset.Zero
+                translationX = d?.x ?: moved.x
+                translationY = d?.y ?: (moved.y + if (t == 0L) 0f else sin(t / 1000f * 3.5f + index * 1.9f) * 1.5.dp.toPx())
                 val s = if (d != null) 1.06f else 0.9f
                 scaleX = s
                 scaleY = s
@@ -235,13 +240,18 @@ fun DialEditCell(
                     detectDragGesturesAfterLongPress(
                         onDragStart = { drag = Offset.Zero },
                         onDragEnd = {
+                            follow(null)
                             drag?.let(drop)
                             drag = null
                         },
-                        onDragCancel = { drag = null },
+                        onDragCancel = {
+                            follow(null)
+                            drag = null
+                        },
                         onDrag = { change, amount ->
                             change.consume()
                             drag = (drag ?: Offset.Zero) + amount
+                            follow(drag)
                         },
                     )
                 },
