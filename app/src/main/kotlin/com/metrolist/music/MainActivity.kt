@@ -520,7 +520,8 @@ class MainActivity : FragmentActivity() {
                     val preferences = dataStore.data.first()
                     val notificationsEnabled = preferences[UpdateNotificationsEnabledKey] ?: true
                     val (releaseInfo, hasUpdate) = Updater.checkForUpdate().getOrNull() ?: (null to false)
-                    releaseInfo?.let { onLatestVersionNameChange(it.versionName) }
+                    // only a newer release counts; a build ahead of GitHub's latest isn't offered the older one
+                    onLatestVersionNameChange(releaseInfo?.takeIf { hasUpdate }?.versionName ?: BuildConfig.BASE_VERSION_NAME)
 
                     val standaloneUpdate =
                         releaseInfo
