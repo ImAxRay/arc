@@ -92,6 +92,9 @@ data class CommunityPlaylistItem(
 internal const val SPEED_DIAL_MAX = 45
 private const val MAX_HOME_PAGES = 6
 
+/** Fewer songs than this and Quick picks or Forgotten favourites get topped up with liked songs. */
+private const val MIN_PICKS = 10
+
 private val bracketed = Regex("""\s*[(\[][^)\]]*[)\]]""")
 private val nonWord = Regex("""[^\p{L}\p{N}]+""")
 
@@ -188,6 +191,9 @@ class HomeViewModel @Inject constructor(
     }.distinctUntilChanged()
 
     val quickPicks = MutableStateFlow<List<Song>?>(null)
+
+    /** Quick picks without the liked-song filler, for the dial, which shows what is played. */
+    private val quickPicksForDial = MutableStateFlow<List<Song>?>(null)
     val dailyDiscover = MutableStateFlow<List<DailyDiscoverItem>?>(null)
     val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
     val keepListening = MutableStateFlow<List<LocalItem>?>(null)
@@ -256,7 +262,7 @@ class HomeViewModel @Inject constructor(
         combine(
             database.speedDialDao.getAll(),
             keepListening,
-            quickPicks,
+            quickPicksForDial,
             homePage,
             speedDialTopUp,
         ) { pinned, keepListening, quick, home, library ->
@@ -508,13 +514,17 @@ class HomeViewModel @Inject constructor(
                     .shuffled()
                     .take(20)
 
-                // related songs build up as songs play; a new library has none yet, so liked songs stand in
-                quickPicks.value = combined.ifEmpty { database.likedSongsByCreateDateAsc().first().filterVideoSongs(hideVideoSongs).shuffled().take(20) }
+                quickPicksForDial.value = combined
+                // related songs build up as songs play; until there are enough, liked songs fill the row (not the dial)
+                quickPicks.value =
+                    if (combined.size >= MIN_PICKS) combined
+                    else (combined + database.likedSongsByCreateDateAsc().first().filterVideoSongs(hideVideoSongs).shuffled()).distinctBy { it.id }.take(20)
             }
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
                 if (song != null && database.hasRelatedSongs(song.id)) {
                     quickPicks.value = database.getRelatedSongs(song.id).first().filterVideoSongs(hideVideoSongs).shuffled().take(20)
+                    quickPicksForDial.value = quickPicks.value
                 }
             }
         }
@@ -613,11 +623,13 @@ class HomeViewModel @Inject constructor(
             launch(Dispatchers.IO) { getQuickPicks() }
 
             launch(Dispatchers.IO) {
-                // the query needs a month of history; until then, liked songs not heard in two weeks
+                // the query needs a month of history; until it finds enough, liked songs not heard in two weeks fill in
+                val found = database.forgottenFavorites().first()
                 val forgotten =
-                    database.forgottenFavorites().first().ifEmpty {
+                    if (found.size >= MIN_PICKS) found
+                    else {
                         val recent = database.mostPlayedSongs(LocalDateTime.now().minusWeeks(2), limit = 500).first().mapTo(HashSet()) { it.id }
-                        database.likedSongsByCreateDateAsc().first().filterNot { it.id in recent }
+                        found + database.likedSongsByCreateDateAsc().first().filterNot { it.id in recent }.shuffled().take(40)
                     }
                 forgottenFavorites.value = forgotten.filterVideoSongs(hideVideoSongs).shuffled().take(20)
             }
