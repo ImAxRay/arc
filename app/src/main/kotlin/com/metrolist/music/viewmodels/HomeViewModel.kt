@@ -814,10 +814,13 @@ class HomeViewModel @Inject constructor(
             sections += page?.sections.orEmpty()
         }
         val shown = sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
+        // only the account's own mixes: editorial playlists (RDCLAK…) also sit on the mood's pages
+        fun personal(items: List<YTItem>) = items.filter { it is PlaylistItem && it.id.removePrefix("VL").let { id -> id.startsWith("RD") && !id.startsWith("RDCLAK") } }
         mixed()?.let { row ->
             // the row shows a handful; its own page holds every mix, Supermix included
-            val all = row.endpoint?.let { YouTube.browse(it.browseId, it.params).getOrNull() }?.items.orEmpty().flatMap { it.items }.filterIsInstance<PlaylistItem>()
-            return all.ifEmpty { shown.firstOrNull { it.endpoint?.browseId == "FEmusic_mixed_for_you" }?.items.orEmpty() }.distinctBy { it.id }
+            val all = row.endpoint?.let { YouTube.browse(it.browseId, it.params).getOrNull() }?.items.orEmpty().flatMap { it.items }
+            val mixes = personal(all).ifEmpty { personal(shown.firstOrNull { it.endpoint?.browseId == "FEmusic_mixed_for_you" }?.items.orEmpty()) }
+            if (mixes.isNotEmpty()) return mixes.distinctBy { it.id }
         }
         // the mood's page also repeats Listen again, Song mixes and so on, which aren't about the mood; accounts with
         // little history get no Mixed for you, so the mood's first row of playlists stands in
