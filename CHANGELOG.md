@@ -1,5 +1,37 @@
 # Arc changelog
 
+## 0.9.4: Welcome home. Part 1
+
+Everything since 0.9.3.
+
+### Home
+
+- **Edit Home in place.** Hold Home: modules wobble, drag to reorder, tap minus to hide, Undo brings one back.
+- **Add to Home** picker with live previews and a description for every module. Every YouTube row is a module of its own.
+- **Presets:** Default, Today's page, or save your own layout.
+- **Mood mixes:** a mood chip shows that mood's mixes right under it.
+- **Speed dial edit:** place panels anywhere, resize them from 1×1 to 3×3, drag tiles to swap them. Edit dial sits next to the gear.
+- **New dial panels:** a die that rolls a mix for a mood, a mood panel that fills the dial with its mixes, and a discovery radio.
+- **Tilt covers on every square cover on Home**, each cover moving a little on its own.
+
+### Player
+
+- **Tap the next song** to open the queue.
+- Strongly coloured covers on a pale ground keep their own colour.
+
+### Library and search
+
+- One selected song gets **Radio** in place of Shuffle.
+
+### Android Auto
+
+- Covers of your own files show up.
+
+### General
+
+- **Updates download and install inside Arc.** Changelogs look like they do on GitHub.
+- Settings search finds Tilt covers by "parallax".
+
 ## 0.9.3
 
 Everything since 0.9.0. Some features are marked Beta: they can break and each has its own off switch.
