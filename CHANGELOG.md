@@ -10,8 +10,8 @@ Everything since 0.9.3.
 - **Add to Home** picker with live previews and a description for every module. Every YouTube row is a module of its own.
 - **Presets:** Default, Today's page, or save your own layout.
 - **Mood mixes:** a mood chip shows that mood's mixes right under it.
-- **Speed dial edit:** place panels anywhere, resize them from 1×1 to 3×3, drag tiles to swap them. Edit dial sits next to the gear.
-- **New dial panels:** a die that rolls a mix for a mood, a mood panel that fills the dial with its mixes, and a discovery radio.
+- **Speed dial edit:** place panels anywhere, resize them from 1×1 to 3×3, drag tiles to swap them or onto another page, undo step by step. Edit dial sits next to the gear.
+- **New dial panels:** a die that rolls a mix for a mood, a mood panel whose neighbours flip over into its mixes, and a discovery radio.
 - **Tilt covers on every square cover on Home**, each cover moving a little on its own.
 
 ### Player
