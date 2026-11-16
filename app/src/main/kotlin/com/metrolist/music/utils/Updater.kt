@@ -240,11 +240,25 @@ object Updater {
                 
                 val result = getLatestRelease(forceRefresh = true)
                 if (result.isSuccess) {
-                    val releaseInfo = result.getOrThrow()
+                    val latest = result.getOrThrow()
                     val hasUpdate = isUpdateAvailable(
                         BuildConfig.BASE_VERSION_NAME,
-                        releaseInfo.versionName
+                        latest.versionName
                     )
+                    // the notes of every version this install skipped, newest first, not only the latest one's
+                    val missed = if (hasUpdate) {
+                        getAllReleases().getOrNull().orEmpty()
+                            .filter { isUpdateAvailable(BuildConfig.BASE_VERSION_NAME, it.versionName) }
+                            .sortedWith { a, b -> compareVersions(b.versionName, a.versionName) }
+                    } else {
+                        emptyList()
+                    }
+                    val releaseInfo = if (missed.size > 1) {
+                        latest.copy(description = missed.joinToString("\n\n") { "## ${it.versionName}\n\n${it.description.trim()}" })
+                    } else {
+                        latest
+                    }
+                    cachedReleaseInfo = releaseInfo
                     releaseInfo to hasUpdate
                 } else {
                     throw result.exceptionOrNull() ?: Exception("Unknown error")

@@ -2,8 +2,12 @@ package com.metrolist.music.arc.home
 
 import android.content.Context
 import androidx.core.content.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+
+/** The id of the last song the player had, whether or not it reached history; Continue falls back to it. */
+val ArcLastPlayedKey = stringPreferencesKey("arcLastPlayedId")
 
 /** What the user put in a dial cell. Cells without one take the dial's changing items. */
 sealed interface DialPanel {

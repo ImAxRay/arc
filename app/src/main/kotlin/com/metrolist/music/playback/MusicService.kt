@@ -153,6 +153,7 @@ import com.metrolist.music.constants.MediaSessionConstants.CommandToggleRepeatMo
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleShuffle
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleStartRadio
 import com.metrolist.music.constants.PauseListenHistoryKey
+import com.metrolist.music.arc.home.ArcLastPlayedKey
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PlayerVolumeKey
@@ -904,6 +905,12 @@ class MusicService :
             safeDataStoreEdit { settings ->
                 settings[PlayerVolumeKey] = volume
             }
+        }
+
+        // Home's Continue tile picks up the last song that played at all; history only gets songs heard 30 s or more
+        currentMediaMetadata.distinctUntilChangedBy { it?.id }.collect(scope) { meta ->
+            val id = meta?.id ?: return@collect
+            if (!dataStore.get(PauseListenHistoryKey, false)) safeDataStoreEdit { it[ArcLastPlayedKey] = id }
         }
 
         currentSong.debounce(1000).collect(scope) { song ->

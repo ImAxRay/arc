@@ -182,7 +182,7 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                             val mix = env.viewModel.diceMix(landed)
                             delay(ROLL_MS - (System.currentTimeMillis() - start))
                             when {
-                                mix != null -> env.playerConnection.playQueue(YouTubeQueue(mix.playEndpoint ?: WatchEndpoint(playlistId = mix.id)))
+                                mix != null -> env.playerConnection.playQueue(YouTubeQueue(mix.playEndpoint ?: WatchEndpoint(playlistId = mix.id), titleOverride = env.viewModel.context.getString(R.string.arc_dice_mix)))
                                 // offline or no moods on this account: something of the user's own, as the old random button did
                                 else -> env.viewModel.getRandomItem()?.let(env::openYtItem)
                             }

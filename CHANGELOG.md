@@ -4,15 +4,13 @@
 
 Everything since 0.9.3.
 
-### Home
+### Home screen got a big update!
 
-- **Edit Home in place.** Hold Home: modules wobble, drag to reorder, tap minus to hide, Undo brings one back.
-- **Add to Home** picker with live previews and a description for every module. Every YouTube row is a module of its own.
-- **Presets:** Default, Today's page, or save your own layout.
-- **Mood mixes:** a mood chip shows that mood's mixes right under it.
-- **Speed dial edit:** place panels anywhere, resize them from 1×1 to 3×3, drag tiles to swap them or onto another page, undo step by step. Edit dial sits next to the gear.
-- **New dial panels:** a die that rolls a mix for a mood, a mood panel whose neighbours flip over into its mixes, and a discovery radio.
-- **Tilt covers on every square cover on Home**, each cover moving a little on its own.
+- Changed visuals of Speed Dial
+- Added modules for home screen. You can add them, rearrange and hide!
+- Speed dial now can be modified as well.
+- Added some extra panels to Speed Dial that you can select from editing mode
+- Improved the dice button...
 
 ### Player
 

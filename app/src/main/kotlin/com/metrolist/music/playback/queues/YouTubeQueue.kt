@@ -16,6 +16,8 @@ import kotlinx.coroutines.withContext
 class YouTubeQueue(
     private var endpoint: WatchEndpoint,
     override val preloadItem: MediaMetadata? = null,
+    /** Shown as the queue's name in place of YouTube's own (the die's mixes stay a mystery). */
+    private val titleOverride: String? = null,
 ) : Queue {
     private var continuation: String? = null
     private var retryCount = 0
@@ -63,7 +65,7 @@ class YouTubeQueue(
                     continuation = nextResult.continuation
                     retryCount = 0
                     return@withContext Queue.Status(
-                        title = nextResult.title,
+                        title = titleOverride ?: nextResult.title,
                         items = items.map { it.toMediaItem() },
                         mediaItemIndex = items.indexOf(selected).coerceAtLeast(0),
                     )

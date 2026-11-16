@@ -15,6 +15,9 @@ import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import kotlinx.coroutines.flow.combine
+import com.metrolist.music.arc.home.ArcLastPlayedKey
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flatMapLatest
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.BrowseEndpoint
 import com.metrolist.innertube.models.EpisodeItem
@@ -224,9 +227,14 @@ class HomeViewModel @Inject constructor(
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
 
-    /** The song the dial's Continue tile falls back to when the player is empty: the last one played, else the bundled song. */
+    /** The song the dial's Continue tile falls back to when the player is empty: the last one the player had, else history's last, else the bundled song. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val continueSong: StateFlow<Song?> =
-        combine(database.latestEvent(), database.song(BundledTracks.firstSongId)) { last, bundled -> last?.song ?: bundled }
+        combine(
+            context.dataStore.data.map { it[ArcLastPlayedKey] }.distinctUntilChanged().flatMapLatest { id -> if (id == null) flowOf(null) else database.song(id) },
+            database.latestEvent(),
+            database.song(BundledTracks.firstSongId),
+        ) { played, last, bundled -> played ?: last?.song ?: bundled }
             .distinctUntilChanged()
             .onEach { continueReady.value = true }
             .stateIn(viewModelScope, SharingStarted.Lazily, null)

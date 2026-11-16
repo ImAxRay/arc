@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -495,6 +496,7 @@ private data class DialDrag(val page: Int, val slot: DialSlot, val item: YTItem?
 // a dragged tile's centre within this share of a cell from the dial's side turns the page after a short hold
 private const val EDGE_ZONE = 0.3f
 private const val EDGE_DWELL_MS = 550L
+private const val PULSE_SETTLE_MS = 150L
 
 /** One tile on a dial page, in cells: a square [span] cells wide, holding a [panel] or, without one, one of the dial's items. */
 internal data class DialSlot(val col: Int, val row: Int, val span: Int = 1, val panel: DialPanel? = null)
@@ -550,6 +552,16 @@ private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: 
             val duration = player?.duration ?: 0L
             if (player != null && current != null && !playing && duration > 0) makeTimeString(duration - player.currentPosition) else null
         }
+    // a press-like bump whenever playback pauses or resumes, from anywhere; a brief buffering blip doesn't count
+    val pulse = remember { Animatable(1f) }
+    var settled by remember { mutableStateOf(playing) }
+    LaunchedEffect(playing) {
+        delay(PULSE_SETTLE_MS)
+        if (playing == settled) return@LaunchedEffect
+        settled = playing
+        pulse.animateTo(0.93f, tween(90))
+        pulse.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
+    }
     PickCard(
         label = stringResource(if (current != null && playing) R.string.arc_home_now_playing else R.string.arc_home_continue),
         title = title,
@@ -560,7 +572,10 @@ private fun ContinueTile(env: HomeEnv, fallback: Song?, big: Boolean, modifier: 
         thumbnail = current?.thumbnailUrl ?: fallback?.thumbnailUrl,
         big = big,
         modifier =
-            modifier.homeTile(
+            modifier.graphicsLayer {
+                scaleX = pulse.value
+                scaleY = pulse.value
+            }.homeTile(
                 onClick = {
                     when {
                         current != null -> env.playerConnection.togglePlayPause()

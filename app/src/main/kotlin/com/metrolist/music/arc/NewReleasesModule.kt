@@ -244,7 +244,8 @@ fun SpeedDialShortcut(icon: Int, label: String?, onClick: () -> Unit, modifier: 
             painter = painterResource(icon),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.size(if (label == null) 56.dp else 28.dp),
+            // alone on the tile, the icon grows with it (a 2x2 radio gets a big one)
+            modifier = if (label == null) Modifier.fillMaxSize(0.42f) else Modifier.size(28.dp),
         )
         if (label != null) Text(
             text = label,

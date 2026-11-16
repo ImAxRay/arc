@@ -1367,6 +1367,7 @@
     <string name="arc_dial_remove">Remove</string>
     <string name="arc_dial_size">Size</string>
     <string name="arc_dial_discard">Discard</string>
+    <string name="arc_dice_mix">Dice Mix</string>
     <string name="arc_dial_dice">Dice</string>
     <string name="arc_dial_radio">Discover radio</string>
     <string name="arc_dial_plus">Guided playlist</string>
