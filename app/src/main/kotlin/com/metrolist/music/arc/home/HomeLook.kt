@@ -180,12 +180,16 @@ fun ModuleHeader(
 ) {
     val colors = MaterialTheme.colorScheme
     val edit = LocalHomeEdit.current
+    val untitled = LocalModuleKey.current?.let { it in LocalUntitled.current } == true
+    // a hidden name still shows faintly while editing, so the module can be found and held
+    if (untitled && !LocalHomeEditing.current) return
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(ModuleHeaderHeight)
+                .graphicsLayer { alpha = if (untitled) 0.5f else 1f }
                 .then(
                     when {
                         edit != null -> Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = edit.enter)

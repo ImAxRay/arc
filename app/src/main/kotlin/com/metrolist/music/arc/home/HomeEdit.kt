@@ -5,8 +5,11 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
@@ -51,8 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.layout
@@ -76,6 +78,10 @@ val LocalHomeEdit = staticCompositionLocalOf<HomeEdit?> { null }
 
 /** True while Home is being edited, so a big module can fold to a size that's easy to drag. */
 val LocalHomeEditing = compositionLocalOf { false }
+
+/** The module being drawn, and the modules whose title the user hid; [ModuleHeader] reads both. */
+val LocalModuleKey = staticCompositionLocalOf<String?> { null }
+val LocalUntitled = compositionLocalOf { emptySet<String>() }
 
 /** True inside an Add to Home preview, where a module must not change what the rest of Home shows. */
 val LocalModulePreview = staticCompositionLocalOf { false }
@@ -142,7 +148,7 @@ fun EditFrame(
         Box(Modifier.matchParentSize().then(cover))
         val badge = 28.dp
         Badge(R.drawable.remove, stringResource(R.string.arc_home_hide), colors.error, colors.onError, Modifier.align(Alignment.TopStart).offset(x = -badge / 3, y = -badge / 3), onHide)
-        if (module.setting != null) {
+        if (module.setting != null || module.nameToggle) {
             Badge(R.drawable.settings, stringResource(R.string.settings), colors.secondaryContainer, colors.onSecondaryContainer, Modifier.align(Alignment.TopEnd).offset(x = badge / 3, y = -badge / 3), onSettings)
         }
     }
@@ -169,51 +175,24 @@ fun EmptyModuleStub(module: HomeModule) {
     Box(Modifier.graphicsLayer { alpha = 0.5f }) { ModuleHeader(module.name(LocalContext.current)) }
 }
 
-/** The bottom of Home while editing: every hidden module as a small live preview; tapping one brings it back. */
+/** The module as it would look on Home, laid out at Home's width and shrunk to fit this one, asleep, cut at [height]. */
 @Composable
-fun AddModulesRow(env: HomeEnv, hidden: List<HomeModule>, onAdd: (String) -> Unit) {
-    if (hidden.isEmpty()) return
-    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-        CapsLabel(stringResource(R.string.arc_home_add_module), Modifier.padding(horizontal = 20.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(top = 8.dp),
-        ) {
-            items(hidden, key = { it.key }) { module -> ModulePreview(env, module) { onAdd(module.key) } }
-        }
-    }
-}
-
-private val PreviewWidth = 196.dp
-private val PreviewHeight = 150.dp
-
-/** The module as it would look on Home, shrunk and asleep, with its name and a plus under it. */
-@Composable
-private fun ModulePreview(env: HomeEnv, module: HomeModule, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(16.dp)
-    Box(Modifier.width(PreviewWidth).clip(shape).border(1.dp, colors.outlineVariant, shape)) {
-        Column {
-            Box(Modifier.fillMaxWidth().height(PreviewHeight).clipToBounds()) {
-                if (module.available(env)) {
-                    CompositionLocalProvider(LocalModulePreview provides true) { Column(Modifier.shrunk(env.width, PreviewWidth)) { module.content(env) } }
-                }
+fun ModuleLivePreview(env: HomeEnv, module: HomeModule, height: Dp) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(height).clipToBounds()) {
+        if (module.available(env)) {
+            CompositionLocalProvider(LocalModulePreview provides true, LocalModuleKey provides module.key) {
+                Column(Modifier.shrunk(env.width, maxWidth)) { module.content(env) }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(colors.surfaceContainer).fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Icon(painterResource(R.drawable.add), contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
-                Column(Modifier.padding(start = 8.dp)) {
-                    Text(module.name(LocalContext.current), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    // some of YouTube's rows share a name with Arc's own modules
-                    if (module.key.startsWith(YT_ROW)) {
-                        Text(stringResource(R.string.arc_home_from_youtube), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant, maxLines = 1)
-                    }
-                }
-            }
+        } else {
+            Text(
+                stringResource(R.string.arc_home_nothing_yet),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
-        // on top, so the module under it never gets a tap
-        val name = module.name(LocalContext.current)
-        Box(Modifier.matchParentSize().clickable(onClick = onClick).semantics { contentDescription = name })
+        // on top and catching taps, so the module under it never gets one; swipes still reach the pager around it
+        Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures() })
     }
 }
 
@@ -232,17 +211,33 @@ private fun Modifier.shrunk(width: Dp, to: Dp): Modifier =
         }
     }
 
-/** The gear's sheet: the module's one setting as a row of choices. */
+/** The gear's sheet: the module's options. */
 @Composable
 fun ModuleSettingsSheet(module: HomeModule) {
-    val setting = module.setting ?: return
-    var value by rememberPreference(setting.key, setting.default)
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
         CapsLabel(module.name(LocalContext.current))
-        Text(stringResource(setting.label), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)) {
-            setting.choices.forEach { choice ->
-                FilterChip(selected = value == choice, onClick = { value = choice }, label = { Text(choice.toString()) })
+        ModuleOptions(module, Modifier.padding(top = 4.dp, bottom = 24.dp))
+    }
+}
+
+/** A module's one number as a row of choices, and whether its name shows. */
+@Composable
+fun ModuleOptions(module: HomeModule, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        module.setting?.let { setting ->
+            var value by rememberPreference(setting.key, setting.default)
+            Text(stringResource(setting.label), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                setting.choices.forEach { choice ->
+                    FilterChip(selected = value == choice, onClick = { value = choice }, label = { Text(choice.toString()) })
+                }
+            }
+        }
+        if (module.nameToggle) {
+            var untitled by rememberPreference(ArcHomeUntitledKey, emptySet())
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(stringResource(R.string.arc_home_show_name), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Switch(checked = module.key !in untitled, onCheckedChange = { show -> untitled = if (show) untitled - module.key else untitled + module.key })
             }
         }
     }

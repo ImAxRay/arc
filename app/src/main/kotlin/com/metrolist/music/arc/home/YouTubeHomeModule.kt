@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -60,7 +61,7 @@ internal fun HomePage.Section.rowKey(): String = YT_ROW + title.lowercase().filt
 fun youTubeRowModules(page: HomePage?): Map<String, HomeModule> =
     page?.sections.orEmpty().distinctBy { it.rowKey() }.associate { section ->
         val key = section.rowKey()
-        key to HomeModule(key, { section.title }, { true }) { env -> HomePageSection(env, section, key) }
+        key to HomeModule(key, { section.title }, ModuleGroup.YOUTUBE, R.string.arc_home_about_youtube_row, { true }) { env -> HomePageSection(env, section, key) }
     }
 
 /** YouTube's mood chips (Relax, Energize, Commute, Sleep...); the tapped chip's rows show under them, mixes first. */
@@ -80,7 +81,8 @@ fun YouTubeHomeModule(env: HomeEnv) {
         )
         if (isLoading && homePage?.chips.isNullOrEmpty()) ChipsShimmer()
         // folded to its chips while editing, so it drags like any other module
-        if (selectedChip != null && !LocalHomeEditing.current) {
+        // the chip's rows keep their titles when the module's own is hidden
+        if (selectedChip != null && !LocalHomeEditing.current) CompositionLocalProvider(LocalModuleKey provides null) {
             val sections = remember(chipPage) { chipPage?.sections.orEmpty().sortedByDescending { it.endpoint?.browseId == "FEmusic_mixed_for_you" } }
             if (selectedChip.isPodcasts()) {
                 PodcastRows(env, chipPage)

@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.R
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.NewReleasesModule
 
@@ -29,21 +30,36 @@ enum class HomeModuleId(val key: String) {
     MOODS("moods"),
 }
 
+/** What a module is for; the Add to Home picker sorts modules by it. */
+enum class ModuleGroup(@StringRes val title: Int) {
+    YOURS(R.string.arc_home_group_yours),
+    DISCOVER(R.string.arc_home_group_discover),
+    MOODS(R.string.arc_home_group_moods),
+    YOUTUBE(R.string.arc_home_group_youtube),
+}
+
 class HomeModule(
     val key: String,
     val name: (Context) -> String,
+    val group: ModuleGroup,
+    @StringRes val description: Int,
     /** Whether the module has anything to show right now. Read inside composition so it follows the data. */
     val available: @Composable (HomeEnv) -> Boolean,
     val setting: ModuleSetting? = null,
+    /** Whether its title can be hidden; the dial has none, and Similar to's titles are its seeds. */
+    val nameToggle: Boolean = true,
     val content: @Composable (HomeEnv) -> Unit,
 ) {
     constructor(
         id: HomeModuleId,
         @StringRes title: Int,
+        group: ModuleGroup,
+        @StringRes description: Int,
         available: @Composable (HomeEnv) -> Boolean,
         setting: ModuleSetting? = null,
+        nameToggle: Boolean = true,
         content: @Composable (HomeEnv) -> Unit,
-    ) : this(id.key, { it.getString(title) }, available, setting, content)
+    ) : this(id.key, { it.getString(title) }, group, description, available, setting, nameToggle, content)
 }
 
 /** The one number a module lets you change from its gear in edit mode. */
@@ -56,23 +72,26 @@ val ForgottenRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPref
 
 val HomeModules: Map<String, HomeModule> =
     listOf(
-        HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
-        HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, { env -> speedDialAvailable(env) }, DialRowsSetting) { SpeedDialModule(it) },
-        HomeModule(HomeModuleId.NEW_RELEASES, R.string.release_radar, { true }) { NewReleasesModule(it.navController) },
-        HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, { env -> recentsShown(env).isNotEmpty() }, RecentsRowsSetting) { RecentsModule(it) },
-        HomeModule(HomeModuleId.QUICK_PICKS, R.string.quick_picks, { env -> quickPicksShown(env).isNotEmpty() }) { QuickPicksModule(it) },
-        HomeModule(HomeModuleId.COMMUNITY, R.string.from_the_community, { env -> env.viewModel.communityPlaylists.notEmpty() }) { CommunityModule(it) },
-        HomeModule(HomeModuleId.DAILY_DISCOVER, R.string.your_daily_discover, { env -> env.viewModel.dailyDiscover.notEmpty() }) { DailyDiscoverModule(it) },
-        HomeModule(HomeModuleId.KEEP_LISTENING, R.string.keep_listening, { env -> env.viewModel.keepListening.notEmpty() }) { KeepListeningModule(it) },
-        HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.arc_home_your_playlists, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
-        HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, { env -> forgottenShown(env).isNotEmpty() }, ForgottenRowsSetting) { ForgottenFavoritesModule(it) },
-        HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, { env -> env.viewModel.similarRecommendations.notEmpty() }, SimilarRowsSetting) { SimilarToModule(it) },
-        HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.arc_home_mood_mixes, { true }) { YouTubeHomeModule(it) },
-        HomeModule(HomeModuleId.MOODS, R.string.mood_and_genres, { env -> moodsAvailable(env) }) { MoodsModule(it) },
+        HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, ModuleGroup.YOURS, R.string.arc_home_about_wrapped, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
+        HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, ModuleGroup.YOURS, R.string.arc_home_about_dial, { env -> speedDialAvailable(env) }, DialRowsSetting, nameToggle = false) { SpeedDialModule(it) },
+        HomeModule(HomeModuleId.NEW_RELEASES, R.string.release_radar, ModuleGroup.DISCOVER, R.string.arc_home_about_new_releases, { true }) { NewReleasesModule(it.navController) },
+        HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, ModuleGroup.YOURS, R.string.arc_home_about_recents, { env -> recentsShown(env).isNotEmpty() }, RecentsRowsSetting) { RecentsModule(it) },
+        HomeModule(HomeModuleId.QUICK_PICKS, R.string.quick_picks, ModuleGroup.DISCOVER, R.string.arc_home_about_quick_picks, { env -> quickPicksShown(env).isNotEmpty() }) { QuickPicksModule(it) },
+        HomeModule(HomeModuleId.COMMUNITY, R.string.from_the_community, ModuleGroup.DISCOVER, R.string.arc_home_about_community, { env -> env.viewModel.communityPlaylists.notEmpty() }) { CommunityModule(it) },
+        HomeModule(HomeModuleId.DAILY_DISCOVER, R.string.your_daily_discover, ModuleGroup.DISCOVER, R.string.arc_home_about_daily_discover, { env -> env.viewModel.dailyDiscover.notEmpty() }) { DailyDiscoverModule(it) },
+        HomeModule(HomeModuleId.KEEP_LISTENING, R.string.keep_listening, ModuleGroup.YOURS, R.string.arc_home_about_keep_listening, { env -> env.viewModel.keepListening.notEmpty() }) { KeepListeningModule(it) },
+        HomeModule(HomeModuleId.ACCOUNT_PLAYLISTS, R.string.arc_home_your_playlists, ModuleGroup.YOURS, R.string.arc_home_about_playlists, { env -> env.viewModel.accountPlaylists.notEmpty() }) { AccountPlaylistsModule(it) },
+        HomeModule(HomeModuleId.FORGOTTEN_FAVORITES, R.string.forgotten_favorites, ModuleGroup.YOURS, R.string.arc_home_about_forgotten, { env -> forgottenShown(env).isNotEmpty() }, ForgottenRowsSetting) { ForgottenFavoritesModule(it) },
+        HomeModule(HomeModuleId.SIMILAR_TO, R.string.similar_to, ModuleGroup.DISCOVER, R.string.arc_home_about_similar, { env -> env.viewModel.similarRecommendations.notEmpty() }, SimilarRowsSetting, nameToggle = false) { SimilarToModule(it) },
+        HomeModule(HomeModuleId.YOUTUBE_HOME, R.string.arc_home_mood_mixes, ModuleGroup.MOODS, R.string.arc_home_about_mood_mixes, { true }) { YouTubeHomeModule(it) },
+        HomeModule(HomeModuleId.MOODS, R.string.mood_and_genres, ModuleGroup.MOODS, R.string.arc_home_about_moods, { env -> moodsAvailable(env) }) { MoodsModule(it) },
     ).associateBy { it.key }
 
 /** The user's modules in order, `-` before a hidden one, e.g. "speed_dial,new_releases,-moods". */
 val ArcHomeModulesKey = stringPreferencesKey("arcHomeModules")
+
+/** Modules whose title the user hid. */
+val ArcHomeUntitledKey = stringSetPreferencesKey("arcHomeUntitled")
 
 data class HomeSlot(val key: String, val shown: Boolean)
 

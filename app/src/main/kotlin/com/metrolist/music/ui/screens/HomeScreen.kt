@@ -49,6 +49,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.height
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,7 +78,6 @@ import com.metrolist.music.arc.TopBarEndPadding
 import com.metrolist.music.arc.home.HomeEnv
 import com.metrolist.music.arc.home.HomeDayHeader
 import com.metrolist.music.arc.home.HomeModules
-import com.metrolist.music.arc.home.AddModulesRow
 import com.metrolist.music.arc.home.ArcHomeModulesKey
 import com.metrolist.music.arc.home.EditFrame
 import com.metrolist.music.arc.home.EditHomeRow
@@ -89,6 +91,10 @@ import com.metrolist.music.arc.home.encode
 import com.metrolist.music.arc.home.parseHomeSlots
 import com.metrolist.music.arc.home.YT_ROW
 import com.metrolist.music.arc.home.LocalHomeEditing
+import com.metrolist.music.arc.home.LocalModuleKey
+import com.metrolist.music.arc.home.LocalUntitled
+import com.metrolist.music.arc.home.ArcHomeUntitledKey
+import com.metrolist.music.arc.home.ModulePicker
 import com.metrolist.music.arc.home.youTubeRowModules
 import com.metrolist.music.arc.home.rememberWobbleClock
 import androidx.activity.compose.BackHandler
@@ -155,6 +161,7 @@ fun HomeScreen(
     val youTubeRows = remember(homePage) { youTubeRowModules(homePage) }
     var slots by remember { mutableStateOf(parseHomeSlots(savedModules, youTubeRows.keys)) }
     var editing by rememberSaveable { mutableStateOf(false) }
+    val untitled by rememberPreference(ArcHomeUntitledKey, emptySet())
     BackHandler(editing) { editing = false }
     val wobble = rememberWobbleClock(editing)
     val homeEdit =
@@ -333,7 +340,7 @@ fun HomeScreen(
                 offerUndo(context.getString(R.string.arc_home_reset_done)) { savedModules = before }
             }
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing) {
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -345,7 +352,7 @@ fun HomeScreen(
                     shown.forEachIndexed { index, (module, available) ->
                         item(key = module.key, contentType = if (module.key.startsWith(YT_ROW)) YT_ROW else module.key) {
                             ReorderableItem(reorder, key = module.key, enabled = editing) { dragging ->
-                                Column(Modifier.homeLanding(index + 1)) {
+                                Column(Modifier.homeLanding(index + 1)) { CompositionLocalProvider(LocalModuleKey provides module.key) {
                                     if (editing) {
                                         EditFrame(
                                             module = module,
@@ -359,19 +366,12 @@ fun HomeScreen(
                                     } else {
                                         module.content(env)
                                     }
-                                }
+                                } }
                             }
                         }
                     }
                     if (editing) {
-                        item(key = "add", contentType = "add") {
-                            AddModulesRow(
-                                env = env,
-                                hidden = slots.filterNot { it.shown }.mapNotNull(::moduleFor),
-                                onAdd = { key -> save(slots.filterNot { it.key == key } + HomeSlot(key, true)) },
-                            )
-                        }
-                        // room for Reset and Done, which float over the bottom
+                        // room for Reset, Add and Done, which float over the bottom
                         item(key = "edit_buttons", contentType = "edit_buttons") { Spacer(Modifier.height(72.dp)) }
                     } else {
                         item(key = "edit", contentType = "edit") { EditHomeRow(homeEdit.enter) }
@@ -390,6 +390,25 @@ fun HomeScreen(
                             .padding(bottom = 12.dp),
                 ) {
                     FilledTonalButton(onClick = ::reset) { Text(stringResource(R.string.reset)) }
+                    FilledTonalButton(
+                        onClick = {
+                            menuState.show {
+                                ModulePicker(
+                                    env = env,
+                                    // a fixed order, so adding one doesn't shuffle the cards under the finger
+                                    modules = (HomeModules.values + youTubeRows.values).filter { it.key != HomeModuleId.WRAPPED.key },
+                                    shown = { slots.filter { it.shown }.mapTo(HashSet()) { it.key } },
+                                    onAdd = { key ->
+                                        save(slots.filterNot { it.key == key } + HomeSlot(key, true))
+                                        scope.launch { lazylistState.animateScrollToItem(lazylistState.layoutInfo.totalItemsCount - 1) }
+                                    },
+                                )
+                            }
+                        },
+                    ) {
+                        Icon(painterResource(R.drawable.add), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.arc_home_add), modifier = Modifier.padding(start = 6.dp))
+                    }
                     Button(onClick = { editing = false }) { Text(stringResource(R.string.arc_home_done)) }
                 }
             }
