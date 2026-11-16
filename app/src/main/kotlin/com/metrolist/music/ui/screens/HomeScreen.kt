@@ -85,6 +85,8 @@ import com.metrolist.music.arc.home.EditHomeRow
 import com.metrolist.music.arc.home.EmptyModuleStub
 import com.metrolist.music.arc.home.HomeEdit
 import com.metrolist.music.arc.home.DialEdit
+import com.metrolist.music.arc.home.DialStore
+import com.metrolist.music.arc.home.undoDial
 import com.metrolist.music.arc.home.LocalDialEdit
 import com.metrolist.music.arc.LocalTiltEye
 import com.metrolist.music.arc.rememberTiltEye
@@ -173,6 +175,8 @@ fun HomeScreen(
     BackHandler(dialEditing) { dialEditing = false }
     val dialWobble = rememberWobbleClock(dialEditing)
     val dialEdit = remember(dialWobble) { DialEdit(dialWobble) }
+    // undo reaches back only to when dial edit opened
+    LaunchedEffect(dialEditing) { if (!dialEditing) dialEdit.steps.clear() }
     // one sensor for every cover on Home
     val tiltEye = rememberTiltEye()
     val homeEdit =
@@ -438,14 +442,32 @@ fun HomeScreen(
                 }
             }
             if (dialEditing) {
-                Button(
-                    onClick = { dialEditing = false },
+                val dialStore = remember { DialStore.get(context) }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
                             .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
                             .padding(bottom = 12.dp),
-                ) { Text(stringResource(R.string.arc_home_done)) }
+                ) {
+                    FilledTonalButton(
+                        enabled = dialEdit.steps.isNotEmpty(),
+                        onClick = { undoDial(listOf(dialEdit.steps.removeAt(dialEdit.steps.lastIndex)), dialStore, database, scope) },
+                    ) {
+                        Icon(painterResource(R.drawable.undo), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.undo), modifier = Modifier.padding(start = 6.dp))
+                    }
+                    FilledTonalButton(
+                        enabled = dialEdit.steps.isNotEmpty(),
+                        onClick = {
+                            undoDial(dialEdit.steps.toList(), dialStore, database, scope)
+                            dialEdit.steps.clear()
+                            dialEditing = false
+                        },
+                    ) { Text(stringResource(R.string.arc_dial_discard)) }
+                    Button(onClick = { dialEditing = false }) { Text(stringResource(R.string.arc_home_done)) }
+                }
             }
             SwipeSnackbarHost(
                 editSnackbar,

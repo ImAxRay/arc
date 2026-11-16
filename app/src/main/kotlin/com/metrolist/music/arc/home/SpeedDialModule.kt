@@ -31,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,8 @@ import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 
 /** Speed dial comes from the library, so it's empty only for a moment at startup; a skeleton holds its place meanwhile. */
@@ -107,8 +111,6 @@ fun SpeedDialModule(env: HomeEnv) {
     val pinned = env.pinnedTypes.value
     // an item taken off the dial comes back if the user pins it again later
     val allItems = remember(dialItems, hiddenId, placedIds, hiddenItems, pinned) { dialItems.filterNot { it.id == hiddenId || it.id in placedIds || (it.id in hiddenItems && it.id !in pinned) } }
-    // a switched-on mood fills the free tiles with its mixes first; the dial's own items fill the rest and wait underneath
-    val freeItems = remember(moodMixes, dialMood, edit, allItems) { moodMixes?.takeIf { dialMood != null && edit == null }?.let { it + allItems } ?: allItems }
     // a cell whose pinned item was unpinned from a menu is free again
     val livePanels = remember(panels, byId) { panels.filterValues { it !is DialPanel.Item || it.id in byId } }
 
@@ -122,17 +124,33 @@ fun SpeedDialModule(env: HomeEnv) {
     val pageCount = maxOf(panelPages, (1 until pages.size).takeWhile { capacities.take(it + 1).sum() <= allItems.size }.lastOrNull()?.plus(1) ?: 1).coerceAtMost(pages.size)
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
     val pagerState = rememberPagerState(pageCount = { pageCount })
+    val scope = rememberCoroutineScope()
     val shownIds = remember(allItems, pageCount, placedIds) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + placedIds + listOfNotNull(hiddenId) }
     SideEffect { if (!preview) env.viewModel.dialShownIds.value = shownIds }
     val radioSeeds = remember(dialItems) { dialItems.filter { it is SongItem && !isOwnFile(it.id) }.map { it.id } }
 
     fun save(new: Map<DialCell, DialPanel>, newSizes: Map<DialCell, Int> = sizes) = store.setPanels(new, newSizes)
 
+    // pins made or taken away during a change go into its undo step
     fun pin(item: YTItem) {
-        if (item.id !in env.pinnedTypes.value) env.scope.launch(Dispatchers.IO) { env.database.speedDialDao.insert(SpeedDialItem.fromYTItem(item)) }
+        if (item.id in env.pinnedTypes.value) return
+        edit?.open?.unpin?.add(item.id)
+        env.scope.launch(Dispatchers.IO) { env.database.speedDialDao.insert(SpeedDialItem.fromYTItem(item)) }
     }
 
-    fun unpin(id: String) = env.scope.launch(Dispatchers.IO) { env.database.speedDialDao.delete(id) }
+    fun unpin(id: String) {
+        byId[id]?.let { edit?.open?.repin?.add(SpeedDialItem.fromYTItem(it)) }
+        env.scope.launch(Dispatchers.IO) { env.database.speedDialDao.delete(id) }
+    }
+
+    /** Runs one edit as one undo step. */
+    fun change(action: () -> Unit) {
+        val step = DialStep(store.panels.value, store.sizes.value, store.hidden.value)
+        edit?.open = step
+        action()
+        edit?.open = null
+        edit?.steps?.add(step)
+    }
 
     /** Takes [panel] off every other cell when it's one of a kind, then puts it at [cell] (null clears the cell). */
     fun put(cell: DialCell, panel: DialPanel?) {
@@ -161,17 +179,34 @@ fun SpeedDialModule(env: HomeEnv) {
         HorizontalPager(
             state = pagerState,
             flingBehavior = rememberPageFling(pagerState),
+            // while editing, a swipe on a tile moves the tile; the dots below turn the page
+            userScrollEnabled = edit == null,
             contentPadding = PaddingValues(horizontal = 16.dp),
             pageSpacing = 16.dp,
             modifier = Modifier.fillMaxWidth().height(itemWidth * rows),
         ) { page ->
-            val pageItems = freeItems.drop(pageStarts[page]).take(capacities[page])
+            val pageItems = allItems.drop(pageStarts[page]).take(capacities[page])
             var next = 0
             // the tile being dragged and the one it would swap with, which slides into its place meanwhile
             var lifted by remember { mutableStateOf<DialSlot?>(null) }
             var over by remember { mutableStateOf<DialSlot?>(null) }
             // where a dropped tile was let go, relative to its new cell, so it settles from there
             val landings = remember { mutableStateMapOf<DialCell, Offset>() }
+            // a switched-on mood here turns the tiles nearest it into its mixes, nearest first; Continue stays
+            val moodSlot = pages[page].firstOrNull { dialMood != null && it.panel == dialMood }
+            val flipped: Map<DialSlot, Pair<YTItem, Int>> =
+                remember(moodSlot, moodMixes, pages[page], edit) {
+                    val mixes = moodMixes
+                    if (moodSlot == null || mixes == null || edit != null) return@remember emptyMap()
+                    fun centre(s: DialSlot) = Offset(s.col + s.span / 2f, s.row + s.span / 2f)
+                    val from = centre(moodSlot)
+                    pages[page]
+                        .filter { it != moodSlot && it.panel != DialPanel.Continue }
+                        .sortedBy { (centre(it) - from).getDistanceSquared() }
+                        .zip(mixes)
+                        .withIndex()
+                        .associate { (rank, pair) -> pair.first to (pair.second to rank) }
+                }
 
             fun targetOf(slot: DialSlot, travel: Offset): DialSlot? {
                 val col = ((slot.col + slot.span / 2f) + travel.x / cellPx).toInt().coerceIn(0, columns - 1)
@@ -226,7 +261,24 @@ fun SpeedDialModule(env: HomeEnv) {
                         }
 
                         if (edit == null) {
-                            Box(placed) { Tile(cell) }
+                            val mix = flipped[slot]
+                            key(slot.col, slot.row) { FlipTile(
+                                back = mix?.first,
+                                delayMs = (mix?.second ?: 0) * FLIP_STAGGER_MS,
+                                modifier = placed,
+                                backContent = { mixItem ->
+                                    Box(cell) {
+                                        SpeedDialGridItem(
+                                            item = mixItem,
+                                            isPinned = false,
+                                            isActive = env.isActive(mixItem.id),
+                                            isPlaying = env.isPlaying.value,
+                                            thumbnailSize = if (slot.span > 1) 544 else 200,
+                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(mixItem) }, onLongClick = { env.showYtItemMenu(mixItem) }, cover = mixItem.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
+                                        )
+                                    }
+                                },
+                            ) { Tile(cell) } }
                         } else key(slot.col, slot.row) {
                             val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
                             val from = lifted
@@ -265,43 +317,66 @@ fun SpeedDialModule(env: HomeEnv) {
                                             itemTitle = item?.title,
                                             onPin =
                                                 when {
-                                                    current is DialPanel.Item -> { { unpin(current.id); put(at, null); env.menuState.dismiss() } }
-                                                    current == null && item != null -> { { pin(item); put(at, DialPanel.Item(item.id)); env.menuState.dismiss() } }
+                                                    current is DialPanel.Item -> { { change { unpin(current.id); put(at, null) }; env.menuState.dismiss() } }
+                                                    current == null && item != null -> { { change { pin(item); put(at, DialPanel.Item(item.id)) }; env.menuState.dismiss() } }
                                                     else -> null
                                                 },
                                             onPut = { panel ->
-                                                put(at, panel)
+                                                change { put(at, panel) }
                                                 env.menuState.dismiss()
                                             },
-                                            onRemove = if (current != null || item != null) { { remove(); env.menuState.dismiss() } } else null,
+                                            onRemove = if (current != null || item != null) { { change(::remove); env.menuState.dismiss() } } else null,
                                             size = slot.span,
                                             maxSize = minOf(rows, columns, 3),
                                             onSize =
                                                 (current ?: item?.let { DialPanel.Item(it.id) })?.let { panel ->
                                                     { span: Int ->
-                                                        if (current == null) item?.let(::pin)
-                                                        resize(at, panel, span)
+                                                        change {
+                                                            if (current == null) item?.let(::pin)
+                                                            resize(at, panel, span)
+                                                        }
                                                         env.menuState.dismiss()
                                                     }
                                                 },
                                         )
                                     }
                                 },
-                                onRemove = if (current != null || item != null) ::remove else null,
+                                onRemove = if (current != null || item != null) { { change(::remove) } } else null,
                                 onDrag = { travel ->
                                     lifted = slot.takeIf { travel != null }
                                     over = travel?.let { targetOf(slot, it) }
                                 },
                                 onDrop = { travel ->
-                                    val target = targetOf(slot, travel) ?: return@DialEditCell
-                                    val to = DialCell(page, target.row, target.col)
-                                    val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@DialEditCell
-                                    landings[to] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
-                                    // a size goes with its tile
-                                    save(
-                                        panels - at - to + (to to moving) + listOfNotNull(target.panel?.let { at to it }),
-                                        sizes - at - to + listOfNotNull(sizes[at]?.let { to to it }, sizes[to]?.let { at to it }),
-                                    )
+                                    // let go past the dial's side: the tile goes to the next page over, at the same height
+                                    val x = (slot.col + slot.span / 2f) * cellPx + travel.x
+                                    val side = when {
+                                        x < 0f && page > 0 -> -1
+                                        x > columns * cellPx && page < pages.size - 1 -> 1
+                                        else -> 0
+                                    }
+                                    val to =
+                                        if (side != 0) {
+                                            DialCell(page + side, slot.row, if (side > 0) 0 else columns - slot.span)
+                                        } else {
+                                            val target = targetOf(slot, travel) ?: return@DialEditCell
+                                            landings[DialCell(page, target.row, target.col)] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
+                                            DialCell(page, target.row, target.col)
+                                        }
+                                    change {
+                                        val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@change
+                                        // whatever sat there swaps back; a size goes with its tile
+                                        save(
+                                            panels - at - to + (to to moving) + listOfNotNull(panels[to]?.let { at to it }),
+                                            sizes - at - to + listOfNotNull(sizes[at]?.let { to to it }, sizes[to]?.let { at to it }),
+                                        )
+                                    }
+                                    if (side != 0) {
+                                        scope.launch {
+                                            // a page that only now holds a tile appears a frame later
+                                            snapshotFlow { pagerState.pageCount }.first { it > page + side }
+                                            pagerState.animateScrollToPage(page + side)
+                                        }
+                                    }
                                 },
                                 shift = { landings[at] ?: shift.value },
                             ) { Tile(cell) }
@@ -312,7 +387,18 @@ fun SpeedDialModule(env: HomeEnv) {
         }
 
         if (pageCount > 1) {
-            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) { PageDots(pagerState) }
+            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                PageDots(
+                    pagerState,
+                    if (edit == null) {
+                        Modifier
+                    } else {
+                        Modifier.pointerInput(pageCount) {
+                            detectTapGestures { tap -> scope.launch { pagerState.animateScrollToPage((tap.x / size.width * pageCount).toInt().coerceIn(0, pageCount - 1)) } }
+                        }
+                    },
+                )
+            }
         }
     }
 }

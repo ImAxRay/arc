@@ -109,6 +109,18 @@ class DialStore(context: Context) {
         }
     }
 
+    /** Puts back a layout saved earlier; null panels means the default one. */
+    fun restore(panels: Map<DialCell, DialPanel>?, sizes: Map<DialCell, Int>, hidden: Set<String>) {
+        _panels.value = panels
+        _sizes.value = sizes
+        _hidden.value = hidden
+        prefs.edit {
+            if (panels == null) remove(PANELS) else putString(PANELS, encodeDialPanels(panels))
+            putString(SIZES, encodeDialSizes(sizes))
+            putStringSet(HIDDEN, hidden)
+        }
+    }
+
     fun hide(id: String) {
         _hidden.value += id
         prefs.edit { putStringSet(HIDDEN, _hidden.value) }

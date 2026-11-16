@@ -807,9 +807,29 @@ class HomeViewModel @Inject constructor(
     /** The account's mood chips, Podcasts left out (it isn't a mood). */
     fun moodChips(): List<HomePage.Chip> = homePage.value?.chips.orEmpty().filterNot { it.title.equals("Podcasts", ignoreCase = true) }
 
-    /** A mood panel on the dial that is switched on: the dial's free tiles show [dialMoodMixes] until it's tapped again. */
+    /** A mood panel on the dial that is switched on: the tiles nearest it show [dialMoodMixes] until it's tapped again. */
     val dialMood = MutableStateFlow<DialPanel.Mood?>(null)
     val dialMoodMixes = MutableStateFlow<List<YTItem>?>(null)
+
+    /** First mix cover per dial mood, by [moodKey], for the mood's own tile. */
+    val moodCovers = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val dialMoodCache = java.util.concurrent.ConcurrentHashMap<String, List<YTItem>>()
+
+    private fun moodKey(mood: DialPanel.Mood) = mood.params ?: mood.title
+
+    /** A dial mood's mixes, fetched once per session (empty answers aren't kept, so it tries again later). */
+    private suspend fun fetchDialMood(mood: DialPanel.Mood): List<YTItem> =
+        dialMoodCache[moodKey(mood)] ?: moodMixes(resolveMood(mood.title, mood.params)?.endpoint?.params ?: mood.params).also {
+            if (it.isNotEmpty()) dialMoodCache[moodKey(mood)] = it
+        }
+
+    fun loadMoodCover(mood: DialPanel.Mood) {
+        if (moodKey(mood) in moodCovers.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val cover = fetchDialMood(mood).firstNotNullOfOrNull { it.thumbnail } ?: return@launch
+            moodCovers.value += moodKey(mood) to cover
+        }
+    }
 
     fun toggleDialMood(mood: DialPanel.Mood) {
         dialMoodMixes.value = null
@@ -819,7 +839,7 @@ class HomeViewModel @Inject constructor(
         }
         dialMood.value = mood
         viewModelScope.launch(Dispatchers.IO) {
-            val mixes = moodMixes(resolveMood(mood.title, mood.params)?.endpoint?.params ?: mood.params)
+            val mixes = fetchDialMood(mood)
             if (dialMood.value != mood) return@launch
             if (mixes.isEmpty()) dialMood.compareAndSet(mood, null) else dialMoodMixes.value = mixes
         }

@@ -6,7 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -33,6 +33,9 @@ import androidx.compose.runtime.MutableLongState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,7 +48,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import com.metrolist.innertube.models.YTItem
+import com.metrolist.music.db.MusicDatabase
+import com.metrolist.music.db.entities.SpeedDialItem
+import com.metrolist.music.ui.utils.resize
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -60,13 +70,71 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.CapsLabel
 import com.metrolist.music.constants.DialCornerRadius
 import com.metrolist.music.playback.queues.YouTubeQueue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 import kotlin.random.Random
 
 /** Set while the dial is being edited: its tiles bob, take no taps, and can be moved, replaced or removed. */
-class DialEdit(val clock: MutableLongState)
+class DialEdit(val clock: MutableLongState) {
+    /** Every change since dial edit opened, newest last, so each can be taken back. */
+    val steps = mutableStateListOf<DialStep>()
+    /** The step a change is writing into while it runs. */
+    var open: DialStep? = null
+}
+
+/** The dial before one change, plus the pins that change added or took away. */
+class DialStep(val panels: Map<DialCell, DialPanel>?, val sizes: Map<DialCell, Int>, val hidden: Set<String>) {
+    val repin = mutableListOf<SpeedDialItem>()
+    val unpin = mutableListOf<String>()
+}
+
+/** Puts the dial back as it was before [steps], newest first. */
+fun undoDial(steps: List<DialStep>, store: DialStore, database: MusicDatabase, scope: CoroutineScope) {
+    val first = steps.firstOrNull() ?: return
+    store.restore(first.panels, first.sizes, first.hidden)
+    scope.launch(Dispatchers.IO) {
+        steps.asReversed().forEach { step ->
+            step.unpin.forEach { database.speedDialDao.delete(it) }
+            step.repin.forEach { database.speedDialDao.insert(it) }
+        }
+    }
+}
+
+/**
+ * A tile that turns over to show [back] on its other side and turns back once it's null; [delayMs] staggers the
+ * tiles so a mood ripples out across the dial one tile after another.
+ */
+@Composable
+fun FlipTile(back: YTItem?, delayMs: Int, modifier: Modifier, backContent: @Composable (YTItem) -> Unit, front: @Composable () -> Unit) {
+    // the side that was showing stays drawn while the tile turns back
+    val last = remember { arrayOfNulls<YTItem>(1) }
+    if (back != null) last[0] = back
+    val turn = remember { Animatable(if (back != null) 180f else 0f) }
+    LaunchedEffect(back != null) {
+        delay(delayMs.toLong())
+        turn.animateTo(if (back != null) 180f else 0f, tween(FLIP_MS, easing = FastOutSlowInEasing))
+    }
+    val showBack by remember { derivedStateOf { turn.value > 90f } }
+    Box(
+        modifier.graphicsLayer {
+            rotationY = turn.value
+            cameraDistance = 14 * density
+        },
+    ) {
+        val face = last[0]
+        if (showBack && face != null) {
+            Box(Modifier.fillMaxSize().graphicsLayer { rotationY = 180f }) { backContent(face) }
+        } else {
+            front()
+        }
+    }
+}
+
+private const val FLIP_MS = 280
+const val FLIP_STAGGER_MS = 70
 
 val LocalDialEdit = staticCompositionLocalOf<DialEdit?> { null }
 
@@ -165,29 +233,51 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
     }
 }
 
-/** A pinned mood: tapped, the dial's free tiles turn into its mixes; tapped again, they come back. */
+/**
+ * A pinned mood, dressed in its first mix's cover: tapped, the tiles nearest it turn over into its mixes; tapped
+ * again, they turn back. While it's on, it wears a ring and a tick.
+ */
 @Composable
 fun MoodTile(env: HomeEnv, mood: DialPanel.Mood, active: Boolean, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val title = env.viewModel.resolveMood(mood.title, mood.params)?.title ?: mood.title
+    val covers by env.viewModel.moodCovers.collectAsStateWithLifecycle()
+    val cover = covers[mood.params ?: mood.title]
+    LaunchedEffect(mood) { env.viewModel.loadMoodCover(mood) }
+    val shape = RoundedCornerShape(DialCornerRadius)
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
-                .homeTile(onClick = { env.viewModel.toggleDialMood(mood) }, glowCorner = DialCornerRadius)
+                .homeTile(onClick = { env.viewModel.toggleDialMood(mood) }, cover = cover, glowCorner = DialCornerRadius)
                 .fillMaxSize()
-                .clip(RoundedCornerShape(DialCornerRadius))
-                .background(if (active) colors.primary else colors.secondaryContainer)
-                .padding(8.dp),
+                .clip(shape)
+                .background(colors.secondaryContainer),
     ) {
+        if (cover != null) {
+            AsyncImage(model = cover.resize(360, 360), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.6f)))))
+        }
         Text(
-            title,
-            color = if (active) colors.onPrimary else colors.onSecondaryContainer,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Light,
+            title.uppercase(),
+            color = if (cover != null) Color.White else colors.onSecondaryContainer,
+            fontSize = 17.sp,
+            lineHeight = 19.sp,
+            letterSpacing = 1.2.sp,
+            fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
             maxLines = 2,
+            modifier = Modifier.padding(8.dp),
         )
+        if (active) {
+            Box(Modifier.fillMaxSize().border(3.dp, colors.primary, shape))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(20.dp).clip(CircleShape).background(colors.primary),
+            ) {
+                Icon(painterResource(R.drawable.done), contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(14.dp))
+            }
+        }
     }
 }
 
@@ -240,7 +330,7 @@ fun DialEditCell(
                 .matchParentSize()
                 .pointerInput(Unit) { detectTapGestures(onTap = { tap() }) }
                 .pointerInput(Unit) {
-                    detectDragGesturesAfterLongPress(
+                    detectDragGestures(
                         onDragStart = { drag = Offset.Zero },
                         onDragEnd = {
                             follow(null)
