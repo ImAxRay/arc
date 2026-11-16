@@ -18,7 +18,7 @@ import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
 import com.metrolist.music.constants.GridThumbnailHeight
 import com.metrolist.music.constants.SmallGridThumbnailHeight
-import com.metrolist.music.ui.component.NavigationTitle
+import androidx.compose.foundation.layout.Column
 import com.metrolist.music.utils.rememberEnumPreference
 
 @Composable
@@ -33,13 +33,15 @@ fun KeepListeningModule(env: HomeEnv) {
         }
     val rows = if (items.size > 6) 2 else 1
 
-    NavigationTitle(title = stringResource(R.string.keep_listening))
-    LazyHorizontalGrid(
-        state = rememberLazyGridState(),
-        rows = GridCells.Fixed(rows),
-        contentPadding = HomeRowPadding,
-        modifier = Modifier.fillMaxWidth().height((gridHeight + textHeight) * rows),
-    ) {
-        items(items.distinctBy { it.id }, key = { it.id }) { HomeLocalGridItem(env, it) }
+    Column {
+        ModuleHeader(stringResource(R.string.keep_listening))
+        LazyHorizontalGrid(
+            state = rememberLazyGridState(),
+            rows = GridCells.Fixed(rows),
+            contentPadding = HomeRowPadding,
+            modifier = Modifier.fillMaxWidth().height((gridHeight + textHeight) * rows),
+        ) {
+            items(items.distinctBy { it.id }, key = { it.id }) { HomeLocalGridItem(env, it) }
+        }
     }
 }

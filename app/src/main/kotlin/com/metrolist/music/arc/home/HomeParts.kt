@@ -181,12 +181,21 @@ fun HomeSongRow(env: HomeEnv, song: Song, modifier: Modifier = Modifier) {
     )
 }
 
-/** Songs that aren't already on the speed dial above, so Home never shows one twice. */
+/**
+ * Songs that aren't already on the speed dial above, so Home rarely shows one twice. A big dial can hold nearly all of a
+ * module's songs; then the module keeps them all, the ones off the dial first, rather than go empty.
+ */
 @Composable
 internal fun List<Song>?.notOnDial(env: HomeEnv): List<Song> {
     val dial by env.viewModel.dialShownIds.collectAsStateWithLifecycle()
-    return remember(this, dial) { orEmpty().distinctBy { it.id }.filterNot { it.id in dial } }
+    return remember(this, dial) {
+        val songs = orEmpty().distinctBy { it.id }
+        val off = songs.filterNot { it.id in dial }
+        if (off.size >= MIN_OFF_DIAL) off else off + songs.filter { it.id in dial }
+    }
 }
+
+private const val MIN_OFF_DIAL = 6
 
 @Composable
 internal fun PickCard(

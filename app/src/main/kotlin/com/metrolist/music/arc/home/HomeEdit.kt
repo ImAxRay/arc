@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +73,9 @@ import kotlin.math.sin
 class HomeEdit(val enter: () -> Unit)
 
 val LocalHomeEdit = staticCompositionLocalOf<HomeEdit?> { null }
+
+/** True while Home is being edited, so a big module can fold to a size that's easy to drag. */
+val LocalHomeEditing = compositionLocalOf { false }
 
 /** True inside an Add to Home preview, where a module must not change what the rest of Home shows. */
 val LocalModulePreview = staticCompositionLocalOf { false }
@@ -127,11 +131,12 @@ fun EditFrame(
         Box(
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.outlineVariant, RoundedCornerShape(16.dp)),
+                .border(1.dp, colors.outlineVariant, RoundedCornerShape(16.dp))
+                .padding(vertical = 8.dp),
         ) {
             // some modules draw nothing while their data is missing; the stub keeps them grabbable
             var empty by remember { mutableStateOf(false) }
-            Box(Modifier.onSizeChanged { empty = it.height == 0 }) { content() }
+            Column(Modifier.onSizeChanged { empty = it.height == 0 }) { content() }
             if (empty) EmptyModuleStub(module)
         }
         Box(Modifier.matchParentSize().then(cover))
@@ -192,7 +197,7 @@ private fun ModulePreview(env: HomeEnv, module: HomeModule, onClick: () -> Unit)
         Column {
             Box(Modifier.fillMaxWidth().height(PreviewHeight).clipToBounds()) {
                 if (module.available(env)) {
-                    CompositionLocalProvider(LocalModulePreview provides true) { Box(Modifier.shrunk(env.width, PreviewWidth)) { module.content(env) } }
+                    CompositionLocalProvider(LocalModulePreview provides true) { Column(Modifier.shrunk(env.width, PreviewWidth)) { module.content(env) } }
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(colors.surfaceContainer).fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {

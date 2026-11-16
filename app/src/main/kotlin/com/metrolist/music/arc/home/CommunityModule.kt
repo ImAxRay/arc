@@ -51,7 +51,6 @@ import com.metrolist.music.R
 import com.metrolist.music.db.entities.PlaylistEntity
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.YouTubeQueue
-import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.joinToArtistString
@@ -361,18 +360,20 @@ fun CommunityPlaylistCard(
 fun CommunityModule(env: HomeEnv) {
     val community by env.viewModel.communityPlaylists.collectAsStateWithLifecycle()
     val playlists = community?.takeIf { it.isNotEmpty() } ?: return
-    NavigationTitle(title = stringResource(R.string.from_the_community))
-    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        items(playlists) { item ->
-            CommunityPlaylistCard(
-                item = item,
-                onClick = { env.navController.navigate("online_playlist/${item.playlist.id.removePrefix("VL")}") },
-                onSongClick = { song ->
-                    if (!env.isListenTogetherGuest) {
-                        env.playerConnection.playQueue(YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()))
-                    }
-                },
-            )
+    Column {
+        ModuleHeader(stringResource(R.string.from_the_community))
+        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(playlists) { item ->
+                CommunityPlaylistCard(
+                    item = item,
+                    onClick = { env.navController.navigate("online_playlist/${item.playlist.id.removePrefix("VL")}") },
+                    onSongClick = { song ->
+                        if (!env.isListenTogetherGuest) {
+                            env.playerConnection.playQueue(YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata()))
+                        }
+                    },
+                )
+            }
         }
     }
 }

@@ -7,6 +7,8 @@ package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import com.metrolist.music.arc.home.LocalHomeEdit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,9 +52,11 @@ fun NavigationTitle(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-            .clickable(enabled = onClick != null) {
-                onClick?.invoke()
-            }
+            .then(
+                // on Home, holding a title edits Home, as with Arc's own module titles
+                LocalHomeEdit.current?.let { edit -> Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = edit.enter) }
+                    ?: Modifier.clickable(enabled = onClick != null) { onClick?.invoke() },
+            )
             .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
         thumbnail?.invoke()

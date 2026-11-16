@@ -46,7 +46,6 @@ import com.metrolist.music.R
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.resize
 import com.metrolist.music.utils.ArtistNameAliases
@@ -199,29 +198,31 @@ fun DailyDiscoverModule(env: HomeEnv) {
     val discover by env.viewModel.dailyDiscover.collectAsStateWithLifecycle()
     val discoverList = discover?.takeIf { it.isNotEmpty() } ?: return
     val title = stringResource(R.string.your_daily_discover)
-    NavigationTitle(
-        title = title,
-        onPlayAllClick = {
-            env.playAll(title, discoverList.mapNotNull { (it.recommendation as? SongItem)?.toMediaMetadata()?.toMediaItem() })
-        },
-    )
-    Box(
-        modifier = Modifier.fillMaxWidth().height(340.dp).padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        val carouselState = rememberCarouselState { discoverList.size }
-        HorizontalMultiBrowseCarousel(
-            state = carouselState,
-            preferredItemWidth = 320.dp,
-            itemSpacing = 16.dp,
-            modifier = Modifier.fillMaxWidth().height(320.dp),
-        ) { i ->
-            val item = discoverList[i]
-            DailyDiscoverCard(
-                dailyDiscover = item,
-                onClick = { (item.recommendation as? SongItem)?.let(env::playYtSong) },
-                modifier = Modifier.maskClip(MaterialTheme.shapes.extraLarge),
-            )
+    Column {
+        ModuleHeader(
+            title = title,
+            onPlay = {
+                env.playAll(title, discoverList.mapNotNull { (it.recommendation as? SongItem)?.toMediaMetadata()?.toMediaItem() })
+            },
+        )
+        Box(
+            modifier = Modifier.fillMaxWidth().height(340.dp).padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val carouselState = rememberCarouselState { discoverList.size }
+            HorizontalMultiBrowseCarousel(
+                state = carouselState,
+                preferredItemWidth = 320.dp,
+                itemSpacing = 16.dp,
+                modifier = Modifier.fillMaxWidth().height(320.dp),
+            ) { i ->
+                val item = discoverList[i]
+                DailyDiscoverCard(
+                    dailyDiscover = item,
+                    onClick = { (item.recommendation as? SongItem)?.let(env::playYtSong) },
+                    modifier = Modifier.maskClip(MaterialTheme.shapes.extraLarge),
+                )
+            }
         }
     }
 }

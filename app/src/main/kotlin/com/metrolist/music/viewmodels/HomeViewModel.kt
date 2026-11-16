@@ -429,9 +429,10 @@ class HomeViewModel @Inject constructor(
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         // own files have no YouTube id, so they can't seed related songs
         val likedSongs = database.likedSongsByCreateDateAsc().first().filterNot { it.song.isLocal }
-        if (likedSongs.isEmpty()) return
-
-        val seeds = likedSongs.shuffled().distinctBy { it.id }.take(5)
+        // few online likes: the most played online songs seed the rest
+        val played = database.mostPlayedSongs(LocalDateTime.now().minusMonths(3), limit = 30).first().filterNot { it.song.isLocal }
+        val seeds = (likedSongs.shuffled() + played.shuffled()).distinctBy { it.id }.take(5)
+        if (seeds.isEmpty()) return
         
         // Use a synchronized list to collect results safely from concurrent coroutines
         val items = java.util.Collections.synchronizedList(mutableListOf<DailyDiscoverItem>())
@@ -507,7 +508,8 @@ class HomeViewModel @Inject constructor(
                     .shuffled()
                     .take(20)
 
-                quickPicks.value = combined.ifEmpty { relatedSongs.shuffled().take(20) }
+                // related songs build up as songs play; a new library has none yet, so liked songs stand in
+                quickPicks.value = combined.ifEmpty { database.likedSongsByCreateDateAsc().first().filterVideoSongs(hideVideoSongs).shuffled().take(20) }
             }
             QuickPicks.LAST_LISTEN -> {
                 val song = database.latestEvent().first()?.song
@@ -611,8 +613,13 @@ class HomeViewModel @Inject constructor(
             launch(Dispatchers.IO) { getQuickPicks() }
 
             launch(Dispatchers.IO) {
-                forgottenFavorites.value = database.forgottenFavorites().first()
-                    .filterVideoSongs(hideVideoSongs).shuffled().take(20)
+                // the query needs a month of history; until then, liked songs not heard in two weeks
+                val forgotten =
+                    database.forgottenFavorites().first().ifEmpty {
+                        val recent = database.mostPlayedSongs(LocalDateTime.now().minusWeeks(2), limit = 500).first().mapTo(HashSet()) { it.id }
+                        database.likedSongsByCreateDateAsc().first().filterNot { it.id in recent }
+                    }
+                forgottenFavorites.value = forgotten.filterVideoSongs(hideVideoSongs).shuffled().take(20)
             }
 
             launch(Dispatchers.IO) {

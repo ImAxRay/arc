@@ -2946,25 +2946,9 @@ object YouTube {
                             title = title,
                             items = songs + result.items,
                             lyricsEndpoint =
-                                response.contents.singleColumnMusicWatchNextResultsRenderer
-                                    ?.tabbedRenderer
-                                    ?.watchNextTabbedResultsRenderer
-                                    ?.tabs
-                                    ?.getOrNull(
-                                        1,
-                                    )?.tabRenderer
-                                    ?.endpoint
-                                    ?.browseEndpoint,
+                                response.tabEndpoint(BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.MUSIC_PAGE_TYPE_TRACK_LYRICS),
                             relatedEndpoint =
-                                response.contents.singleColumnMusicWatchNextResultsRenderer
-                                    ?.tabbedRenderer
-                                    ?.watchNextTabbedResultsRenderer
-                                    ?.tabs
-                                    ?.getOrNull(
-                                        2,
-                                    )?.tabRenderer
-                                    ?.endpoint
-                                    ?.browseEndpoint,
+                                response.tabEndpoint(BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.MUSIC_PAGE_TYPE_TRACK_RELATED),
                             currentIndex = currentIndex,
                             endpoint = watchPlaylistEndpoint,
                         )
@@ -2975,25 +2959,9 @@ object YouTube {
                 items = songs,
                 currentIndex = currentIndex,
                 lyricsEndpoint =
-                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                        ?.tabbedRenderer
-                        ?.watchNextTabbedResultsRenderer
-                        ?.tabs
-                        ?.getOrNull(
-                            1,
-                        )?.tabRenderer
-                        ?.endpoint
-                        ?.browseEndpoint,
+                    response.tabEndpoint(BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.MUSIC_PAGE_TYPE_TRACK_LYRICS),
                 relatedEndpoint =
-                    response.contents.singleColumnMusicWatchNextResultsRenderer
-                        ?.tabbedRenderer
-                        ?.watchNextTabbedResultsRenderer
-                        ?.tabs
-                        ?.getOrNull(
-                            2,
-                        )?.tabRenderer
-                        ?.endpoint
-                        ?.browseEndpoint,
+                    response.tabEndpoint(BrowseEndpoint.BrowseEndpointContextSupportedConfigs.BrowseEndpointContextMusicConfig.MUSIC_PAGE_TYPE_TRACK_RELATED),
                 continuation = playlistPanelRenderer.continuations?.getContinuation(),
                 endpoint = endpoint,
             )
@@ -3393,3 +3361,13 @@ internal class UploadProgressInputStream(
         onProgress((bytesRead.toFloat() / contentLength).coerceAtMost(1f))
     }
 }
+
+/** A watch page tab's endpoint by its page type; YouTube adds tabs (Comments, 2026), so their order can't be trusted. */
+private fun NextResponse.tabEndpoint(pageType: String): BrowseEndpoint? =
+    contents.singleColumnMusicWatchNextResultsRenderer
+        ?.tabbedRenderer
+        ?.watchNextTabbedResultsRenderer
+        ?.tabs
+        ?.firstNotNullOfOrNull { tab ->
+            tab.tabRenderer.endpoint?.browseEndpoint?.takeIf { it.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType == pageType }
+        }

@@ -14,7 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.R
-import com.metrolist.music.ui.component.NavigationTitle
+import androidx.compose.foundation.layout.Column
 import com.metrolist.music.ui.screens.MoodAndGenresButton
 import com.metrolist.music.ui.screens.MoodAndGenresButtonHeight
 
@@ -28,19 +28,21 @@ internal fun moodsAvailable(env: HomeEnv): Boolean {
 fun MoodsModule(env: HomeEnv) {
     val explorePage by env.viewModel.explorePage.collectAsStateWithLifecycle()
     val moods = explorePage?.moodAndGenres ?: return
-    NavigationTitle(title = stringResource(R.string.mood_and_genres), onClick = { env.navController.navigate("mood_and_genres") })
-    LazyHorizontalGrid(
-        rows = GridCells.Fixed(4),
-        contentPadding = PaddingValues(6.dp),
-        modifier = Modifier.height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
-    ) {
-        val key = { it: com.metrolist.innertube.pages.MoodAndGenres.Item -> "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }
-        items(moods.distinctBy(key), key = key) {
-            MoodAndGenresButton(
-                title = it.title,
-                onClick = { env.navController.navigate("youtube_browse/${it.endpoint.browseId}?params=${it.endpoint.params}") },
-                modifier = Modifier.padding(6.dp).width(180.dp),
-            )
+    Column {
+        ModuleHeader(stringResource(R.string.mood_and_genres), onClick = { env.navController.navigate("mood_and_genres") })
+        LazyHorizontalGrid(
+            rows = GridCells.Fixed(4),
+            contentPadding = PaddingValues(6.dp),
+            modifier = Modifier.height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp),
+        ) {
+            val key = { it: com.metrolist.innertube.pages.MoodAndGenres.Item -> "${it.title}_${it.endpoint.browseId}_${it.endpoint.params}" }
+            items(moods.distinctBy(key), key = key) {
+                MoodAndGenresButton(
+                    title = it.title,
+                    onClick = { env.navController.navigate("youtube_browse/${it.endpoint.browseId}?params=${it.endpoint.params}") },
+                    modifier = Modifier.padding(6.dp).width(180.dp),
+                )
+            }
         }
     }
 }

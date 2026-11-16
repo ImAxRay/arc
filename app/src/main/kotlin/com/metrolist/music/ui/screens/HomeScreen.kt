@@ -88,6 +88,7 @@ import com.metrolist.music.arc.home.ModuleSettingsSheet
 import com.metrolist.music.arc.home.encode
 import com.metrolist.music.arc.home.parseHomeSlots
 import com.metrolist.music.arc.home.YT_ROW
+import com.metrolist.music.arc.home.LocalHomeEditing
 import com.metrolist.music.arc.home.youTubeRowModules
 import com.metrolist.music.arc.home.rememberWobbleClock
 import androidx.activity.compose.BackHandler
@@ -332,7 +333,7 @@ fun HomeScreen(
                 offerUndo(context.getString(R.string.arc_home_reset_done)) { savedModules = before }
             }
 
-            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit) {
+            CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing) {
                 LazyColumn(
                     state = lazylistState,
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),

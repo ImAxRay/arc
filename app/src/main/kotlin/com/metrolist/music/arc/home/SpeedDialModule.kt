@@ -5,7 +5,6 @@ import com.metrolist.music.constants.DialCornerRadius
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,13 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.SpeedDialShortcut
 import com.metrolist.music.arc.SpeedDialSkeleton
 import com.metrolist.music.arc.rememberTiltEye
-import com.metrolist.music.arc.speedDialCellSize
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.RandomizeGridItem
@@ -88,10 +85,8 @@ fun SpeedDialModule(env: HomeEnv) {
             else -> speedDialRows
         }
     val itemsPerPage = columns * rows
-    val insets = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-    // Home's day header above and page dots below stay on screen with the grid
-    val gridHeight = env.height - insets.calculateTopPadding() - insets.calculateBottomPadding() - DayHeaderHeight - 24.dp
-    val itemWidth = speedDialCellSize(availableWidth, columns, rows, gridHeight)
+    // full-width cells: more rows make the dial taller, never thinner
+    val itemWidth = availableWidth / columns
     val tiltEye = rememberTiltEye()
 
     val big = rows >= 3 && columns >= 3
@@ -107,6 +102,8 @@ fun SpeedDialModule(env: HomeEnv) {
     SideEffect { if (!preview) env.viewModel.dialShownIds.value = shownIds }
 
     Column(Modifier.fillMaxWidth()) {
+        // the dial has no title on Home; in edit mode it gets one like every other module
+        if (LocalHomeEditing.current) ModuleHeader(stringResource(R.string.speed_dial))
         HorizontalPager(
             state = pagerState,
             contentPadding = PaddingValues(horizontal = 16.dp),

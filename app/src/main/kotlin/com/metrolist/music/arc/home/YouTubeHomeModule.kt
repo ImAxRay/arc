@@ -79,7 +79,8 @@ fun YouTubeHomeModule(env: HomeEnv) {
             onValueUpdate = env.viewModel::toggleChip,
         )
         if (isLoading && homePage?.chips.isNullOrEmpty()) ChipsShimmer()
-        if (selectedChip != null) {
+        // folded to its chips while editing, so it drags like any other module
+        if (selectedChip != null && !LocalHomeEditing.current) {
             val sections = remember(chipPage) { chipPage?.sections.orEmpty().sortedByDescending { it.endpoint?.browseId == "FEmusic_mixed_for_you" } }
             if (selectedChip.isPodcasts()) {
                 PodcastRows(env, chipPage)

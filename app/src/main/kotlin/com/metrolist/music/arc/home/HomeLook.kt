@@ -203,9 +203,8 @@ fun ModuleHeader(
             color = colors.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.weight(1f))
         if (onPlay != null) {
             IconButton(onClick = onPlay) {
                 Icon(painterResource(R.drawable.play), contentDescription = stringResource(R.string.play_all), tint = colors.onSurfaceVariant, modifier = Modifier.size(22.dp))
