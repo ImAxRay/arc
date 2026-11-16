@@ -79,6 +79,7 @@ import com.metrolist.music.arc.home.HomeEnv
 import com.metrolist.music.arc.home.HomeDayHeader
 import com.metrolist.music.arc.home.HomeModules
 import com.metrolist.music.arc.home.ArcHomeModulesKey
+import com.metrolist.music.arc.home.PresetSheet
 import com.metrolist.music.arc.home.EditFrame
 import com.metrolist.music.arc.home.EditHomeRow
 import com.metrolist.music.arc.home.EmptyModuleStub
@@ -333,11 +334,12 @@ fun HomeScreen(
                 }
             }
 
-            fun reset() {
+            fun applyPreset(name: String, modules: String) {
+                menuState.dismiss()
                 val before = savedModules
-                slots = parseHomeSlots("", youTubeRows.keys)
-                savedModules = ""
-                offerUndo(context.getString(R.string.arc_home_reset_done)) { savedModules = before }
+                slots = parseHomeSlots(modules, youTubeRows.keys)
+                savedModules = modules
+                offerUndo(context.getString(R.string.arc_home_preset_applied, name)) { savedModules = before }
             }
 
             CompositionLocalProvider(LocalPressGlow provides pressGlow, LocalMarqueeTouches provides marqueeTouches, LocalHomeEdit provides homeEdit, LocalHomeEditing provides editing, LocalUntitled provides untitled) {
@@ -389,7 +391,9 @@ fun HomeScreen(
                             .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
                             .padding(bottom = 12.dp),
                 ) {
-                    FilledTonalButton(onClick = ::reset) { Text(stringResource(R.string.reset)) }
+                    FilledTonalButton(onClick = { menuState.show { PresetSheet(slots.encode(), youTubeRows.keys, ::applyPreset) } }) {
+                        Text(stringResource(R.string.arc_home_presets))
+                    }
                     FilledTonalButton(
                         onClick = {
                             menuState.show {

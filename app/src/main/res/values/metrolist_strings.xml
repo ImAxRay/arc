@@ -1344,6 +1344,14 @@
     <string name="arc_home_about_row_albums">%1$s: albums picked for you today.</string>
     <string name="arc_home_about_row_mixed">%1$s: a fresh selection for today.</string>
     <string name="arc_home_show_name">Show name</string>
+    <string name="arc_home_presets">Presets</string>
+    <string name="arc_home_preset_default">Default</string>
+    <string name="arc_home_preset_default_about">The dial, new releases, mood mixes, recents, quick picks, forgotten favourites and your playlists.</string>
+    <string name="arc_home_preset_today">Today\'s page</string>
+    <string name="arc_home_preset_today_about">Mood mixes on top, then today\'s fresh rows in the order they come.</string>
+    <string name="arc_home_preset_name">Name this layout</string>
+    <string name="arc_home_preset_save">Save</string>
+    <string name="arc_home_preset_applied">%1$s applied</string>
     <string name="arc_home_add">Add</string>
     <string name="arc_home_on_home">On Home</string>
     <string name="arc_home_nothing_yet">Nothing to show yet</string>

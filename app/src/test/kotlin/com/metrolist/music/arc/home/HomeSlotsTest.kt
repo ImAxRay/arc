@@ -46,4 +46,12 @@ class HomeSlotsTest {
         assertEquals("yt:freshfindsoldfavorites", section.rowKey())
         assertEquals(listOf(HomeSlot(section.rowKey(), true)), parseHomeSlots(listOf(HomeSlot(section.rowKey(), true)).encode()).take(1))
     }
+
+    @Test
+    fun todaysPageShowsMoodMixesThenTheRowsInOrderAndNothingTwice() {
+        val rows = listOf("yt:listenagain", "yt:mixedforyou")
+        val slots = parseHomeSlots(todaysPagePreset(rows) + ",yt:mixedforyou", rows)
+        assertEquals(listOf("youtube_home") + rows, slots.filter { it.shown }.map { it.key })
+        assertEquals(slots.size, slots.distinctBy { it.key }.size)
+    }
 }
