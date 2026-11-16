@@ -27,12 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.R
 
-@Composable
-internal fun wrappedAvailable(env: HomeEnv): Boolean {
-    val selectedChip by env.viewModel.selectedChip.collectAsStateWithLifecycle()
-    return selectedChip == null
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WrappedModule(env: HomeEnv) {

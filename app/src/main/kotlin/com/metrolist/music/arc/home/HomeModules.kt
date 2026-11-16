@@ -42,7 +42,7 @@ class HomeModule(
     val key: String,
     val name: (Context) -> String,
     val group: ModuleGroup,
-    @StringRes val description: Int,
+    val description: (Context) -> String,
     /** Whether the module has anything to show right now. Read inside composition so it follows the data. */
     val available: @Composable (HomeEnv) -> Boolean,
     val setting: ModuleSetting? = null,
@@ -59,7 +59,7 @@ class HomeModule(
         setting: ModuleSetting? = null,
         nameToggle: Boolean = true,
         content: @Composable (HomeEnv) -> Unit,
-    ) : this(id.key, { it.getString(title) }, group, description, available, setting, nameToggle, content)
+    ) : this(id.key, { it.getString(title) }, group, { it.getString(description) }, available, setting, nameToggle, content)
 }
 
 /** The one number a module lets you change from its gear in edit mode. */
@@ -72,7 +72,7 @@ val ForgottenRowsSetting = ModuleSetting(R.string.arc_home_setting_rows, intPref
 
 val HomeModules: Map<String, HomeModule> =
     listOf(
-        HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, ModuleGroup.YOURS, R.string.arc_home_about_wrapped, { env -> wrappedAvailable(env) }) { WrappedModule(it) },
+        HomeModule(HomeModuleId.WRAPPED, R.string.wrapped_ready_title, ModuleGroup.YOURS, R.string.arc_home_about_wrapped, { true }) { WrappedModule(it) },
         HomeModule(HomeModuleId.SPEED_DIAL, R.string.speed_dial, ModuleGroup.YOURS, R.string.arc_home_about_dial, { env -> speedDialAvailable(env) }, DialRowsSetting, nameToggle = false) { SpeedDialModule(it) },
         HomeModule(HomeModuleId.NEW_RELEASES, R.string.release_radar, ModuleGroup.DISCOVER, R.string.arc_home_about_new_releases, { true }) { NewReleasesModule(it.navController) },
         HomeModule(HomeModuleId.RECENTS, R.string.arc_home_recents, ModuleGroup.YOURS, R.string.arc_home_about_recents, { env -> recentsShown(env).isNotEmpty() }, RecentsRowsSetting) { RecentsModule(it) },

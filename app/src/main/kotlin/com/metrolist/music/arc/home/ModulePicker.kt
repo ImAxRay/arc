@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,6 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.R
 import com.metrolist.music.arc.CapsLabel
+
+private val CardHeight = 470.dp
 
 /**
  * Add to Home: modules sorted into groups, one card each, swiped through like a ship picker in a roguelike: how it
@@ -69,12 +73,15 @@ fun ModulePicker(env: HomeEnv, modules: List<HomeModule>, shown: () -> Set<Strin
 private fun ModuleCard(env: HomeEnv, module: HomeModule, onHome: Boolean, onAdd: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
-    Column(Modifier.fillMaxWidth().border(1.dp, colors.outlineVariant, shape).padding(bottom = 16.dp)) {
+    val context = LocalContext.current
+    // one height for every card: a pager that resizes to each page jolts the sheet once a swipe settles
+    Column(Modifier.fillMaxWidth().height(CardHeight).border(1.dp, colors.outlineVariant, shape).padding(bottom = 16.dp)) {
         ModuleLivePreview(env, module, height = 200.dp)
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            Text(module.name(LocalContext.current), style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.dp))
-            Text(stringResource(module.description), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
-            ModuleOptions(module)
+        Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            Text(module.name(context), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.dp))
+            Text(module.description(context), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+            ModuleOptions(module, nameSwitch = false)
+            Spacer(Modifier.weight(1f))
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
                 Button(onClick = onAdd, enabled = !onHome) {
                     if (!onHome) Icon(painterResource(R.drawable.add), contentDescription = null, modifier = Modifier.padding(end = 8.dp))

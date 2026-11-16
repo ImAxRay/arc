@@ -220,9 +220,9 @@ fun ModuleSettingsSheet(module: HomeModule) {
     }
 }
 
-/** A module's one number as a row of choices, and whether its name shows. */
+/** A module's one number as a row of choices, and in the gear sheet whether its name shows. */
 @Composable
-fun ModuleOptions(module: HomeModule, modifier: Modifier = Modifier) {
+fun ModuleOptions(module: HomeModule, modifier: Modifier = Modifier, nameSwitch: Boolean = true) {
     Column(modifier) {
         module.setting?.let { setting ->
             var value by rememberPreference(setting.key, setting.default)
@@ -233,7 +233,7 @@ fun ModuleOptions(module: HomeModule, modifier: Modifier = Modifier) {
                 }
             }
         }
-        if (module.nameToggle) {
+        if (nameSwitch && module.nameToggle) {
             var untitled by rememberPreference(ArcHomeUntitledKey, emptySet())
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text(stringResource(R.string.arc_home_show_name), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))

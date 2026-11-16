@@ -202,14 +202,6 @@ class HomeViewModel @Inject constructor(
     val homePage = MutableStateFlow<HomePage?>(null)
     val explorePage = MutableStateFlow<ExplorePage?>(null)
     val communityPlaylists = MutableStateFlow<List<CommunityPlaylistItem>?>(null)
-    val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
-
-    /** The chosen chip's rows; [homePage] stays unfiltered, since YouTube's rows are modules of their own. */
-    val chipPage = MutableStateFlow<HomePage?>(null)
-
-    // Official API data for podcast sections
-    val savedPodcastShows = MutableStateFlow<List<com.metrolist.innertube.models.PodcastItem>>(emptyList())
-    val episodesForLater = MutableStateFlow<List<SongItem>>(emptyList())
 
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
@@ -766,47 +758,6 @@ class HomeViewModel @Inject constructor(
             if (items.isEmpty()) null else section.copy(items = items)
         }
 
-    fun toggleChip(chip: HomePage.Chip?) {
-        chipPage.value = null
-        if (chip == null || chip == selectedChip.value) {
-            selectedChip.value = null
-            return
-        }
-        selectedChip.value = chip
-        viewModelScope.launch(Dispatchers.IO) { loadChip(chip) }
-    }
-
-    private suspend fun loadChip(chip: HomePage.Chip) {
-        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-        val page =
-            YouTube.home(params = chip.endpoint?.params).getOrNull() ?: run {
-                // no rows to show, so the chip lets go rather than leave a shimmer up
-                selectedChip.compareAndSet(chip, null)
-                return
-            }
-        if (selectedChip.value != chip) return
-        chipPage.value = page.copy(sections = page.sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts))
-        if (chip.title.contains("Podcast", ignoreCase = true)) fetchPodcastData()
-    }
-
-    private suspend fun fetchPodcastData() {
-        // Fetch saved podcast shows from official API
-        YouTube.savedPodcastShows().onSuccess { shows ->
-            savedPodcastShows.value = shows.filterOutNulls()
-        }.onFailure {
-            reportException(it)
-        }
-
-        // Fetch episodes for later from official API
-        YouTube.episodesForLater().onSuccess { episodes ->
-            episodesForLater.value = episodes.filterOutNulls()
-        }.onFailure {
-            reportException(it)
-        }
-    }
-
     private suspend fun loadAccountInfo() {
         YouTube.accountInfo().onSuccess { info ->
             accountName.value = info.name
@@ -845,7 +796,6 @@ class HomeViewModel @Inject constructor(
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onPullToRefresh(context, database) }
         viewModelScope.launch(Dispatchers.IO) {
-            selectedChip.value?.let { launch { loadChip(it) } }
             load()
             if (fromUser) dialGeneration.value++
             isRefreshing.value = false

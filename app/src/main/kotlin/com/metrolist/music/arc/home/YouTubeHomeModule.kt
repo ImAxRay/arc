@@ -1,9 +1,10 @@
 package com.metrolist.music.arc.home
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,20 +18,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.BrowseEndpoint
-import com.metrolist.innertube.models.EpisodeItem
-import com.metrolist.innertube.models.PodcastItem
+import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.pages.HomePage
 import com.metrolist.music.R
@@ -38,14 +34,9 @@ import com.metrolist.music.constants.ListItemHeight
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.component.ChipsRow
-import com.metrolist.music.ui.component.NavigationTitle
 import com.metrolist.music.ui.component.YouTubeListItem
-import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
-import com.metrolist.music.ui.screens.MoodAndGenresButtonHeight
-
-internal fun HomePage.Chip?.isPodcasts(): Boolean = this?.title?.contains("Podcast", ignoreCase = true) == true
 
 /** Start of the stored key of one of YouTube's own home rows. */
 const val YT_ROW = "yt:"
@@ -61,97 +52,56 @@ internal fun HomePage.Section.rowKey(): String = YT_ROW + title.lowercase().filt
 fun youTubeRowModules(page: HomePage?): Map<String, HomeModule> =
     page?.sections.orEmpty().distinctBy { it.rowKey() }.associate { section ->
         val key = section.rowKey()
-        key to HomeModule(key, { section.title }, ModuleGroup.YOUTUBE, R.string.arc_home_about_youtube_row, { true }) { env -> HomePageSection(env, section, key) }
+        key to HomeModule(key, { section.title }, ModuleGroup.YOUTUBE, { section.about(it) }, { true }) { env -> HomePageSection(env, section, key) }
     }
 
-/** YouTube's mood chips (Relax, Energize, Commute, Sleep...); the tapped chip's rows show under them, mixes first. */
+/** What a row holds: by its endpoint, then by its English title, then by what kind of items it carries. */
+private fun HomePage.Section.about(context: Context): String {
+    val known =
+        when (endpoint?.browseId) {
+            "FEmusic_listen_again" -> R.string.arc_home_about_row_listen_again
+            "FEmusic_new_releases_albums" -> R.string.arc_home_about_row_new_releases
+            "FEmusic_library_landing" -> R.string.arc_home_about_row_library
+            "FEmusic_mixed_for_you" -> R.string.arc_home_about_row_mixed_for_you
+            "FEmusic_moods_and_genres_category" -> return context.getString(R.string.arc_home_about_row_genre, title)
+            else ->
+                when (rowKey().removePrefix(YT_ROW)) {
+                    "songmixes" -> R.string.arc_home_about_row_song_mixes
+                    "trendingsongsforyou" -> R.string.arc_home_about_row_trending
+                    "freshfindsoldfavorites" -> R.string.arc_home_about_row_fresh_finds
+                    "fromthecommunity" -> R.string.arc_home_about_row_community
+                    "forgottenfavorites" -> R.string.arc_home_about_row_forgotten
+                    "yourdailydiscover" -> R.string.arc_home_about_row_daily_discover
+                    "recaps" -> R.string.arc_home_about_row_recaps
+                    "longlistens" -> R.string.arc_home_about_row_long_listens
+                    else -> null
+                }
+        }
+    if (known != null) return context.getString(known)
+    val kind =
+        when {
+            items.all { it is SongItem } -> R.string.arc_home_about_row_songs
+            items.all { it is PlaylistItem } -> R.string.arc_home_about_row_playlists
+            items.all { it is AlbumItem } -> R.string.arc_home_about_row_albums
+            else -> R.string.arc_home_about_row_mixed
+        }
+    return context.getString(kind, title)
+}
+
+/** The mood chips (Relax, Energize, Commute, Sleep...); a tapped chip opens that mood's page, mixes first. */
 @Composable
 fun YouTubeHomeModule(env: HomeEnv) {
     val homePage by env.viewModel.homePage.collectAsStateWithLifecycle()
-    val chipPage by env.viewModel.chipPage.collectAsStateWithLifecycle()
-    val selectedChip by env.viewModel.selectedChip.collectAsStateWithLifecycle()
     val isLoading by env.viewModel.isLoading.collectAsStateWithLifecycle()
 
     Column {
         ModuleHeader(stringResource(R.string.arc_home_mood_mixes))
         ChipsRow(
             chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
-            currentValue = selectedChip,
-            onValueUpdate = env.viewModel::toggleChip,
+            currentValue = null,
+            onValueUpdate = { chip -> chip?.endpoint?.params?.let { env.navController.navigate("youtube_browse/FEmusic_home?params=${Uri.encode(it)}&title=${Uri.encode(chip.title)}") } },
         )
         if (isLoading && homePage?.chips.isNullOrEmpty()) ChipsShimmer()
-        // folded to its chips while editing, so it drags like any other module
-        // the chip's rows keep their titles when the module's own is hidden
-        if (selectedChip != null && !LocalHomeEditing.current) CompositionLocalProvider(LocalModuleKey provides null) {
-            val sections = remember(chipPage) { chipPage?.sections.orEmpty().sortedByDescending { it.endpoint?.browseId == "FEmusic_mixed_for_you" } }
-            if (selectedChip.isPodcasts()) {
-                PodcastRows(env, chipPage)
-                // the chip's own rows, minus the ones the podcast rows above already show
-                val skipTitles = listOf("your shows", "episodes for later", "podcast channels", "new episodes")
-                sections.forEachIndexed { index, section ->
-                    if (skipTitles.none { section.title.lowercase().contains(it) }) {
-                        key("chip_$index") {
-                            SectionTitle(env, section, playAll = false)
-                            HomeYtRow(env, section.items, "home_chip_section")
-                        }
-                    }
-                }
-            } else {
-                sections.forEachIndexed { index, section ->
-                    key("chip_$index") { HomePageSection(env, section, "chip_$index") }
-                }
-            }
-            if (chipPage == null) SectionsShimmer()
-        }
-    }
-}
-
-@Composable
-private fun PodcastRows(env: HomeEnv, homePage: HomePage?) {
-    val savedShows by env.viewModel.savedPodcastShows.collectAsStateWithLifecycle()
-    val episodesForLater by env.viewModel.episodesForLater.collectAsStateWithLifecycle()
-    // podcasts pulled out of the chip's episodes; the last good set stays while a refresh is empty
-    var cachedPodcasts by remember { mutableStateOf<List<PodcastItem>>(emptyList()) }
-    val featuredPodcasts =
-        remember(homePage) {
-            val fresh =
-                homePage?.sections.orEmpty()
-                    .flatMap { it.items }
-                    .filterIsInstance<EpisodeItem>()
-                    .mapNotNull { episode ->
-                        episode.podcast?.let { podcast ->
-                            PodcastItem(
-                                id = podcast.id,
-                                title = podcast.name,
-                                author = episode.author,
-                                episodeCountText = null,
-                                thumbnail = episode.thumbnail,
-                                playEndpoint = null,
-                                shuffleEndpoint = null,
-                            )
-                        }
-                    }.distinctBy { it.id }
-                    .shuffled()
-                    .take(10)
-            if (fresh.isNotEmpty()) cachedPodcasts = fresh
-            cachedPodcasts
-        }
-
-    if (savedShows.isNotEmpty()) {
-        NavigationTitle(
-            title = stringResource(R.string.your_shows),
-            onClick = { env.navController.navigate("youtube_browse/FEmusic_library_non_music_audio_list") },
-        )
-        HomeYtRow(env, savedShows, "home_saved_podcast")
-    }
-    if (episodesForLater.isNotEmpty()) {
-        NavigationTitle(title = stringResource(R.string.episodes_for_later), onClick = { env.navController.navigate("online_playlist/SE") })
-        HomeYtRow(env, episodesForLater, "home_episode_later")
-    }
-    // only when Your shows is empty, so the same shows don't appear twice
-    if (featuredPodcasts.isNotEmpty() && savedShows.isEmpty()) {
-        NavigationTitle(title = stringResource(R.string.podcast_channels))
-        HomeYtRow(env, featuredPodcasts, "home_featured_podcast")
     }
 }
 
@@ -234,28 +184,6 @@ private fun ChipsShimmer() {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             items(5) { TextPlaceholder(height = 30.dp, shape = RoundedCornerShape(16.dp), modifier = Modifier.width(72.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun SectionsShimmer() {
-    ShimmerHost {
-        repeat(2) {
-            TextPlaceholder(height = 36.dp, modifier = Modifier.padding(12.dp).width(250.dp))
-            LazyRow(contentPadding = HomeRowPadding) { items(4) { GridItemPlaceHolder() } }
-        }
-        TextPlaceholder(height = 36.dp, modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp).width(250.dp))
-        repeat(4) {
-            Row {
-                repeat(2) {
-                    TextPlaceholder(
-                        height = MoodAndGenresButtonHeight,
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp).width(200.dp),
-                    )
-                }
-            }
         }
     }
 }
