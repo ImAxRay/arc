@@ -202,6 +202,10 @@ class HomeViewModel @Inject constructor(
     val homePage = MutableStateFlow<HomePage?>(null)
     val explorePage = MutableStateFlow<ExplorePage?>(null)
     val communityPlaylists = MutableStateFlow<List<CommunityPlaylistItem>?>(null)
+    val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
+
+    /** The chosen mood's mixes; [homePage] stays unfiltered, since its rows are modules of their own. */
+    val chipMixes = MutableStateFlow<List<YTItem>?>(null)
 
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
@@ -758,6 +762,32 @@ class HomeViewModel @Inject constructor(
             if (items.isEmpty()) null else section.copy(items = items)
         }
 
+    fun toggleChip(chip: HomePage.Chip?) {
+        chipMixes.value = null
+        if (chip == null || chip == selectedChip.value) {
+            selectedChip.value = null
+            return
+        }
+        selectedChip.value = chip
+        viewModelScope.launch(Dispatchers.IO) { loadChip(chip) }
+    }
+
+    private suspend fun loadChip(chip: HomePage.Chip) {
+        val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+        val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+        val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+        val sections = YouTube.home(params = chip.endpoint?.params).getOrNull()?.sections?.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
+        // the mood's page also repeats Listen again, Song mixes and so on, which aren't about the mood; accounts with
+        // little history get no Mixed for you, so the mood's first row of playlists stands in
+        val mixes =
+            (sections.orEmpty().filter { it.endpoint?.browseId == "FEmusic_mixed_for_you" }.ifEmpty { null }
+                ?: listOfNotNull(sections.orEmpty().firstOrNull { section -> section.items.all { it is PlaylistItem } }))
+                .flatMap { it.items }.distinctBy { it.id }
+        if (selectedChip.value != chip) return
+        // nothing to show, so the chip lets go rather than leave a shimmer up
+        if (mixes.isEmpty()) selectedChip.compareAndSet(chip, null) else chipMixes.value = mixes
+    }
+
     private suspend fun loadAccountInfo() {
         YouTube.accountInfo().onSuccess { info ->
             accountName.value = info.name
@@ -796,6 +826,7 @@ class HomeViewModel @Inject constructor(
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onPullToRefresh(context, database) }
         viewModelScope.launch(Dispatchers.IO) {
+            selectedChip.value?.let { launch { loadChip(it) } }
             load()
             if (fromUser) dialGeneration.value++
             isRefreshing.value = false

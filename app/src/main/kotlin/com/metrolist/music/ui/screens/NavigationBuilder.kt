@@ -332,7 +332,7 @@ fun NavGraphBuilder.navigationBuilder(
     }
 
     composable(
-        route = "youtube_browse/{browseId}?params={params}&title={title}",
+        route = "youtube_browse/{browseId}?params={params}",
         arguments =
             listOf(
                 navArgument("browseId") {
@@ -340,10 +340,6 @@ fun NavGraphBuilder.navigationBuilder(
                     nullable = true
                 },
                 navArgument("params") {
-                    type = NavType.StringType
-                    nullable = true
-                },
-                navArgument("title") {
                     type = NavType.StringType
                     nullable = true
                 },

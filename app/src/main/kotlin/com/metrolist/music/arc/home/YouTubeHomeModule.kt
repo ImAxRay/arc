@@ -1,7 +1,6 @@
 package com.metrolist.music.arc.home
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,6 +35,7 @@ import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.component.ChipsRow
 import com.metrolist.music.ui.component.YouTubeListItem
+import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
 
@@ -88,20 +89,24 @@ private fun HomePage.Section.about(context: Context): String {
     return context.getString(kind, title)
 }
 
-/** The mood chips (Relax, Energize, Commute, Sleep...); a tapped chip opens that mood's page, mixes first. */
+/** The mood chips (Relax, Energize, Commute, Sleep...); the tapped mood's mixes show under them. */
 @Composable
 fun YouTubeHomeModule(env: HomeEnv) {
     val homePage by env.viewModel.homePage.collectAsStateWithLifecycle()
+    val selectedChip by env.viewModel.selectedChip.collectAsStateWithLifecycle()
+    val mixes by env.viewModel.chipMixes.collectAsStateWithLifecycle()
     val isLoading by env.viewModel.isLoading.collectAsStateWithLifecycle()
+    // Podcasts sits among the moods on the source page but has no mixes
+    val moods = remember(homePage) { homePage?.chips.orEmpty().filterNot { it.title.contains("Podcast", ignoreCase = true) } }
 
     Column {
         ModuleHeader(stringResource(R.string.arc_home_mood_mixes))
-        ChipsRow(
-            chips = homePage?.chips?.map { it to it.title } ?: emptyList(),
-            currentValue = null,
-            onValueUpdate = { chip -> chip?.endpoint?.params?.let { env.navController.navigate("youtube_browse/FEmusic_home?params=${Uri.encode(it)}&title=${Uri.encode(chip.title)}") } },
-        )
-        if (isLoading && homePage?.chips.isNullOrEmpty()) ChipsShimmer()
+        ChipsRow(chips = moods.map { it to it.title }, currentValue = selectedChip, onValueUpdate = env.viewModel::toggleChip)
+        if (isLoading && moods.isEmpty()) ChipsShimmer()
+        // folded to its chips while editing, so it drags like any other module
+        if (selectedChip != null && !LocalHomeEditing.current) {
+            mixes?.let { HomeYtRow(env, it, "mood_mix") } ?: MixesShimmer()
+        }
     }
 }
 
@@ -186,4 +191,9 @@ private fun ChipsShimmer() {
             items(5) { TextPlaceholder(height = 30.dp, shape = RoundedCornerShape(16.dp), modifier = Modifier.width(72.dp)) }
         }
     }
+}
+
+@Composable
+private fun MixesShimmer() {
+    ShimmerHost { LazyRow(contentPadding = HomeRowPadding) { items(4) { GridItemPlaceHolder() } } }
 }

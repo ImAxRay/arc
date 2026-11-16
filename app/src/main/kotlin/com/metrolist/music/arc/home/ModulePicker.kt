@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -56,6 +59,9 @@ fun ModulePicker(env: HomeEnv, modules: List<HomeModule>, shown: () -> Set<Strin
             val pager = rememberPagerState { list.size }
             HorizontalPager(
                 state = pager,
+                // live previews are heavy: composing the next one as a swipe lets go stalls the settle, so keep it ready
+                beyondViewportPageCount = 1,
+                flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = spring(stiffness = Spring.StiffnessMedium)),
                 contentPadding = PaddingValues(horizontal = 32.dp),
                 pageSpacing = 12.dp,
                 verticalAlignment = Alignment.Top,
