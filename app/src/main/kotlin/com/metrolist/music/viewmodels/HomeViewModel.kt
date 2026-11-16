@@ -796,12 +796,24 @@ class HomeViewModel @Inject constructor(
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
         val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-        val sections = YouTube.home(params = params).getOrNull()?.sections?.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
+        var page = YouTube.home(params = params).getOrNull()
+        val sections = page?.sections.orEmpty().toMutableList()
+        fun mixed() = sections.firstOrNull { it.endpoint?.browseId == "FEmusic_mixed_for_you" }
+        // Mixed for you can sit further down the mood's page than its first batch of rows
+        repeat(2) {
+            val more = page?.continuation?.takeIf { mixed() == null } ?: return@repeat
+            page = YouTube.home(continuation = more).getOrNull()
+            sections += page?.sections.orEmpty()
+        }
+        val shown = sections.filtered(hideExplicit, hideVideoSongs, hideYoutubeShorts)
+        mixed()?.let { row ->
+            // the row shows a handful; its own page holds every mix, Supermix included
+            val all = row.endpoint?.let { YouTube.browse(it.browseId, it.params).getOrNull() }?.items.orEmpty().flatMap { it.items }.filterIsInstance<PlaylistItem>()
+            return all.ifEmpty { shown.firstOrNull { it.endpoint?.browseId == "FEmusic_mixed_for_you" }?.items.orEmpty() }.distinctBy { it.id }
+        }
         // the mood's page also repeats Listen again, Song mixes and so on, which aren't about the mood; accounts with
         // little history get no Mixed for you, so the mood's first row of playlists stands in
-        return (sections.orEmpty().filter { it.endpoint?.browseId == "FEmusic_mixed_for_you" }.ifEmpty { null }
-            ?: listOfNotNull(sections.orEmpty().firstOrNull { section -> section.items.all { it is PlaylistItem } }))
-            .flatMap { it.items }.distinctBy { it.id }
+        return shown.firstOrNull { section -> section.items.all { it is PlaylistItem } }?.items.orEmpty().distinctBy { it.id }
     }
 
     /** The account's mood chips, Podcasts left out (it isn't a mood). */

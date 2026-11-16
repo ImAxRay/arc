@@ -19,6 +19,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import com.metrolist.music.arc.LocalTiltEye
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -52,8 +57,6 @@ import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 
 /** Speed dial comes from the library, so it's empty only for a moment at startup; a skeleton holds its place meanwhile. */
@@ -123,7 +126,9 @@ fun SpeedDialModule(env: HomeEnv) {
     val panelPages = livePanels.keys.filter { it.row < rows && it.col < columns }.maxOfOrNull { it.page + 1 } ?: 1
     val pageCount = maxOf(panelPages, (1 until pages.size).takeWhile { capacities.take(it + 1).sum() <= allItems.size }.lastOrNull()?.plus(1) ?: 1).coerceAtMost(pages.size)
     val pageStarts = capacities.runningFold(0) { sum, c -> sum + c }
-    val pagerState = rememberPagerState(pageCount = { pageCount })
+    // while editing, all three pages show, so a tile can be carried to an empty one
+    val shownPages = if (edit != null) pages.size else pageCount
+    val pagerState = rememberPagerState(pageCount = { shownPages })
     val scope = rememberCoroutineScope()
     val shownIds = remember(allItems, pageCount, placedIds) { allItems.take(pageStarts[pageCount]).mapTo(HashSet()) { it.id } + placedIds + listOfNotNull(hiddenId) }
     SideEffect { if (!preview) env.viewModel.dialShownIds.value = shownIds }
@@ -173,25 +178,86 @@ fun SpeedDialModule(env: HomeEnv) {
         save(next, nextSizes)
     }
 
+    @Composable
+    fun Tile(slot: DialSlot, item: YTItem?, modifier: Modifier) {
+        when (val panel = slot.panel) {
+            DialPanel.Continue -> ContinueTile(env, continueSong, big = slot.span > 1, modifier = modifier)
+            DialPanel.Dice -> Box(modifier) { DiceTile(env, Modifier) }
+            DialPanel.Radio -> Box(modifier) { SpeedDialShortcut(icon = R.drawable.radio, label = null, onClick = { playDiscoverRadio(env, radioSeeds) }) }
+            DialPanel.Moods -> Box(modifier) { SpeedDialShortcut(icon = R.drawable.discover_tune, label = null, onClick = { env.navController.navigate("mood_and_genres") }) }
+            is DialPanel.Mood -> Box(modifier) { MoodTile(env, panel, active = dialMood == panel, modifier = Modifier) }
+            DialPanel.Plus -> {
+                var showCreatePlaylist by remember { mutableStateOf(false) }
+                if (showCreatePlaylist) CreatePlaylistDialog(onDismiss = { showCreatePlaylist = false })
+                Box(modifier) { SpeedDialShortcut(icon = R.drawable.add, label = null, onClick = { showCreatePlaylist = true }) }
+            }
+            null, is DialPanel.Item ->
+                if (item == null) {
+                    if (edit != null) EmptyDialCell(modifier)
+                } else {
+                    key(item.id) {
+                        Box(modifier) {
+                            SpeedDialGridItem(
+                                item = item,
+                                isPinned = item.id in env.pinnedTypes.value,
+                                isActive = env.isActive(item.id),
+                                isPlaying = env.isPlaying.value,
+                                thumbnailSize = if (slot.span > 1) 544 else 200,
+                                modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
+                            )
+                        }
+                    }
+                }
+        }
+    }
+
+    // the tile being dragged floats above the pages, so it can be carried to another page; held at the dial's side,
+    // it turns the page
+    var dragFrom by remember { mutableStateOf<DialDrag?>(null) }
+    var dragTravel by remember { mutableStateOf(Offset.Zero) }
+    // where a dropped tile was let go, relative to its new cell, so it settles from there
+    val landings = remember { mutableStateMapOf<DialCell, Offset>() }
+
+    fun centreOf(slot: DialSlot, travel: Offset) = Offset((slot.col + slot.span / 2f) * cellPx + travel.x, (slot.row + slot.span / 2f) * cellPx + travel.y)
+
+    fun cellUnder(point: Offset) = (point.x / cellPx).toInt().coerceIn(0, columns - 1) to (point.y / cellPx).toInt().coerceIn(0, rows - 1)
+
+    val overCell by remember(cellPx, columns, rows) { derivedStateOf { dragFrom?.let { cellUnder(centreOf(it.slot, dragTravel)) } } }
+    val edgeSide by remember(cellPx, columns) {
+        derivedStateOf {
+            val x = dragFrom?.let { centreOf(it.slot, dragTravel).x } ?: return@derivedStateOf 0
+            when {
+                x < cellPx * EDGE_ZONE -> -1
+                x > (columns - EDGE_ZONE) * cellPx -> 1
+                else -> 0
+            }
+        }
+    }
+    LaunchedEffect(edgeSide) {
+        if (edgeSide == 0) return@LaunchedEffect
+        while (true) {
+            delay(EDGE_DWELL_MS)
+            val to = pagerState.currentPage + edgeSide
+            if (to !in 0 until pagerState.pageCount) break
+            pagerState.animateScrollToPage(to)
+        }
+    }
+
     Column(Modifier.fillMaxWidth()) {
         // the dial has no title on Home; in edit mode it gets one like every other module
         if (LocalHomeEditing.current || edit != null) ModuleHeader(stringResource(R.string.speed_dial))
+        Box(Modifier.fillMaxWidth().height(itemWidth * rows)) {
         HorizontalPager(
             state = pagerState,
             flingBehavior = rememberPageFling(pagerState),
-            // while editing, a swipe on a tile moves the tile; the dots below turn the page
-            userScrollEnabled = edit == null,
             contentPadding = PaddingValues(horizontal = 16.dp),
             pageSpacing = 16.dp,
-            modifier = Modifier.fillMaxWidth().height(itemWidth * rows),
+            // a dragged tile's own page stays composed while the dial turns away from it, so the drag carries on
+            beyondViewportPageCount = if (edit != null) pages.size else 0,
+            modifier = Modifier.fillMaxSize(),
         ) { page ->
             val pageItems = allItems.drop(pageStarts[page]).take(capacities[page])
             var next = 0
-            // the tile being dragged and the one it would swap with, which slides into its place meanwhile
-            var lifted by remember { mutableStateOf<DialSlot?>(null) }
-            var over by remember { mutableStateOf<DialSlot?>(null) }
-            // where a dropped tile was let go, relative to its new cell, so it settles from there
-            val landings = remember { mutableStateMapOf<DialCell, Offset>() }
             // a switched-on mood here turns the tiles nearest it into its mixes, nearest first; Continue stays
             val moodSlot = pages[page].firstOrNull { dialMood != null && it.panel == dialMood }
             val flipped: Map<DialSlot, Pair<YTItem, Int>> =
@@ -207,12 +273,10 @@ fun SpeedDialModule(env: HomeEnv) {
                         .withIndex()
                         .associate { (rank, pair) -> pair.first to (pair.second to rank) }
                 }
-
-            fun targetOf(slot: DialSlot, travel: Offset): DialSlot? {
-                val col = ((slot.col + slot.span / 2f) + travel.x / cellPx).toInt().coerceIn(0, columns - 1)
-                val row = ((slot.row + slot.span / 2f) + travel.y / cellPx).toInt().coerceIn(0, rows - 1)
-                // a drop on any of a 2x2 tile's cells lands on the tile
-                return pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }?.takeIf { it != slot }
+            // the tile under a dragged one on its own page slides into the dragged tile's cell meanwhile
+            val lifted = dragFrom?.takeIf { it.page == page }?.slot
+            val over = overCell?.takeIf { lifted != null && pagerState.currentPage == page }?.let { (col, row) ->
+                pages[page].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }?.takeIf { it != lifted }
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(itemWidth * columns, itemWidth * rows)) {
@@ -227,62 +291,33 @@ fun SpeedDialModule(env: HomeEnv) {
                                 else -> null
                             }
 
-                        @Composable
-                        fun Tile(modifier: Modifier) {
-                            when (val panel = slot.panel) {
-                                DialPanel.Continue -> ContinueTile(env, continueSong, big = slot.span > 1, modifier = modifier)
-                                DialPanel.Dice -> Box(modifier) { DiceTile(env, Modifier) }
-                                DialPanel.Radio -> Box(modifier) { SpeedDialShortcut(icon = R.drawable.radio, label = null, onClick = { playDiscoverRadio(env, radioSeeds) }) }
-                                DialPanel.Moods -> Box(modifier) { SpeedDialShortcut(icon = R.drawable.discover_tune, label = null, onClick = { env.navController.navigate("mood_and_genres") }) }
-                                is DialPanel.Mood -> Box(modifier) { MoodTile(env, panel, active = dialMood == panel, modifier = Modifier) }
-                                DialPanel.Plus -> {
-                                    var showCreatePlaylist by remember { mutableStateOf(false) }
-                                    if (showCreatePlaylist) CreatePlaylistDialog(onDismiss = { showCreatePlaylist = false })
-                                    Box(modifier) { SpeedDialShortcut(icon = R.drawable.add, label = null, onClick = { showCreatePlaylist = true }) }
-                                }
-                                null, is DialPanel.Item ->
-                                    if (item == null) {
-                                        if (edit != null) EmptyDialCell(modifier)
-                                    } else {
-                                        key(item.id) {
-                                            Box(modifier) {
+                        if (edit == null) {
+                            val mix = flipped[slot]
+                            key(slot.col, slot.row) {
+                                FlipTile(
+                                    back = mix?.first,
+                                    delayMs = (mix?.second ?: 0) * FLIP_STAGGER_MS,
+                                    modifier = placed,
+                                    backContent = { mixItem ->
+                                        // flat, so the whole mix cover shows and its number reads
+                                        CompositionLocalProvider(LocalTiltEye provides null) {
+                                            Box(cell) {
                                                 SpeedDialGridItem(
-                                                    item = item,
-                                                    isPinned = item.id in env.pinnedTypes.value,
-                                                    isActive = env.isActive(item.id),
+                                                    item = mixItem,
+                                                    isPinned = false,
+                                                    isActive = env.isActive(mixItem.id),
                                                     isPlaying = env.isPlaying.value,
                                                     thumbnailSize = if (slot.span > 1) 544 else 200,
-                                                    modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
+                                                    modifier = Modifier.homeTile(onClick = { env.openYtItem(mixItem) }, onLongClick = { env.showYtItemMenu(mixItem) }, cover = mixItem.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
                                                 )
                                             }
                                         }
-                                    }
+                                    },
+                                ) { Tile(slot, item, cell) }
                             }
-                        }
-
-                        if (edit == null) {
-                            val mix = flipped[slot]
-                            key(slot.col, slot.row) { FlipTile(
-                                back = mix?.first,
-                                delayMs = (mix?.second ?: 0) * FLIP_STAGGER_MS,
-                                modifier = placed,
-                                backContent = { mixItem ->
-                                    Box(cell) {
-                                        SpeedDialGridItem(
-                                            item = mixItem,
-                                            isPinned = false,
-                                            isActive = env.isActive(mixItem.id),
-                                            isPlaying = env.isPlaying.value,
-                                            thumbnailSize = if (slot.span > 1) 544 else 200,
-                                            modifier = Modifier.homeTile(onClick = { env.openYtItem(mixItem) }, onLongClick = { env.showYtItemMenu(mixItem) }, cover = mixItem.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
-                                        )
-                                    }
-                                },
-                            ) { Tile(cell) } }
                         } else key(slot.col, slot.row) {
                             val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
-                            val from = lifted
-                            val goal = if (from != null && over == slot) Offset((from.col - slot.col) * cellPx, (from.row - slot.row) * cellPx) else Offset.Zero
+                            val goal = if (lifted != null && over == slot) Offset((lifted.col - slot.col) * cellPx, (lifted.row - slot.row) * cellPx) else Offset.Zero
                             val landing = landings[at]
                             LaunchedEffect(goal, landing) {
                                 if (landing != null) {
@@ -343,25 +378,21 @@ fun SpeedDialModule(env: HomeEnv) {
                                 },
                                 onRemove = if (current != null || item != null) { { change(::remove) } } else null,
                                 onDrag = { travel ->
-                                    lifted = slot.takeIf { travel != null }
-                                    over = travel?.let { targetOf(slot, it) }
+                                    if (travel == null) {
+                                        dragFrom = null
+                                    } else {
+                                        if (dragFrom == null) dragFrom = DialDrag(page, slot, item)
+                                        dragTravel = travel
+                                    }
                                 },
                                 onDrop = { travel ->
-                                    // let go past the dial's side: the tile goes to the next page over, at the same height
-                                    val x = (slot.col + slot.span / 2f) * cellPx + travel.x
-                                    val side = when {
-                                        x < 0f && page > 0 -> -1
-                                        x > columns * cellPx && page < pages.size - 1 -> 1
-                                        else -> 0
-                                    }
-                                    val to =
-                                        if (side != 0) {
-                                            DialCell(page + side, slot.row, if (side > 0) 0 else columns - slot.span)
-                                        } else {
-                                            val target = targetOf(slot, travel) ?: return@DialEditCell
-                                            landings[DialCell(page, target.row, target.col)] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
-                                            DialCell(page, target.row, target.col)
-                                        }
+                                    // it lands on whichever page is showing now, under the tile's centre
+                                    val toPage = pagerState.currentPage
+                                    val (col, row) = cellUnder(centreOf(slot, travel))
+                                    val target = pages[toPage].firstOrNull { col in it.col until it.col + it.span && row in it.row until it.row + it.span }
+                                        ?.takeIf { toPage != page || it != slot } ?: return@DialEditCell
+                                    val to = DialCell(toPage, target.row, target.col)
+                                    landings[to] = Offset((slot.col - target.col) * cellPx + travel.x, (slot.row - target.row) * cellPx + travel.y)
                                     change {
                                         val moving = current ?: item?.also(::pin)?.let { DialPanel.Item(it.id) } ?: return@change
                                         // whatever sat there swaps back; a size goes with its tile
@@ -370,31 +401,41 @@ fun SpeedDialModule(env: HomeEnv) {
                                             sizes - at - to + listOfNotNull(sizes[at]?.let { to to it }, sizes[to]?.let { at to it }),
                                         )
                                     }
-                                    if (side != 0) {
-                                        scope.launch {
-                                            // a page that only now holds a tile appears a frame later
-                                            snapshotFlow { pagerState.pageCount }.first { it > page + side }
-                                            pagerState.animateScrollToPage(page + side)
-                                        }
-                                    }
                                 },
                                 shift = { landings[at] ?: shift.value },
-                            ) { Tile(cell) }
+                            ) { Tile(slot, item, cell) }
                         }
                     }
                 }
             }
         }
+        dragFrom?.let { drag ->
+            Box(
+                Modifier
+                    .offset(16.dp + itemWidth * drag.slot.col, itemWidth * drag.slot.row)
+                    .size(itemWidth * drag.slot.span)
+                    .graphicsLayer {
+                        translationX = dragTravel.x
+                        translationY = dragTravel.y
+                        scaleX = 1.06f
+                        scaleY = 1.06f
+                        shadowElevation = 12.dp.toPx()
+                        shape = RoundedCornerShape(DialCornerRadius)
+                    },
+            ) { Tile(drag.slot, drag.item, Modifier.padding(4.dp)) }
+        }
+        }
 
-        if (pageCount > 1) {
+        if (pagerState.pageCount > 1) {
             Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
                 PageDots(
                     pagerState,
                     if (edit == null) {
                         Modifier
                     } else {
-                        Modifier.pointerInput(pageCount) {
-                            detectTapGestures { tap -> scope.launch { pagerState.animateScrollToPage((tap.x / size.width * pageCount).toInt().coerceIn(0, pageCount - 1)) } }
+                        // a tap on the dots turns the page, also with a tile held in the other hand
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures { tap -> scope.launch { pagerState.animateScrollToPage((tap.x / size.width * pagerState.pageCount).toInt().coerceIn(0, pagerState.pageCount - 1)) } }
                         }
                     },
                 )
@@ -402,6 +443,13 @@ fun SpeedDialModule(env: HomeEnv) {
         }
     }
 }
+
+/** A tile being dragged in dial edit: where it came from and what it shows. */
+private data class DialDrag(val page: Int, val slot: DialSlot, val item: YTItem?)
+
+// a dragged tile's centre within this share of a cell from the dial's side turns the page after a short hold
+private const val EDGE_ZONE = 0.3f
+private const val EDGE_DWELL_MS = 550L
 
 /** One tile on a dial page, in cells: a square [span] cells wide, holding a [panel] or, without one, one of the dial's items. */
 internal data class DialSlot(val col: Int, val row: Int, val span: Int = 1, val panel: DialPanel? = null)

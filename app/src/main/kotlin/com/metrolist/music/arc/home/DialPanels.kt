@@ -6,7 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -316,12 +316,12 @@ fun DialEditCell(
                 val d = drag
                 val t = edit.clock.longValue
                 val moved = if (d == null) shift() else Offset.Zero
-                translationX = d?.x ?: moved.x
-                translationY = d?.y ?: (moved.y + if (t == 0L) 0f else sin(t / 1000f * 3.5f + index * 1.9f) * 1.5.dp.toPx())
-                val s = if (d != null) 1.06f else 0.9f
-                scaleX = s
-                scaleY = s
-                shadowElevation = if (d != null) 12.dp.toPx() else 0f
+                // while dragged, the dial draws a floating copy above its pages instead
+                alpha = if (d != null) 0f else 1f
+                translationX = moved.x
+                translationY = moved.y + if (t == 0L) 0f else sin(t / 1000f * 3.5f + index * 1.9f) * 1.5.dp.toPx()
+                scaleX = 0.9f
+                scaleY = 0.9f
             },
     ) {
         content()
@@ -330,7 +330,7 @@ fun DialEditCell(
                 .matchParentSize()
                 .pointerInput(Unit) { detectTapGestures(onTap = { tap() }) }
                 .pointerInput(Unit) {
-                    detectDragGestures(
+                    detectDragGesturesAfterLongPress(
                         onDragStart = { drag = Offset.Zero },
                         onDragEnd = {
                             follow(null)
