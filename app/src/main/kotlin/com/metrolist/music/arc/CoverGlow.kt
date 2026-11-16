@@ -136,10 +136,10 @@ internal fun edgeColor(bitmap: Bitmap, x0: Int, y0: Int, x1: Int, y1: Int): Int 
         ?: bitmap.getPixel((x0 + x1) / 2, (y0 + y1) / 2)
     if (Hct.fromInt(edge).chroma >= GREY_CHROMA) return edge
     val swatches = Palette.from(bitmap).maximumColorCount(8).clearFilters().generate().swatches
-    // one colour often splits into several swatches, so they count together
-    val coloured = swatches.filter { Hct.fromInt(it.rgb).chroma >= GREY_CHROMA }
-    if (coloured.sumOf { it.population } * 20 < swatches.sumOf { it.population }) return edge
-    return coloured.maxBy { it.population }.rgb
+    // one colour often splits into several swatches, so they count together; a faint tint over a big area loses to a strong colour
+    val coloured = swatches.map { it to Hct.fromInt(it.rgb).chroma }.filter { it.second >= GREY_CHROMA }
+    if (coloured.sumOf { it.first.population } * 20 < swatches.sumOf { it.population }) return edge
+    return coloured.maxBy { (swatch, chroma) -> swatch.population * chroma * chroma }.first.rgb
 }
 
 private const val GREY_CHROMA = 8.0

@@ -1906,7 +1906,7 @@ private fun PlayerSheet(
                                     item.mediaId,
                                     meta.title?.toString().orEmpty(),
                                     meta.artist?.toString().orEmpty(),
-                                    meta.artworkUri?.toString(),
+                                    item.metadata?.thumbnailUrl ?: meta.artworkUri?.toString(),
                                     onOpen = queueSheetState::expandSoft,
                                 ) { player.removeMediaItem(index) }
                             }
@@ -2254,7 +2254,7 @@ private fun BoxScope.CoverPeeks(shift: Animatable<Float, *>, songId: String?) {
     val player = LocalPlayerConnection.current?.player ?: return
     val (previous, next) =
         remember(songId) {
-            fun artwork(index: Int) = if (index == C.INDEX_UNSET) null else player.getMediaItemAt(index).mediaMetadata.artworkUri?.toString()
+            fun artwork(index: Int) = if (index == C.INDEX_UNSET) null else player.getMediaItemAt(index).let { it.metadata?.thumbnailUrl ?: it.mediaMetadata.artworkUri?.toString() }
             artwork(player.previousMediaItemIndex) to artwork(player.nextMediaItemIndex)
         }
     listOf(previous to -1f, next to 1f).forEach { (artwork, side) ->

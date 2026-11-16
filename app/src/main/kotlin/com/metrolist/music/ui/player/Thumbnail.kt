@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.metrolist.music.arc.MotionCover
+import com.metrolist.music.extensions.metadata
 import com.metrolist.music.arc.MusicVideoLayer
 import com.metrolist.music.arc.VideoToggle
 import com.metrolist.music.arc.ArcVideoButtonKey
@@ -617,7 +618,7 @@ private fun ThumbnailItem(
                 val artworkUriToUse = if (item.mediaId == currentMediaId && !currentMediaThumbnail.isNullOrBlank()) {
                     currentMediaThumbnail
                 } else {
-                    item.mediaMetadata.artworkUri?.toString()
+                    item.metadata?.thumbnailUrl ?: item.mediaMetadata.artworkUri?.toString()
                 }
 
                 ThumbnailImage(
