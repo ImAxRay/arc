@@ -539,7 +539,7 @@ fun ContentSettings(
         LaunchedEffect(providerOrder) {
             draggableItems.clear()
             draggableItems.addAll(
-                providerOrder.map { DraggableLyricsProviderItem(id = it, name = providerDisplayNames[it] ?: it, icon = lyricsIcon) }
+                providerOrder.filter { it in providerSwitches }.map { DraggableLyricsProviderItem(id = it, name = providerDisplayNames[it] ?: it, icon = lyricsIcon) }
             )
         }
 
@@ -561,7 +561,10 @@ fun ContentSettings(
                     DraggableLyricsProviderList(
                         items = draggableItems,
                         onItemsReordered = { items ->
-                            onLyricsProviderOrderChange(LyricsProviderRegistry.serializeProviderOrder(items.map { it.id }))
+                            // YouTube sources stay last: they are the unsynced fallback
+                            onLyricsProviderOrderChange(
+                                LyricsProviderRegistry.serializeProviderOrder(items.map { it.id } + providerOrder.filter { it !in providerSwitches })
+                            )
                         },
                         trailing = { item ->
                             providerSwitches[item.id]?.let { (on, set) -> Switch(checked = on, onCheckedChange = set) }
