@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.displayVersion
 import com.metrolist.music.arc.arcScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -122,7 +123,7 @@ fun UpdaterScreen(
                 listOf(
                     Material3SettingsItem(
                         title = {
-                            Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
+                            Text(stringResource(R.string.version_format, displayVersion(BuildConfig.VERSION_NAME)))
                         },
                         description = {
                             val arch = BuildConfig.ARCHITECTURE
@@ -183,7 +184,7 @@ fun UpdaterScreen(
                             if (isChecking) {
                                 Text(stringResource(R.string.checking_for_updates))
                             } else if (latestVersion != null) {
-                                Text(stringResource(R.string.latest_version_format, latestVersion!!))
+                                Text(stringResource(R.string.latest_version_format, displayVersion(latestVersion!!)))
                             } else {
                                 Text(stringResource(R.string.check_for_updates_button))
                             }

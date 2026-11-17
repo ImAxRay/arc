@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.arc.Usage
 import com.metrolist.music.constants.DialCornerRadius
 
 import androidx.compose.animation.core.Animatable
@@ -487,6 +488,7 @@ fun SpeedDialModule(env: HomeEnv) {
 /** A mood's mix plays at once from the dial instead of opening its page. */
 private fun playMix(env: HomeEnv, mix: YTItem) {
     if (env.isListenTogetherGuest) return env.openYtItem(mix)
+    Usage.homeTap(Usage.listKey(mix.id), mix.title)
     env.playerConnection.playQueue(YouTubeQueue((mix as? PlaylistItem)?.playEndpoint ?: WatchEndpoint(playlistId = mix.id)))
 }
 

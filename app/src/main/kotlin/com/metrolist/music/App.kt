@@ -94,6 +94,13 @@ class App :
         com.metrolist.music.lyrics.JapaneseDictionary.init(this)
         applicationScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onAppStart(this@App, database) }
         InnerTubeXPlayer.initialize(this)
+        com.metrolist.music.arc.Usage.init(this)
+        applicationScope.launch {
+            dataStore.data
+                .map { (it[com.metrolist.music.arc.ArcLearnUsageKey] ?: true) && it[com.metrolist.music.constants.PauseListenHistoryKey] != true }
+                .distinctUntilChanged()
+                .collect { com.metrolist.music.arc.Usage.enabled = it }
+        }
 
         // Pre-read Coil cache size on background to avoid runBlocking in newImageLoader
         applicationScope.launch(Dispatchers.IO) {

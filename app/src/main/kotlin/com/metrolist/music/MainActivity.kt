@@ -5,6 +5,7 @@
 
 package com.metrolist.music
 
+import com.metrolist.music.arc.displayVersion
 import com.metrolist.music.arc.swipeUpOpens
 import android.Manifest
 import android.annotation.SuppressLint
@@ -556,7 +557,7 @@ class MainActivity : FragmentActivity() {
                             if (update.isKmp) {
                                 getString(R.string.kmp_upgrade_warning)
                             } else {
-                                update.release.versionName
+                                displayVersion(update.release.versionName)
                             }
                         val notification =
                             NotificationCompat
@@ -564,7 +565,7 @@ class MainActivity : FragmentActivity() {
                                 .setSmallIcon(R.drawable.update)
                                 .setContentTitle(
                                     if (update.isKmp) {
-                                        getString(R.string.kmp_upgrade_title, update.release.versionName)
+                                        getString(R.string.kmp_upgrade_title, displayVersion(update.release.versionName))
                                     } else {
                                         getString(R.string.update_available_title)
                                     },
@@ -732,6 +733,13 @@ class MainActivity : FragmentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
 
                 val navController = rememberNavController()
+                DisposableEffect(navController) {
+                    val listener = androidx.navigation.NavController.OnDestinationChangedListener { controller, destination, args ->
+                        com.metrolist.music.arc.Usage.onScreen(controller.currentBackStackEntry?.id, destination.route, args)
+                    }
+                    navController.addOnDestinationChangedListener(listener)
+                    onDispose { navController.removeOnDestinationChangedListener(listener) }
+                }
 
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
@@ -1467,7 +1475,7 @@ class MainActivity : FragmentActivity() {
                                                     } else {
                                                         R.string.update_available_message
                                                     },
-                                                    update.release.versionName,
+                                                    displayVersion(update.release.versionName),
                                                 ),
                                             style = MaterialTheme.typography.bodyMedium,
                                         )

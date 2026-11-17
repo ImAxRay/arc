@@ -1,5 +1,9 @@
 # Arc changelog
 
+## 0.9.4a
+
+- Improved telemetry (it never leaves your phone).
+
 ## 0.9.4: Welcome home. Part 1
 
 Everything since 0.9.3.

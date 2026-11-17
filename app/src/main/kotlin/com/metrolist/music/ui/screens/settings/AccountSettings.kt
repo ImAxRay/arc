@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import com.metrolist.music.arc.displayVersion
 import com.metrolist.music.arc.arcScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -420,7 +421,7 @@ fun AccountSettings(
                         add(
                             Material3SettingsItem(
                                 title = { Text(stringResource(R.string.new_version_available)) },
-                                description = { Text(latestVersionName) },
+                                description = { Text(displayVersion(latestVersionName)) },
                                 icon = painterResource(R.drawable.update),
                                 showBadge = true,
                                 onClick = { uriHandler.openUri(downloadUrl) }

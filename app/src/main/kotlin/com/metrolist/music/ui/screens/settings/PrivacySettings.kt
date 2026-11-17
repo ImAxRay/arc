@@ -6,6 +6,13 @@
 package com.metrolist.music.ui.screens.settings
 
 import com.metrolist.music.arc.arcScroll
+import com.metrolist.music.arc.ArcLearnUsageKey
+import com.metrolist.music.arc.Usage
+import com.metrolist.music.arc.shareUsageExport
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -99,6 +106,36 @@ fun PrivacySettings(
             },
         )
     }
+
+    val (learnUsage, onLearnUsageChange) = rememberPreference(key = ArcLearnUsageKey, defaultValue = true)
+    var showForgetUsageDialog by remember { mutableStateOf(false) }
+    if (showForgetUsageDialog) {
+        DefaultDialog(
+            onDismiss = { showForgetUsageDialog = false },
+            content = {
+                Text(
+                    text = stringResource(R.string.arc_usage_forget_confirm),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                )
+            },
+            buttons = {
+                TextButton(onClick = { showForgetUsageDialog = false }) {
+                    Text(text = stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        showForgetUsageDialog = false
+                        Usage.forget()
+                    },
+                ) {
+                    Text(text = stringResource(android.R.string.ok))
+                }
+            },
+        )
+    }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var showClearSearchHistoryDialog by remember {
         mutableStateOf(false)
@@ -213,6 +250,44 @@ fun PrivacySettings(
                     icon = painterResource(R.drawable.clear_all),
                     title = { Text(stringResource(R.string.clear_search_history)) },
                     onClick = { showClearSearchHistoryDialog = true }
+                )
+            )
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.arc_usage),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.trending_up),
+                    title = { Text(stringResource(R.string.arc_usage_learn)) },
+                    description = { Text(stringResource(R.string.arc_usage_learn_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = learnUsage,
+                            onCheckedChange = onLearnUsageChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(id = if (learnUsage) R.drawable.check else R.drawable.close),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onLearnUsageChange(!learnUsage) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.share),
+                    title = { Text(stringResource(R.string.arc_usage_export)) },
+                    description = { Text(stringResource(R.string.arc_usage_export_desc)) },
+                    onClick = { scope.launch { runCatching { shareUsageExport(context, database) }.onFailure(Timber::e) } }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.delete),
+                    title = { Text(stringResource(R.string.arc_usage_forget)) },
+                    onClick = { showForgetUsageDialog = true }
                 )
             )
         )

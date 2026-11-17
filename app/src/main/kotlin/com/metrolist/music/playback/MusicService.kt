@@ -154,6 +154,7 @@ import com.metrolist.music.constants.MediaSessionConstants.CommandToggleShuffle
 import com.metrolist.music.constants.MediaSessionConstants.CommandToggleStartRadio
 import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.arc.home.ArcLastPlayedKey
+import com.metrolist.music.arc.Usage
 import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PlayerVolumeKey
@@ -1873,6 +1874,8 @@ class MusicService :
 
         currentQueue = queue
         queueTitle = null
+        // shortcut: a play from Android Auto is put on the page open in the app, if any; give queues a source to fix
+        val usageSource = queue.sourceId?.let(Usage::listKey) ?: Usage.page
         val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues && !restoringQueue) {
             player.shuffleModeEnabled = false
@@ -1896,6 +1899,7 @@ class MusicService :
                 queueTitle = initialStatus.title
             }
             if (initialStatus.items.isEmpty()) return@launch
+            if (!restoringQueue) Usage.played(usageSource, initialStatus.title)
             // Track original queue size for shuffle playlist first feature
             originalQueueSize = initialStatus.items.size
             if (queue.preloadItem != null) {
@@ -4893,6 +4897,11 @@ class MusicService :
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
             scheduleCrossfade()
+            val skippedTo = player.currentTimeline.takeUnless { it.isEmpty }
+                ?.getNextWindowIndex(oldPosition.mediaItemIndex, player.repeatMode, player.shuffleModeEnabled)
+            if (skippedTo == newPosition.mediaItemIndex && skippedTo != oldPosition.mediaItemIndex) {
+                oldPosition.mediaItem?.let { Usage.skipped(it.mediaId, it.mediaMetadata.title?.toString(), oldPosition.positionMs) }
+            }
         }
     }
 

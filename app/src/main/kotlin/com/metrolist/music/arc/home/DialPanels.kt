@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.arc.Usage
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -176,6 +177,7 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                         rolling = true
                         val landed = Random.nextInt(1, 7)
                         // the mix is fetched and played on the screen's scope, so scrolling the die away doesn't drop it
+                        Usage.homeTap("dial:dice", null)
                         env.scope.launch {
                             val start = System.currentTimeMillis()
                             store.setDice(landed)
@@ -285,6 +287,7 @@ fun MoodTile(env: HomeEnv, mood: DialPanel.Mood, active: Boolean, modifier: Modi
 fun playDiscoverRadio(env: HomeEnv, seeds: List<String>) {
     if (env.isListenTogetherGuest) return
     val seed = seeds.randomOrNull() ?: return
+    Usage.homeTap(Usage.listKey("RDATiXv$seed"), null)
     env.playerConnection.playQueue(YouTubeQueue(WatchEndpoint(videoId = seed, playlistId = "RDATiXv$seed")))
 }
 

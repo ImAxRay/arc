@@ -19,6 +19,8 @@ class YouTubeQueue(
     /** Shown as the queue's name in place of YouTube's own (the die's mixes stay a mystery). */
     private val titleOverride: String? = null,
 ) : Queue {
+    // a song's own radio (RDAMVM) is counted as the song, not as a list
+    override val sourceId = endpoint.playlistId?.takeUnless { it.startsWith("RDAMVM") }
     private var continuation: String? = null
     private var retryCount = 0
     private val maxRetries = 3

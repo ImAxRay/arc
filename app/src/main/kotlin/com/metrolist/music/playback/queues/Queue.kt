@@ -12,6 +12,9 @@ import com.metrolist.music.models.MediaMetadata
 interface Queue {
     val preloadItem: MediaMetadata?
 
+    /** The YouTube list this queue plays, for usage counting; null when it plays from a page or a single song. */
+    val sourceId: String? get() = null
+
     suspend fun getInitialStatus(): Status
 
     fun hasNextPage(): Boolean

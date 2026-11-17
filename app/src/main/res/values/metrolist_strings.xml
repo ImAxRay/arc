@@ -1373,4 +1373,12 @@
     <string name="arc_dial_plus">Guided playlist</string>
     <string name="arc_dial_mood">Mood</string>
     <string name="arc_dial_changing">Changing tile</string>
+    <string name="arc_usage">Learning from use</string>
+    <string name="arc_usage_learn">Learn from how I use Arc</string>
+    <string name="arc_usage_learn_desc">Counts what you play from, open and tap on Home, for suggestions. It never leaves your phone.</string>
+    <string name="arc_usage_export">Export usage data</string>
+    <string name="arc_usage_export_desc">Share everything Arc has counted as one JSON file</string>
+    <string name="arc_usage_forget">Forget usage data</string>
+    <string name="arc_usage_forget_confirm">Forget everything Arc has counted about how you use it? Your listen history stays.</string>
+    <string name="arc_usage_keywords">telemetry, data, export, statistics, tracking, learn, usage</string>
 </resources>

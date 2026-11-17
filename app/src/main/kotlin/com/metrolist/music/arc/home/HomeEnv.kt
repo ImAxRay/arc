@@ -1,5 +1,6 @@
 package com.metrolist.music.arc.home
 
+import com.metrolist.music.arc.Usage
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
@@ -58,6 +59,16 @@ class HomeEnv(
     fun isActive(id: String?): Boolean = id != null && id in listOf(mediaMetadata.value?.album?.id, mediaMetadata.value?.id)
 
     fun openYtItem(item: YTItem) {
+        Usage.homeTap(
+            when (item) {
+                is SongItem, is EpisodeItem -> "song:${item.id}"
+                is AlbumItem -> "album:${item.id}"
+                is ArtistItem -> "artist:${item.id}"
+                is PlaylistItem -> if (pinnedTypes.value[item.id] == "LOCAL_PLAYLIST") "local_playlist:${item.id}" else Usage.listKey(item.id)
+                is PodcastItem -> "podcast:${item.id}"
+            },
+            item.title,
+        )
         when (item) {
             is SongItem -> {
                 if (!isListenTogetherGuest) {
@@ -107,6 +118,7 @@ class HomeEnv(
     /** A library song tapped on Home: pause or resume it if it's playing, otherwise start it (with a radio if that's on). */
     fun playSong(song: Song) {
         if (isListenTogetherGuest) return
+        Usage.homeTap("song:${song.id}", song.title)
         if (song.id == mediaMetadata.value?.id) {
             playerConnection.togglePlayPause()
         } else {
@@ -129,6 +141,7 @@ class HomeEnv(
     /** A YouTube song tapped on Home: start it, with its radio if that's on. */
     fun playYtSong(song: SongItem) {
         if (isListenTogetherGuest) return
+        Usage.homeTap("song:${song.id}", song.title)
         playerConnection.playQueue(
             if (autoRadioQueue) {
                 YouTubeQueue(song.endpoint ?: WatchEndpoint(videoId = song.id), song.toMediaMetadata())
@@ -139,6 +152,8 @@ class HomeEnv(
     }
 
     fun playAll(title: String, items: List<androidx.media3.common.MediaItem>) {
-        if (!isListenTogetherGuest && items.isNotEmpty()) playerConnection.playQueue(ListQueue(title = title, items = items))
+        if (isListenTogetherGuest || items.isEmpty()) return
+        Usage.homeTap("module:$title", title)
+        playerConnection.playQueue(ListQueue(title = title, items = items))
     }
 }
