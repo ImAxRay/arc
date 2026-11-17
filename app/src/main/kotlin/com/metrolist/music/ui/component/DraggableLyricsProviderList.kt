@@ -46,6 +46,7 @@ fun DraggableLyricsProviderList(
     items: MutableList<DraggableLyricsProviderItem>,
     onItemsReordered: (List<DraggableLyricsProviderItem>) -> Unit,
     modifier: Modifier = Modifier,
+    trailing: @Composable (DraggableLyricsProviderItem) -> Unit = {},
 ) {
     val lazyListState = rememberLazyListState()
     var hasDragged by remember { mutableStateOf(false) }
@@ -107,6 +108,7 @@ fun DraggableLyricsProviderList(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
+                        trailing(item)
                     }
                 }
             }
