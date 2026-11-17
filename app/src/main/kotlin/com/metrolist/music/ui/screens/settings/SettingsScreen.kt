@@ -83,17 +83,20 @@ fun SettingsScreen(
         RecentSettings(navController)
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_listening),
+            icon = painterResource(R.drawable.headphones),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.tune),
                     title = { Text(stringResource(R.string.arc_settings_sound)) },
                     description = { Text(stringResource(R.string.arc_settings_sound_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/sound") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.queue_music),
                     title = { Text(stringResource(R.string.arc_settings_queue)) },
                     description = { Text(stringResource(R.string.arc_settings_queue_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/queue") }
                 ))
                 if (hasAndroidAuto) {
@@ -101,6 +104,7 @@ fun SettingsScreen(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.ic_android_auto),
                             title = { Text(stringResource(R.string.android_auto)) },
+                            opensPage = true,
                             onClick = { navController.navigate("settings/android_auto") }
                         )
                     )
@@ -112,17 +116,20 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_look),
+            icon = painterResource(R.drawable.palette),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.palette),
                     title = { Text(stringResource(R.string.appearance)) },
                     description = { Text(stringResource(R.string.arc_settings_appearance_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/appearance") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.library_music),
                     title = { Text(stringResource(R.string.arc_settings_library)) },
                     description = { Text(stringResource(R.string.arc_settings_library_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/library") }
                 ))
             }
@@ -132,21 +139,25 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.lyrics),
+            icon = painterResource(R.drawable.lyrics),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
                     title = { Text(stringResource(R.string.lyrics)) },
                     description = { Text(stringResource(R.string.arc_settings_lyrics_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/lyrics") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.language_korean_latin),
                     title = { Text(stringResource(R.string.lyrics_romanization)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/content/romanization") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.translate),
                     title = { Text(stringResource(R.string.ai_lyrics_translation)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/ai") }
                 ))
             }
@@ -156,33 +167,39 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_sources),
+            icon = painterResource(R.drawable.library_music),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.language),
                     title = { Text(stringResource(R.string.arc_settings_region)) },
                     description = { Text(stringResource(R.string.arc_settings_region_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/region") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.cloud),
                     title = { Text(stringResource(R.string.arc_drive)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/drive") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.graphic_eq),
                     title = { Text(stringResource(R.string.arc_addons)) },
                     description = { Text(stringResource(R.string.arc_beta)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/addons") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.library_music),
                     title = { Text(stringResource(R.string.arc_untitled)) },
                     description = { Text(stringResource(R.string.arc_beta)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/untitled") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.integration),
                     title = { Text(stringResource(R.string.integrations)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/integrations") }
                 ))
             }
@@ -192,20 +209,24 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_your_data),
+            icon = painterResource(R.drawable.storage),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.security),
                     title = { Text(stringResource(R.string.privacy)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/privacy") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.storage),
                     title = { Text(stringResource(R.string.storage)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/storage") }
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.restore),
                     title = { Text(stringResource(R.string.backup_restore)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/backup_restore") }
                 ))
             }
@@ -216,6 +237,7 @@ fun SettingsScreen(
         // System & About Section
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_app),
+            icon = painterResource(R.drawable.settings),
             items = buildList {
                 if (isAndroid12OrLater) {
                     add(
@@ -266,6 +288,7 @@ fun SettingsScreen(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.update),
                             title = { Text(stringResource(R.string.updater)) },
+                            opensPage = true,
                             onClick = { navController.navigate("settings/updater") }
                         )
                     )

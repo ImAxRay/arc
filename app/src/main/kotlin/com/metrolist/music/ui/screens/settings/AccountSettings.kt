@@ -307,6 +307,7 @@ fun AccountSettings(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.switch_youtube_channel)) },
                         icon = painterResource(R.drawable.account),
+                        opensPage = true,
                         onClick = {
                             onClose()
                             navController.navigate("switch_channel")
@@ -395,6 +396,7 @@ fun AccountSettings(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.integrations)) },
                         icon = painterResource(R.drawable.integration),
+                        opensPage = true,
                         onClick = {
                             onClose()
                             navController.navigate("settings/integrations")
@@ -407,6 +409,7 @@ fun AccountSettings(
                         icon = painterResource(R.drawable.settings),
                         showBadge = BuildConfig.UPDATER_AVAILABLE &&
                             latestVersionName != BuildConfig.BASE_VERSION_NAME,
+                        opensPage = true,
                         onClick = {
                             onClose()
                             navController.navigate("settings")

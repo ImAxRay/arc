@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.component
 
+import com.metrolist.music.arc.scrollRow
 import com.metrolist.music.arc.scrollSection
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -33,7 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.metrolist.music.R
 import com.metrolist.music.arc.settingsHighlight
 
 /**
@@ -45,7 +49,8 @@ import com.metrolist.music.arc.settingsHighlight
 fun Material3SettingsGroup(
     title: String? = null,
     items: List<Material3SettingsItem>,
-    useLowContrast: Boolean = false
+    useLowContrast: Boolean = false,
+    icon: Painter? = null,
 ) {
     Column(
         modifier = Modifier
@@ -55,18 +60,27 @@ fun Material3SettingsGroup(
     ) {
         // Section title
         title?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 10.dp),
+            ) {
+                if (icon != null) {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
 
         // Settings items
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             items.forEachIndexed { index, item ->
                 val shape = when {
@@ -181,7 +195,7 @@ private fun Material3SettingsItemRow(
                         MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                item.title()
+                Box(Modifier.scrollRow()) { item.title() }
             }
 
             // Description if provided
@@ -205,6 +219,15 @@ private fun Material3SettingsItemRow(
             Spacer(modifier = Modifier.width(8.dp))
             trailing()
         }
+        if (item.opensPage && item.trailingContent == null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painterResource(R.drawable.navigate_next),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (item.enabled) 0.6f else 0.3f),
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 
@@ -220,5 +243,6 @@ data class Material3SettingsItem(
     val showBadge: Boolean = false,
     val isHighlighted: Boolean = false,
     val enabled: Boolean = true,
+    val opensPage: Boolean = false,
     val onClick: (() -> Unit)? = null
 )

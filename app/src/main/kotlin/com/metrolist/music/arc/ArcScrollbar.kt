@@ -50,6 +50,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalViewConfiguration
+import android.view.View
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -61,7 +72,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.roundToInt
 
 private class ScrollProxy(
@@ -77,12 +90,24 @@ private class ScrollProxy(
 /** A named stretch of a scrolling page, starting this far down it (0 top, 1 bottom). */
 private class Section(val name: String, val at: Float)
 
+/** A settings group's rows while the bar is held, laid out as slots: the group's name at -1, then each row. */
+private class Fan(val group: String, val starts: List<Float>, val labels: List<TextLayoutResult>) {
+    /** Where [f] sits among the slots, continuous, -1 at the group's own top. */
+    fun slot(f: Float): Float {
+        val i = starts.indexOfLast { it <= f }.coerceAtLeast(0)
+        val from = starts[i]
+        val to = starts.getOrElse(i + 1) { 1f }
+        return i - 1 + if (to > from) ((f - from) / (to - from)).coerceIn(0f, 1f) else 0f
+    }
+}
+
 /**
  * The titled groups on the page being scrolled, so its scroll bar can name the group under the finger the way
  * Niagara's side strip does. Provided around a settings page; each settings group adds itself.
  */
 class ScrollSections {
     internal val groups = mutableStateMapOf<String, LayoutCoordinates>()
+    internal val rows = mutableSetOf<LayoutCoordinates>()
     internal var viewport: LayoutCoordinates? = null
 }
 
@@ -97,10 +122,42 @@ fun Modifier.scrollSection(title: String?): Modifier {
     return onGloballyPositioned { sections.groups[title] = it }
 }
 
+/** Puts a settings row's title on the page's scroll bar, shown around the finger while the bar is held. */
+@Composable
+fun Modifier.scrollRow(): Modifier {
+    val sections = LocalScrollSections.current ?: return this
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(sections) { onDispose { placed[0]?.let(sections.rows::remove) } }
+    return onPlaced {
+        if (placed[0] !== it) placed[0]?.let(sections.rows::remove)
+        placed[0] = it
+        sections.rows += it
+    }
+}
+
+/** Row titles read off the semantics tree, the way the settings search finds its row, since items hold composable titles. */
+private fun rowTitles(view: View, rows: Collection<LayoutCoordinates>): List<Pair<LayoutCoordinates, String>> {
+    val root = (view as? RootForTest)?.semanticsOwner?.unmergedRootSemanticsNode ?: return emptyList()
+    val texts = ArrayList<Pair<Offset, String>>()
+    fun walk(node: SemanticsNode) {
+        node.config.getOrNull(SemanticsProperties.Text)?.let { t -> texts += node.positionInRoot to t.joinToString(" ") { it.text } }
+        node.children.forEach(::walk)
+    }
+    walk(root)
+    return rows.filter { it.isAttached }.mapNotNull { row ->
+        val at = row.positionInRoot()
+        val text = texts.firstOrNull { (p, _) ->
+            p.x >= at.x - 1f && p.x < at.x + row.size.width && p.y >= at.y - 1f && p.y < at.y + row.size.height
+        }?.second
+        if (text.isNullOrBlank()) null else row to text
+    }
+}
+
 /** [verticalScroll] with Arc's scroll bar: the line with its dot, shown while scrolling, naming the page's groups. */
 @Composable
 fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: PaddingValues = PaddingValues()): Modifier {
     val sections = LocalScrollSections.current
+    val view = LocalView.current
     val density = LocalDensity.current
     val edgeTop = with(density) { insets.calculateTopPadding().toPx() + 12.dp.toPx() }
     val edgeBottom = with(density) { insets.calculateBottomPadding().toPx() + 12.dp.toPx() }
@@ -112,25 +169,23 @@ fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: Paddi
             jump = { state.scrollTo((it * state.maxValue).roundToInt()) },
         )
     }
+    // The handle at f sits beside the page at edgeTop + f * (max + span), so a group or row is named where it passes the handle.
+    fun fractionOf(coords: LayoutCoordinates): Float? {
+        val viewport = sections?.viewport
+        val max = state.maxValue
+        if (viewport == null || !viewport.isAttached || !coords.isAttached || max !in 1 until Int.MAX_VALUE) return null
+        val span = viewport.size.height - edgeTop - edgeBottom
+        val y = viewport.localPositionOf(coords, Offset.Zero).y + state.value
+        return ((y - edgeTop) / (max + span)).coerceIn(0f, 1f)
+    }
     val named: (() -> List<Section>)? = sections?.let { s ->
-        {
-            val viewport = s.viewport
-            val max = state.maxValue
-            if (viewport == null || !viewport.isAttached || max !in 1 until Int.MAX_VALUE) {
-                emptyList()
-            } else {
-                // The handle at f sits beside the page at edgeTop + f * (max + span), so a group is named and marked where it passes the handle.
-                val span = viewport.size.height - edgeTop - edgeBottom
-                s.groups.mapNotNull { (name, coords) ->
-                    if (!coords.isAttached) return@mapNotNull null
-                    val y = viewport.localPositionOf(coords, Offset.Zero).y + state.value
-                    Section(name, ((y - edgeTop) / (max + span)).coerceIn(0f, 1f))
-                }.sortedBy { it.at }
-            }
-        }
+        { s.groups.mapNotNull { (name, coords) -> fractionOf(coords)?.let { Section(name, it) } }.sortedBy { it.at } }
+    }
+    val rows: (() -> List<Section>)? = sections?.let { s ->
+        { rowTitles(view, s.rows.toList()).mapNotNull { (coords, title) -> fractionOf(coords)?.let { Section(title, it) } }.sortedBy { it.at } }
     }
     val placed = if (sections != null) Modifier.onPlaced { sections.viewport = it } else Modifier
-    return arcScrollbar(proxy, insets, label = null, sectionsOf = named, persistent = false).then(placed).verticalScroll(state)
+    return arcScrollbar(proxy, insets, label = null, sectionsOf = named, persistent = false, rowsOf = rows).then(placed).verticalScroll(state)
 }
 
 /**
@@ -223,6 +278,7 @@ private fun Modifier.arcScrollbar(
     label: ((Int) -> String?)?,
     sectionsOf: (() -> List<Section>)?,
     persistent: Boolean,
+    rowsOf: (() -> List<Section>)? = null,
 ): Modifier {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -247,6 +303,17 @@ private fun Modifier.arcScrollbar(
     val grab by animateFloatAsState(if (dragging) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "scrollGrab")
     val count by remember(proxy) { derivedStateOf { proxy.count() } }
     val handle = persistent && count >= HANDLE_FROM_ITEMS
+    val still by rememberUpdatedState(rememberVisualsStill())
+    val currentRows by rememberUpdatedState(rowsOf)
+    val surface = MaterialTheme.colorScheme.surfaceContainerHigh
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onAccent = MaterialTheme.colorScheme.onPrimary
+    // Laid out once per drag start; the measurer's own cache is too small for a page of rows.
+    var fan by remember { mutableStateOf<Fan?>(null) }
+    var fanRows by remember { mutableStateOf<List<Section>>(emptyList()) }
+    val nameLayouts = remember { HashMap<String, TextLayoutResult>() }
+    val back = remember { Animatable(1f) }
+    var releasedAt by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(proxy) {
         var first = true
@@ -269,6 +336,32 @@ private fun Modifier.arcScrollbar(
     fun nameAt(f: Float): String? {
         currentLabel?.let { l -> return l(proxy.indexAt(f)) }
         return currentSections?.invoke()?.lastOrNull { it.at <= f + 0.001f }?.name
+    }
+
+    val labelMax = with(density) { 220.dp.roundToPx() }
+    fun layout(text: String, size: Float, weight: FontWeight, caps: Boolean = false) = measurer.measure(
+        if (caps) text.uppercase() else text,
+        TextStyle(fontSize = size.sp, fontWeight = weight, letterSpacing = if (caps) 1.2.sp else 0.sp),
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1,
+        constraints = Constraints(maxWidth = labelMax),
+    )
+
+    /** The fan for the group under [f]: its name and its rows' titles, laid out once. */
+    fun fanAt(f: Float): Fan? {
+        val groups = currentSections?.invoke().orEmpty()
+        val gi = groups.indexOfLast { it.at <= f + 0.001f }
+        if (gi < 0) return null
+        val group = groups[gi]
+        if (fan?.group == group.name) return fan
+        val end = groups.getOrNull(gi + 1)?.at ?: 1.01f
+        val rows = fanRows.filter { it.at >= group.at && it.at < end }
+        if (rows.isEmpty()) return null
+        return Fan(
+            group.name,
+            listOf(group.at) + rows.map { it.at },
+            listOf(layout(group.name, 11f, FontWeight.Medium, caps = true)) + rows.map { layout(it.name, 14f, FontWeight.Normal) },
+        )
     }
 
     return this
@@ -300,6 +393,8 @@ private fun Modifier.arcScrollbar(
                             val moved = change.position - down.position
                             if (abs(moved.y) > slop && abs(moved.y) > abs(moved.x)) {
                                 taken = true
+                                fanRows = currentRows?.invoke().orEmpty()
+                                fan = null
                                 dragging = true
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             } else if (abs(moved.x) > slop) {
@@ -312,7 +407,12 @@ private fun Modifier.arcScrollbar(
                         dragFraction = ((change.position.y - offset - top) / span).coerceIn(0f, 1f)
                         val f = dragFraction
                         scope.launch { proxy.jump(f) }
-                        val name = nameAt(f)
+                        val name = if (fanRows.isNotEmpty()) {
+                            fan = fanAt(f)
+                            fan?.let { "${it.group}/${it.slot(f).roundToInt().coerceAtLeast(0)}" } ?: nameAt(f)
+                        } else {
+                            nameAt(f)
+                        }
                         if (name != lastName) {
                             if (lastName != null) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                             lastName = name
@@ -321,8 +421,17 @@ private fun Modifier.arcScrollbar(
                         change.consume()
                     }
                 } finally {
+                    if (fan != null) {
+                        releasedAt = dragFraction
+                        if (!still) scope.launch {
+                            back.snapTo(0f)
+                            back.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 260f))
+                        }
+                    }
                     dragging = false
                     dragLabel = null
+                    fan = null
+                    fanRows = emptyList()
                 }
             }
         }
@@ -336,11 +445,19 @@ private fun Modifier.arcScrollbar(
             val y = top + span * fraction
             val inset = if (handle) 14.dp.toPx() else 6.dp.toPx()
             val x = if (rtl) inset else size.width - inset
+            val fanNow = fan?.takeIf { dragging }
             if (alpha > 0f) {
-                currentSections?.invoke().orEmpty().forEach { m ->
+                val marks = currentSections?.invoke().orEmpty()
+                marks.forEach { m ->
                     val ty = top + span * m.at
                     drawLine(line.copy(alpha = (0.22f + 0.4f * grab) * alpha), Offset(x - 5.dp.toPx(), ty), Offset(x + 5.dp.toPx(), ty), 1.5.dp.toPx())
                 }
+                if (rowsOf != null && fanNow == null) {
+                    drawGroupNames(marks, nameLayouts, ::layout, x, top, span, rtl, alpha, back.value, releasedAt, surface, accent)
+                }
+            }
+            if (fanNow != null) {
+                drawFan(fanNow, fanNow.slot(dragFraction), x, y, rtl, still, surface, onSurface, accent, onAccent)
             }
             if (handle) {
                 if (alpha > 0f) drawPill(line.copy(alpha = 0.12f * alpha), x, top, top + span, 2.dp.toPx())
@@ -351,8 +468,86 @@ private fun Modifier.arcScrollbar(
                 drawPill((if (dragging) accent else line).copy(alpha = (if (dragging) 1f else 0.55f) * alpha), x, top, y, width)
                 drawCircle(if (dragging) accent else line.copy(alpha = 0.8f * alpha), radius = 3.dp.toPx() + 5.dp.toPx() * grab, center = Offset(x, y))
             }
-            dragLabel?.let { drawBubble(measurer, it, if (rtl) x + 16.dp.toPx() else x - 16.dp.toPx(), y, rtl, bubble, onBubble) }
+            if (fanNow == null) dragLabel?.let { drawBubble(measurer, it, if (rtl) x + 16.dp.toPx() else x - 16.dp.toPx(), y, rtl, bubble, onBubble) }
         }
+}
+
+/** Group names beside their marks; after a held fan, they come back in from above and below the release point. */
+private fun DrawScope.drawGroupNames(
+    marks: List<Section>,
+    cache: HashMap<String, TextLayoutResult>,
+    layout: (String, Float, FontWeight, Boolean) -> TextLayoutResult,
+    x: Float,
+    top: Float,
+    span: Float,
+    rtl: Boolean,
+    alpha: Float,
+    back: Float,
+    releasedAt: Float,
+    fill: Color,
+    ink: Color,
+) {
+    val gap = 4.dp.toPx()
+    val padX = 8.dp.toPx()
+    val padY = 3.dp.toPx()
+    val edge = 14.dp.toPx()
+    var floor = Float.NEGATIVE_INFINITY
+    marks.forEach { m ->
+        val text = cache.getOrPut(m.name) { layout(m.name, 10f, FontWeight.Medium, true) }
+        val h = text.size.height + padY * 2
+        val w = text.size.width + padX * 2
+        // pushed down so close groups don't overlap; shortcut: a crowded bottom can run past the track, fine for settings pages
+        val cy = maxOf(top + span * m.at, floor + h / 2)
+        floor = cy + h / 2 + gap
+        val from = if (m.at <= releasedAt) -1f else 1f
+        val shown = cy + from * (1f - back) * span * 0.6f
+        val left = if (rtl) x + edge else x - edge - w
+        val a = alpha * back
+        drawRoundRect(fill.copy(alpha = 0.92f * a), Offset(left, shown - h / 2), Size(w, h), CornerRadius(h / 2))
+        drawText(text, color = ink.copy(alpha = a), topLeft = Offset(left + padX, shown - h / 2 + padY))
+    }
+}
+
+/**
+ * The held group's rows stacked along the edge, the one beside the finger in an accent pill; like Niagara's letters,
+ * rows near the finger bulge away from the edge on a curve (flat in Saver).
+ */
+private fun DrawScope.drawFan(
+    fan: Fan,
+    slot: Float,
+    x: Float,
+    fingerY: Float,
+    rtl: Boolean,
+    still: Boolean,
+    fill: Color,
+    ink: Color,
+    accent: Color,
+    onAccent: Color,
+) {
+    val pitch = 34.dp.toPx()
+    val edge = 22.dp.toPx()
+    val bulge = if (still) 0f else 44.dp.toPx()
+    val padX = 12.dp.toPx()
+    val padY = 5.dp.toPx()
+    val current = slot.roundToInt().coerceAtLeast(0)
+    fan.labels.forEachIndexed { index, text ->
+        val i = index - 1
+        val d = abs(i - slot)
+        val near = if (d < 3f) cos(d / 3f * (PI / 2)).toFloat() else 0f
+        val cy = fingerY + (i - slot) * pitch
+        if (cy < -pitch || cy > size.height + pitch) return@forEachIndexed
+        val grow = if (still) 1f else 1f + 0.18f * near
+        val w = text.size.width + padX * 2
+        val h = text.size.height + padY * 2
+        val off = edge + bulge * near
+        val left = if (rtl) x + off else x - off - w
+        val picked = i == current
+        val a = if (picked) 1f else 0.45f + 0.55f * near
+        withTransform({ scale(grow, grow, Offset(if (rtl) left else left + w, cy)) }) {
+            if (i >= 0) drawRoundRect((if (picked) accent else fill).copy(alpha = if (picked) 1f else 0.95f * a), Offset(left, cy - h / 2), Size(w, h), CornerRadius(h / 2))
+            drawText(text, color = if (picked) onAccent else if (i < 0) accent.copy(alpha = a) else ink.copy(alpha = a), topLeft = Offset(left + padX, cy - text.size.height / 2))
+        }
+    }
 }
 
 private fun DrawScope.drawHandle(x: Float, y: Float, fill: Color, ink: Color, scale: Float) {

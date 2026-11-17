@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -66,6 +67,7 @@ fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
     val phoneSaver by Visuals.phoneSaver.collectAsState()
     Material3SettingsGroup(
         title = stringResource(R.string.arc_visual_mode),
+        icon = painterResource(R.drawable.contrast),
         items = listOfNotNull(
             Material3SettingsItem(
                 title = {
@@ -85,6 +87,7 @@ fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
                     icon = painterResource(R.drawable.tune),
                     title = { Text(stringResource(R.string.arc_visual_fine_tune)) },
                     description = { Text(stringResource(R.string.arc_visual_fine_tune_desc)) },
+                    opensPage = true,
                     onClick = { navController.navigate("settings/visual") },
                 )
             } else null,
@@ -97,7 +100,7 @@ fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
 private fun VisualModeSteps(mode: VisualMode, onPick: (VisualMode) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(colors.surfaceContainerHighest).padding(4.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.surfaceContainerHighest).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         VisualMode.entries.forEach { step ->
@@ -107,17 +110,29 @@ private fun VisualModeSteps(mode: VisualMode, onPick: (VisualMode) -> Unit) {
                 Modifier
                     .weight(1f)
                     .tapBounce(tick = false)
-                    .clip(RoundedCornerShape(50))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(fill)
                     .clickable { onPick(step) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    stringResource(step.label),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) colors.onPrimary else colors.onSurfaceVariant,
-                )
+                val ink = if (selected) colors.onPrimary else colors.onSurfaceVariant
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painterResource(
+                            when (step) {
+                                VisualMode.SAVER -> R.drawable.speed
+                                VisualMode.NORMAL -> R.drawable.palette
+                                VisualMode.FULL -> R.drawable.gradient
+                            },
+                        ),
+                        null,
+                        tint = ink,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(stringResource(step.label), style = MaterialTheme.typography.labelLarge, color = ink)
+                }
             }
         }
     }
@@ -158,6 +173,7 @@ fun VisualSettings(navController: NavController) {
         VisualModeControl(navController, fineTune = false)
         Material3SettingsGroup(
             title = stringResource(R.string.home),
+            icon = painterResource(R.drawable.home_outlined),
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.gradient),
@@ -173,6 +189,7 @@ fun VisualSettings(navController: NavController) {
         Spacer(Modifier.height(27.dp))
         Material3SettingsGroup(
             title = stringResource(R.string.arc_visual_covers),
+            icon = painterResource(R.drawable.album),
             items = listOfNotNull(
                 switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCovers, enabled = !locked),
                 switchItem(R.drawable.slow_motion_video, R.string.arc_motion_covers, R.string.arc_motion_covers_desc, motionCovers, onMotionCovers, enabled = !locked),

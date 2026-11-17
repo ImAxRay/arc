@@ -368,10 +368,12 @@ fun PlayerSettings(
         if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.player),
+                icon = painterResource(R.drawable.play),
                 items = buildList {
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.equalizer),
                         title = { Text(stringResource(R.string.equalizer)) },
+                        opensPage = true,
                         onClick = { navController.navigate("equalizer") }
                     ))
                     add(Material3SettingsItem(
@@ -777,6 +779,7 @@ fun PlayerSettings(
         if (section == "queue") {
             Material3SettingsGroup(
                 title = stringResource(R.string.sleep_timer),
+                icon = painterResource(R.drawable.bedtime),
                 items = buildList {
                     add(
                         Material3SettingsItem(
@@ -892,6 +895,7 @@ fun PlayerSettings(
         if (section == "queue") {
             Material3SettingsGroup(
                 title = stringResource(R.string.queue),
+                icon = painterResource(R.drawable.queue_music),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.shuffle),
@@ -1139,6 +1143,7 @@ fun PlayerSettings(
         if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.misc),
+                icon = painterResource(R.drawable.more_horiz),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.clear_all),

@@ -306,6 +306,7 @@ fun AppearanceSettings(
                         title = { Text(stringResource(R.string.theme)) },
                         // The theme screen's Dynamic palette is what turns cover colours on, so the row says which is in use.
                         description = { Text(stringResource(if (dynamicTheme) R.string.arc_theme_from_cover else R.string.theme_desc)) },
+                        opensPage = true,
                         onClick = { navController.navigate("settings/appearance/theme") },
                     ),
                     Material3SettingsItem(
