@@ -353,12 +353,6 @@ fun NavGraphBuilder.navigationBuilder(
         }
     }
 
-    composable("settings/visual") {
-        com.metrolist.music.arc.WithScrollSections {
-            com.metrolist.music.arc.VisualSettings(navController)
-        }
-    }
-
     composable("settings/appearance") {
         com.metrolist.music.arc.WithScrollSections {
             AppearanceSettings(navController, snackbarHostState)

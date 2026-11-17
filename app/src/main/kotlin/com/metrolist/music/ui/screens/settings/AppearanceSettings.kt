@@ -61,6 +61,9 @@ import com.metrolist.music.arc.ArcAudioDetailsKey
 import com.metrolist.music.arc.DialGlyph
 import com.metrolist.music.arc.HomeBackdropAsSet
 import com.metrolist.music.arc.ThemeSwatches
+import com.metrolist.music.arc.VisualEffects
+import com.metrolist.music.arc.VisualModeControl
+import com.metrolist.music.arc.rememberVisualsStill
 import com.metrolist.music.arc.SearchMicKey
 import com.metrolist.music.arc.resetHints
 import com.metrolist.music.constants.ChipSortTypeKey
@@ -70,7 +73,6 @@ import com.metrolist.music.constants.DensityScale
 import com.metrolist.music.constants.DensityScaleKey
 import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.constants.EnableDynamicIconKey
-import com.metrolist.music.constants.EnableHighRefreshRateKey
 import com.metrolist.music.constants.EnableLandscapeScalingKey
 import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.ForceBottomNavBarKey
@@ -151,11 +153,6 @@ fun AppearanceSettings(
         onEnableDynamicIconPrefChange(newValue)
         IconUtils.setIcon(iconContext, newValue)
     }
-    val (enableHighRefreshRate, onEnableHighRefreshRateChange) =
-        rememberPreference(
-            EnableHighRefreshRateKey,
-            defaultValue = true,
-        )
     val (selectedThemeColorInt) =
         rememberPreference(
             SelectedThemeColorKey,
@@ -295,22 +292,28 @@ fun AppearanceSettings(
         }
     }
 
-    HomeBackdropAsSet()
+    var picking by rememberSaveable { mutableStateOf(false) }
+    val locked = rememberVisualsStill()
+    // the picker sheet shows its own copy
+    HomeBackdropAsSet(paused = picking)
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
             .arcScroll()
             .padding(horizontal = 16.dp),
     ) {
+        VisualModeControl(navController, fineTune = false)
+        VisualEffects(picking) { picking = it }
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_look),
+            icon = painterResource(R.drawable.palette),
             items =
                 listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.palette),
                         title = { Text(stringResource(R.string.theme)) },
                         // The theme screen's Dynamic palette is what turns cover colours on, so the row says which is in use.
-                        description = { Text(stringResource(if (dynamicTheme) R.string.arc_theme_from_cover else R.string.theme_desc)) },
+                        description = { Text(stringResource(if (dynamicTheme && !locked) R.string.arc_theme_from_cover else R.string.theme_desc)) },
                         trailingContent = { ThemeSwatches() },
                         opensPage = true,
                         onClick = { navController.navigate("settings/appearance/theme") },
@@ -321,7 +324,6 @@ fun AppearanceSettings(
                         description = { Text(DensityScale.fromValue(densityScale).label) },
                         onClick = { showDensityScaleDialog = true },
                     ),
-                    switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange, enabled = !com.metrolist.music.arc.rememberVisualsStill()),
                     switchItem(R.drawable.palette, R.string.enable_dynamic_icon, R.string.enable_dynamic_icon_desc, enableDynamicIcon, onEnableDynamicIconChange),
                 ),
         )
@@ -330,6 +332,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.home),
+            icon = painterResource(R.drawable.home_outlined),
             items =
                 listOf(
                     Material3SettingsItem(
@@ -361,6 +364,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.player),
+            icon = painterResource(R.drawable.play),
             items =
                 listOf(
                     switchItem(R.drawable.info, R.string.arc_audio_details, R.string.arc_audio_details_desc, audioDetails, onAudioDetailsChange),
@@ -371,6 +375,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_library_search),
+            icon = painterResource(R.drawable.library_music),
             items =
                 listOf(
                     Material3SettingsItem(

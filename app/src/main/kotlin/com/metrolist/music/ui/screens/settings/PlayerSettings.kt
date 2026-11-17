@@ -660,7 +660,7 @@ fun PlayerSettings(
                             }
                         }
                     ),
-                    switchItem(R.drawable.screenshot, R.string.arc_keep_screen_on, R.string.arc_keep_screen_on_desc, keepScreenOn, onKeepScreenOnChange),
+                    switchItem(R.drawable.screenshot, R.string.arc_keep_screen_on, R.string.arc_keep_screen_on_desc, keepScreenOn, onKeepScreenOnChange, enabled = !com.metrolist.music.arc.rememberVisualsStill()),
                     switchItem(R.drawable.volume_off_pause, R.string.pause_music_when_media_is_muted, null, pauseOnMute, onPauseOnMuteChange),
                     switchItem(R.drawable.bluetooth, R.string.resume_on_bluetooth_connect, null, resumeOnBluetoothConnect, onResumeOnBluetoothConnectChange),
                     switchItem(R.drawable.clear_all, R.string.stop_music_on_task_clear, null, stopMusicOnTaskClear, onStopMusicOnTaskClearChange),
