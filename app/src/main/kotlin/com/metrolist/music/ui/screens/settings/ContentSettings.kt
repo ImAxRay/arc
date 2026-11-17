@@ -12,7 +12,9 @@ import com.metrolist.music.constants.ShowLikedPlaylistKey
 import com.metrolist.music.constants.ShowTopPlaylistKey
 import com.metrolist.music.constants.ShowUploadedPlaylistKey
 import com.metrolist.music.arc.arcScroll
+import com.metrolist.music.arc.switchItem
 import android.content.Intent
+import android.app.LocaleManager
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
@@ -220,11 +222,12 @@ fun ContentSettings(
         var tempProxyUsername by rememberSaveable { mutableStateOf(proxyUsername) }
         var tempProxyPassword by rememberSaveable { mutableStateOf(proxyPassword) }
         var authEnabled by rememberSaveable { mutableStateOf(proxyUsername.isNotBlank() || proxyPassword.isNotBlank()) }
+        var tempEnabled by rememberSaveable { mutableStateOf(proxyEnabled) }
 
         AlertDialog(
             onDismissRequest = { showProxyConfigurationDialog = false },
             title = {
-                Text(stringResource(R.string.config_proxy))
+                Text(stringResource(R.string.proxy))
             },
             text = {
                 Column(
@@ -233,6 +236,19 @@ fun ContentSettings(
                         .arcScroll(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.enable_proxy))
+                        Switch(checked = tempEnabled, onCheckedChange = { tempEnabled = it })
+                    }
+                    Text(
+                        stringResource(R.string.restart_to_take_effect),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     ExposedDropdownMenuBox(
                         expanded = expandedDropdown,
                         onExpandedChange = { expandedDropdown = !expandedDropdown },
@@ -313,6 +329,7 @@ fun ContentSettings(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        onProxyEnabledChange(tempEnabled)
                         onProxyUrlChange(tempProxyUrl)
                         onProxyUsernameChange(if (authEnabled) tempProxyUsername else "")
                         onProxyPasswordChange(if (authEnabled) tempProxyPassword else "")
@@ -329,6 +346,23 @@ fun ContentSettings(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    val videoFilter = if (hideVideoSongs) 2 else if (hideYoutubeShorts) 1 else 0
+    var showVideosDialog by rememberSaveable { mutableStateOf(false) }
+    if (showVideosDialog) {
+        EnumDialog(
+            onDismiss = { showVideosDialog = false },
+            onSelect = {
+                onHideVideoSongsChange(it == 2)
+                onHideYoutubeShortsChange(it >= 1)
+                showVideosDialog = false
+            },
+            title = stringResource(R.string.arc_videos),
+            current = videoFilter,
+            values = listOf(0, 1, 2),
+            valueText = { stringResource(videosLabel(it)) }
         )
     }
 
@@ -774,15 +808,39 @@ fun ContentSettings(
     ) {
         if (section == null || section == "region") {
             Material3SettingsGroup(
-                title = stringResource(R.string.general),
+                title = stringResource(R.string.arc_language),
+                icon = painterResource(R.drawable.language),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.language),
-                        title = { Text(stringResource(R.string.content_language)) },
+                        title = { Text(stringResource(R.string.app_language)) },
                         description = {
                             Text(
-                                LanguageCodeToName.getOrElse(contentLanguage) { stringResource(R.string.system_default) }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    context.getSystemService(LocaleManager::class.java).applicationLocales
+                                        .takeUnless { it.isEmpty }?.get(0)?.let { it.getDisplayName(it) }
+                                        ?: stringResource(R.string.system_default)
+                                } else {
+                                    LanguageCodeToName.getOrElse(appLanguage) { stringResource(R.string.system_default) }
+                                }
                             )
+                        },
+                        opensPage = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_LOCALE_SETTINGS, "package:${context.packageName}".toUri())
+                                )
+                            } else {
+                                showAppLanguageDialog = true
+                            }
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.translate),
+                        title = { Text(stringResource(R.string.content_language)) },
+                        description = {
+                            Text(LanguageCodeToName.getOrElse(contentLanguage) { stringResource(R.string.system_default) })
                         },
                         onClick = { showContentLanguageDialog = true }
                     ),
@@ -790,71 +848,42 @@ fun ContentSettings(
                         icon = painterResource(R.drawable.location_on),
                         title = { Text(stringResource(R.string.content_country)) },
                         description = {
-                            Text(
-                                CountryCodeToName.getOrElse(contentCountry) { stringResource(R.string.system_default) }
-                            )
+                            Text(CountryCodeToName.getOrElse(contentCountry) { stringResource(R.string.system_default) })
                         },
                         onClick = { showContentCountryDialog = true }
                     ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.explicit),
-                        title = { Text(stringResource(R.string.hide_explicit)) },
-                        trailingContent = {
-                            Switch(
-                                checked = hideExplicit,
-                                onCheckedChange = onHideExplicitChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (hideExplicit) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onHideExplicitChange(!hideExplicit) }
-                    ),
+                )
+            )
+
+            Spacer(modifier = Modifier.height(27.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.arc_filters),
+                icon = painterResource(R.drawable.tune),
+                items = listOf(
+                    switchItem(R.drawable.explicit, R.string.hide_explicit, null, hideExplicit, onHideExplicitChange),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.slow_motion_video),
-                        title = { Text(stringResource(R.string.hide_video_songs)) },
-                        trailingContent = {
-                            Switch(
-                                checked = hideVideoSongs,
-                                onCheckedChange = onHideVideoSongsChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (hideVideoSongs) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onHideVideoSongsChange(!hideVideoSongs) }
+                        title = { Text(stringResource(R.string.arc_videos)) },
+                        description = { Text(stringResource(videosLabel(videoFilter))) },
+                        onClick = { showVideosDialog = true }
                     ),
+                )
+            )
+
+            Spacer(modifier = Modifier.height(27.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.arc_network),
+                icon = painterResource(R.drawable.wifi_proxy),
+                items = listOf(
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.hide_image),
-                        title = { Text(stringResource(R.string.hide_youtube_shorts)) },
-                        trailingContent = {
-                            Switch(
-                                checked = hideYoutubeShorts,
-                                onCheckedChange = onHideYoutubeShortsChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (hideYoutubeShorts) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
+                        icon = painterResource(R.drawable.wifi_proxy),
+                        title = { Text(stringResource(R.string.proxy)) },
+                        description = {
+                            Text(if (proxyEnabled) "${proxyType.name} · $proxyUrl" else stringResource(R.string.arc_off))
                         },
-                        onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
+                        onClick = { showProxyConfigurationDialog = true }
                     )
                 )
             )
@@ -950,82 +979,6 @@ fun ContentSettings(
                         onClick = { onShowMonthlyListenersChange(!showMonthlyListeners) }
                     )
                 )
-            )
-
-            Spacer(modifier = Modifier.height(27.dp))
-        }
-
-        if (section == null || section == "region") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.app_language),
-                items = listOf(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.language),
-                            title = { Text(stringResource(R.string.app_language)) },
-                            onClick = {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_APP_LOCALE_SETTINGS,
-                                        "package:${context.packageName}".toUri()
-                                    )
-                                )
-                            }
-                        )
-                    } else {
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.language),
-                            title = { Text(stringResource(R.string.app_language)) },
-                            description = {
-                                Text(
-                                    LanguageCodeToName.getOrElse(appLanguage) { stringResource(R.string.system_default) }
-                                )
-                            },
-                            onClick = { showAppLanguageDialog = true }
-                        )
-                    }
-                )
-            )
-
-            Spacer(modifier = Modifier.height(27.dp))
-        }
-
-        if (section == null || section == "region") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.proxy),
-                items = buildList {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.wifi_proxy),
-                            title = { Text(stringResource(R.string.enable_proxy)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = proxyEnabled,
-                                    onCheckedChange = onProxyEnabledChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (proxyEnabled) R.drawable.check else R.drawable.close
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                                        )
-                                    }
-                                )
-                            },
-                            onClick = { onProxyEnabledChange(!proxyEnabled) }
-                        )
-                    )
-                    if (proxyEnabled) {
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.settings),
-                                title = { Text(stringResource(R.string.config_proxy)) },
-                                onClick = { showProxyConfigurationDialog = true }
-                            )
-                        )
-                    }
-                }
             )
 
             Spacer(modifier = Modifier.height(27.dp))
@@ -1278,4 +1231,10 @@ fun ContentSettings(
             }
         }
     )
+}
+
+private fun videosLabel(filter: Int) = when (filter) {
+    2 -> R.string.arc_videos_none
+    1 -> R.string.arc_videos_no_shorts
+    else -> R.string.arc_videos_all
 }

@@ -1414,4 +1414,20 @@
     <string name="arc_skip_unplayable_desc">Moves on to the next song instead of stopping</string>
     <string name="arc_download_liked">Download songs you like</string>
     <string name="arc_sleep_auto_keywords">automatic sleep timer, repeat, schedule</string>
+    <string name="arc_language">Language</string>
+    <string name="arc_filters">Filters</string>
+    <string name="arc_network">Network</string>
+    <string name="arc_videos">Videos</string>
+    <string name="arc_videos_all">Show all</string>
+    <string name="arc_videos_no_shorts">Hide Shorts</string>
+    <string name="arc_videos_none">Hide all videos</string>
+    <string name="arc_videos_keywords">hide video songs, hide youtube shorts, shorts</string>
+    <string name="arc_proxy_keywords">enable proxy, configure proxy, http, socks</string>
+    <string name="arc_lyrics_sources">Sources</string>
+    <string name="arc_lyrics_sources_keywords">provider selection, lyrics provider priority, order, lrclib, kugou, better lyrics, paxsenix, lyricsplus, zemer</string>
+    <string name="arc_and_more">%1$s +%2$d</string>
+    <string name="arc_add_songs_to">Add songs to</string>
+    <string name="arc_add_songs_to_keywords">add to playlist position, beginning, end</string>
+    <string name="arc_weekly_monthly_top">Weekly and monthly top</string>
+    <string name="arc_auto_playlists_keywords">show liked playlist, downloaded playlist, my top, cached, uploaded, weekly, monthly, most played</string>
 </resources>
