@@ -283,7 +283,8 @@ fun Snippet.Take.findSync(expectedMs: Int = 0, reachMs: Int = 300): Int? {
     val expected = expectedMs / MS_PER_HOP - lags.first
     val near = (expected - reachMs / MS_PER_HOP).coerceAtLeast(0)..(expected + reachMs / MS_PER_HOP).coerceAtMost(scores.lastIndex)
     val top = near.maxOf { scores[it] }
-    val best = near.filter { scores[it] >= top * 0.85 }.minBy { abs(it - expected) }
+    // within 15% of the top score; measured from |top| since every score can be below zero
+    val best = near.filter { scores[it] >= top - abs(top) * 0.15 }.minByOrNull { abs(it - expected) } ?: return null
     val strength = if (spread > 0) (scores[best] - mean) / spread else 0.0
     val ms = (lags.first + best) * MS_PER_HOP
     return ms.takeIf { strength >= 4 }
