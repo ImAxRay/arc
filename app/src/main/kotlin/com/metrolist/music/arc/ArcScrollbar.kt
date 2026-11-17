@@ -52,6 +52,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInWindow
+import com.metrolist.music.LocalPlayerAwareWindowInsets
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -133,9 +135,11 @@ fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: Paddi
 }
 
 /** Icons stand this far apart down the edge, centred on the page, so each group gets the same finger travel. */
-private fun Density.barPitch(n: Int, height: Float) = minOf(40.dp.toPx(), (height - 96.dp.toPx()) / n)
+private fun Density.barPitch(n: Int, top: Float, bottom: Float) = minOf(40.dp.toPx(), (bottom - top - 96.dp.toPx()) / n)
 
-private fun Density.barSlot(y: Float, n: Int, height: Float) = (y - height / 2) / barPitch(n, height) + (n - 1) / 2f
+private fun Density.barY(slot: Float, n: Int, top: Float, bottom: Float) = (top + bottom) / 2 + (slot - (n - 1) / 2f) * barPitch(n, top, bottom)
+
+private fun Density.barSlot(y: Float, n: Int, top: Float, bottom: Float) = (y - (top + bottom) / 2) / barPitch(n, top, bottom) + (n - 1) / 2f
 
 /**
  * Settings pages, like Niagara's letter strip: each group's icon down the edge, still while the page scrolls, the
@@ -157,6 +161,10 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
     var pickedName by remember { mutableStateOf<String?>(null) }
     var fingerY by remember { mutableFloatStateOf(0f) }
     val grab = remember { Animatable(0f) }
+    val barsTop by rememberUpdatedState(LocalPlayerAwareWindowInsets.current.getTop(LocalDensity.current).toFloat())
+
+    /** How much of the page's top the top bar covers: most pages scroll under it, some start below it. */
+    fun covered(): Float = sections.viewport?.takeIf { it.isAttached }?.let { (barsTop - it.positionInWindow().y).coerceAtLeast(0f) } ?: 0f
 
     /** The page's groups top to bottom, with their bounds in the viewport. */
     fun groups(): List<Pair<String, Rect>> {
@@ -204,12 +212,13 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                         val list = groups()
                         if (list.isEmpty()) break
                         fingerY = change.position.y
-                        val i = barSlot(fingerY, list.size, size.height.toFloat()).roundToInt().coerceIn(0, list.lastIndex)
+                        val cover = covered()
+                        val i = barSlot(fingerY, list.size, cover, size.height.toFloat()).roundToInt().coerceIn(0, list.lastIndex)
                         if (i != picked) {
                             if (picked >= 0) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                             picked = i
                             pickedName = list[i].first
-                            val target = if (i == 0) 0 else (list[i].second.top + state.value).roundToInt()
+                            val target = if (i == 0) 0 else (list[i].second.top + state.value - cover).roundToInt()
                             scope.launch { state.scrollTo(target) }
                         }
                         change.consume()
@@ -226,6 +235,7 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
             state.value // the current group and the picked group's bounds follow the scroll
             val list = groups()
             val g = grab.value
+            val cover = covered()
             val shown = if (g > 0f) list.firstOrNull { it.first == pickedName }?.second else null
             if (shown == null) {
                 drawContent()
@@ -233,27 +243,27 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                 // Only the picked group, eased from where it sits towards the middle; the rest of the page fades out.
                 if (g < 1f) drawContent()
                 drawRect(colors.background.copy(alpha = g.coerceIn(0f, 1f)))
-                val top = shown.top.coerceAtLeast(0f)
+                val top = shown.top.coerceAtLeast(cover)
                 val bottom = shown.bottom.coerceAtMost(size.height)
-                val middle = if (bottom - top < size.height) (size.height - (bottom - top)) / 2 - top else 0f
+                val band = size.height - cover
+                val middle = if (bottom - top < band) cover + (band - (bottom - top)) / 2 - top else 0f
                 translate(top = middle * g) {
                     clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
                 }
             }
             val n = list.size
             if (n < 2 || state.maxValue !in 1 until Int.MAX_VALUE) return@drawWithContent
-            val pitch = barPitch(n, size.height)
             val edgeX = if (rtl) 8.dp.toPx() else size.width - 8.dp.toPx()
             val out = if (rtl) 1f else -1f
-            val current = if (holding && picked >= 0) picked else list.indexOfLast { it.second.top <= size.height * 0.3f }.coerceAtLeast(0)
-            val slot = barSlot(fingerY, n, size.height).coerceIn(-0.5f, n - 0.5f)
+            val current = if (holding && picked >= 0) picked else list.indexOfLast { it.second.top <= cover + (size.height - cover) * 0.3f }.coerceAtLeast(0)
+            val slot = barSlot(fingerY, n, cover, size.height).coerceIn(-0.5f, n - 0.5f)
             val lift = if (still) 0f else g.coerceIn(0f, 1.2f)
             val iconSize = 12.dp.toPx()
             list.forEachIndexed { i, (name, _) ->
                 val d = abs(i - slot)
                 val near = if (d < 2.5f) cos(d / 2.5f * (PI / 2)).toFloat() * lift else 0f
                 val cx = edgeX + out * 36.dp.toPx() * near
-                val cy = size.height / 2 + (i - (n - 1) / 2f) * pitch
+                val cy = barY(i.toFloat(), n, cover, size.height)
                 val s = iconSize * (1f + 0.6f * near)
                 val tint = when {
                     i == current && holding -> {
@@ -271,7 +281,7 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                 }
             }
             if (holding) pickedName?.let {
-                val y = size.height / 2 + (slot - (n - 1) / 2f) * pitch
+                val y = barY(slot, n, cover, size.height)
                 drawBubble(measurer, it, edgeX + out * (if (still) 24.dp.toPx() else 60.dp.toPx()), y, rtl, colors.primaryContainer, colors.onPrimaryContainer, 26f)
             }
         }
