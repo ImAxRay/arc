@@ -104,9 +104,6 @@ import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.HideExplicitKey
-import com.metrolist.music.constants.ShowArtistDescriptionKey
-import com.metrolist.music.constants.ShowArtistSubscriberCountKey
-import com.metrolist.music.constants.ShowMonthlyListenersKey
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
@@ -178,9 +175,6 @@ fun ArtistScreen(
     val isChannelSubscribed by viewModel.isChannelSubscribed.collectAsStateWithLifecycle()
     val albumGridSections = remember { mutableStateListOf<String>() }
     val hideExplicit by rememberPreference(key = HideExplicitKey, defaultValue = false)
-    val showArtistDescription by rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
-    val showArtistSubscriberCount by rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
-    val showMonthlyListeners by rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
 
     val lazyListState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -433,8 +427,8 @@ fun ArtistScreen(
                                 ArtistStats(
                                     stats =
                                         listOfNotNull(
-                                            artistPage?.monthlyListenerCount?.takeIf { showMonthlyListeners && it.isNotEmpty() },
-                                            artistPage?.subscriberCountText?.takeIf { showArtistSubscriberCount && it.isNotEmpty() },
+                                            artistPage?.monthlyListenerCount?.takeIf { it.isNotEmpty() },
+                                            artistPage?.subscriberCountText?.takeIf { it.isNotEmpty() },
                                         ),
                                     modifier = Modifier.padding(bottom = 16.dp),
                                 )
@@ -829,7 +823,7 @@ fun ArtistScreen(
             }
 
             // The artist's bio comes last, so the music is what you see first.
-            if (!showLocal && showArtistDescription) {
+            if (!showLocal) {
                 val description = artistPage?.description
                 val descriptionRuns = artistPage?.descriptionRuns
                 if (!description.isNullOrEmpty() || !descriptionRuns.isNullOrEmpty()) {

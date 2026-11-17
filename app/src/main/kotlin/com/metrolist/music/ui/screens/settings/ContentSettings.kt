@@ -18,6 +18,7 @@ import android.app.LocaleManager
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,14 +88,8 @@ import com.metrolist.music.constants.ProxyPasswordKey
 import com.metrolist.music.constants.ProxyTypeKey
 import com.metrolist.music.constants.ProxyUrlKey
 import com.metrolist.music.constants.ProxyUsernameKey
-import com.metrolist.music.constants.QuickPicks
-import com.metrolist.music.constants.QuickPicksKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
-import com.metrolist.music.constants.ShowArtistDescriptionKey
 import com.metrolist.music.constants.ShowMostStatsPlaylistsKey
-import com.metrolist.music.constants.ShowArtistSubscriberCountKey
-import com.metrolist.music.constants.ShowMonthlyListenersKey
-import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
@@ -150,9 +145,6 @@ fun ContentSettings(
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
     val (hideVideoSongs, onHideVideoSongsChange) = rememberPreference(key = HideVideoSongsKey, defaultValue = false)
     val (hideYoutubeShorts, onHideYoutubeShortsChange) = rememberPreference(key = HideYoutubeShortsKey, defaultValue = false)
-    val (showArtistDescription, onShowArtistDescriptionChange) = rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
-    val (showArtistSubscriberCount, onShowArtistSubscriberCountChange) = rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
-    val (showMonthlyListeners, onShowMonthlyListenersChange) = rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
     val (proxyEnabled, onProxyEnabledChange) = rememberPreference(key = ProxyEnabledKey, defaultValue = false)
     val (proxyType, onProxyTypeChange) = rememberEnumPreference(key = ProxyTypeKey, defaultValue = Proxy.Type.HTTP)
     val (proxyUrl, onProxyUrlChange) = rememberPreference(key = ProxyUrlKey, defaultValue = "host:port")
@@ -169,8 +161,6 @@ fun ContentSettings(
         defaultValue = LyricsProviderRegistry.serializeProviderOrder(LyricsProviderRegistry.getDefaultProviderOrder())
     )
     val (lengthTop, onLengthTopChange) = rememberPreference(key = TopSize, defaultValue = "50")
-    val (quickPicks, onQuickPicksChange) = rememberEnumPreference(key = QuickPicksKey, defaultValue = QuickPicks.QUICK_PICKS)
-    val (showWrappedCard, onShowWrappedCardChange) = rememberPreference(key = ShowWrappedCardKey, defaultValue = false)
     val (showMostStatsPlaylists, onShowMostStatsPlaylistsChange) =
         rememberPreference(key = ShowMostStatsPlaylistsKey, defaultValue = true)
     val (addToPlaylistPosition, onAddToPlaylistPositionChange) = rememberEnumPreference(
@@ -426,24 +416,38 @@ fun ContentSettings(
         )
     }
 
-    var showQuickPicksDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    if (showQuickPicksDialog) {
-        EnumDialog(
-            onDismiss = { showQuickPicksDialog = false },
-            onSelect = {
-                onQuickPicksChange(it)
-                showQuickPicksDialog = false
+    val autoPlaylists = listOf(
+        Triple(R.string.liked, showLikedPlaylist, onShowLikedPlaylistChange),
+        Triple(R.string.offline, showDownloadedPlaylist, onShowDownloadedPlaylistChange),
+        Triple(R.string.my_top, showTopPlaylist, onShowTopPlaylistChange),
+        Triple(R.string.cached_playlist, showCachedPlaylist, onShowCachedPlaylistChange),
+        Triple(R.string.uploaded_playlist, showUploadedPlaylist, onShowUploadedPlaylistChange),
+        Triple(R.string.arc_weekly_monthly_top, showMostStatsPlaylists, onShowMostStatsPlaylistsChange),
+    )
+    var showAutoPlaylistsDialog by rememberSaveable { mutableStateOf(false) }
+    if (showAutoPlaylistsDialog) {
+        AlertDialog(
+            onDismissRequest = { showAutoPlaylistsDialog = false },
+            title = { Text(stringResource(R.string.auto_playlists)) },
+            text = {
+                Column {
+                    autoPlaylists.forEach { (name, on, set) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { set(!on) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(stringResource(name), modifier = Modifier.weight(1f))
+                            Switch(checked = on, onCheckedChange = set)
+                        }
+                    }
+                }
             },
-            title = stringResource(R.string.set_quick_picks),
-            current = quickPicks,
-            values = QuickPicks.values().toList(),
-            valueText = {
-                when (it) {
-                    QuickPicks.QUICK_PICKS -> stringResource(R.string.quick_picks)
-                    QuickPicks.LAST_LISTEN -> stringResource(R.string.last_song_listened)
+            confirmButton = {
+                TextButton(onClick = { showAutoPlaylistsDialog = false }) {
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -670,10 +674,11 @@ fun ContentSettings(
         if (section == null || section == "library") {
             Material3SettingsGroup(
                 title = stringResource(R.string.playlists),
+                icon = painterResource(R.drawable.queue_music),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.playlist_add),
-                        title = { Text(stringResource(R.string.add_to_playlist_position)) },
+                        title = { Text(stringResource(R.string.arc_add_songs_to)) },
                         description = {
                             Text(
                                 when (addToPlaylistPosition) {
@@ -683,77 +688,28 @@ fun ContentSettings(
                             )
                         },
                         onClick = { showAddToPlaylistPositionDialog = true },
-                    )
-                ),
-            )
-
-            Spacer(modifier = Modifier.height(27.dp))
-        }
-
-        if (section == null || section == "library") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.artist_page_settings),
-                items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.info),
-                        title = { Text(stringResource(R.string.show_artist_description)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showArtistDescription,
-                                onCheckedChange = onShowArtistDescriptionChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showArtistDescription) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onShowArtistDescriptionChange(!showArtistDescription) }
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.person),
-                        title = { Text(stringResource(R.string.show_artist_subscriber_count)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showArtistSubscriberCount,
-                                onCheckedChange = onShowArtistSubscriberCountChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showArtistSubscriberCount) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
+                        icon = painterResource(R.drawable.playlist_play),
+                        title = { Text(stringResource(R.string.auto_playlists)) },
+                        description = {
+                            val shown = autoPlaylists.filter { it.second }.map { stringResource(it.first) }
+                            Text(
+                                when {
+                                    shown.isEmpty() -> stringResource(R.string.none)
+                                    shown.size > 3 -> stringResource(R.string.arc_and_more, shown.take(3).joinToString(", "), shown.size - 3)
+                                    else -> shown.joinToString(", ")
                                 }
                             )
                         },
-                        onClick = { onShowArtistSubscriberCountChange(!showArtistSubscriberCount) }
+                        onClick = { showAutoPlaylistsDialog = true },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.person),
-                        title = { Text(stringResource(R.string.show_artist_monthly_listeners)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showMonthlyListeners,
-                                onCheckedChange = onShowMonthlyListenersChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showMonthlyListeners) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onShowMonthlyListenersChange(!showMonthlyListeners) }
-                    )
+                        icon = painterResource(R.drawable.trending_up),
+                        title = { Text(stringResource(R.string.top_length)) },
+                        description = { Text(lengthTop) },
+                        onClick = { showTopLengthDialog = true }
+                    ),
                 )
             )
 
@@ -785,200 +741,6 @@ fun ContentSettings(
             Spacer(modifier = Modifier.height(27.dp))
         }
 
-        if (section == null || section == "library") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.auto_playlists),
-                items =
-                    listOf(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.favorite),
-                            title = { Text(stringResource(R.string.show_liked_playlist)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = showLikedPlaylist,
-                                    onCheckedChange = onShowLikedPlaylistChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (showLikedPlaylist) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onShowLikedPlaylistChange(!showLikedPlaylist) },
-                        ),
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.offline),
-                            title = { Text(stringResource(R.string.show_downloaded_playlist)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = showDownloadedPlaylist,
-                                    onCheckedChange = onShowDownloadedPlaylistChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (showDownloadedPlaylist) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onShowDownloadedPlaylistChange(!showDownloadedPlaylist) },
-                        ),
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.trending_up),
-                            title = { Text(stringResource(R.string.show_top_playlist)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = showTopPlaylist,
-                                    onCheckedChange = onShowTopPlaylistChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (showTopPlaylist) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onShowTopPlaylistChange(!showTopPlaylist) },
-                        ),
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.cached),
-                            title = { Text(stringResource(R.string.show_cached_playlist)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = showCachedPlaylist,
-                                    onCheckedChange = onShowCachedPlaylistChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (showCachedPlaylist) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) },
-                        ),
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.backup),
-                            title = { Text(stringResource(R.string.show_uploaded_playlist)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = showUploadedPlaylist,
-                                    onCheckedChange = onShowUploadedPlaylistChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (showUploadedPlaylist) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
-                                    },
-                                )
-                            },
-                            onClick = { onShowUploadedPlaylistChange(!showUploadedPlaylist) },
-                        ),
-                    ),
-            )
-
-            Spacer(modifier = Modifier.height(27.dp))
-        }
-
-        if (section == null || section == "library") {
-            Material3SettingsGroup(
-                title = "Wrapped",
-                items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.stats),
-                        title = { Text(stringResource(R.string.show_most_stats_playlists)) },
-                        description = { Text(stringResource(R.string.show_most_stats_playlists_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showMostStatsPlaylists,
-                                onCheckedChange = onShowMostStatsPlaylistsChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showMostStatsPlaylists) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onShowMostStatsPlaylistsChange(!showMostStatsPlaylists) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.trending_up),
-                        title = { Text(stringResource(R.string.show_wrapped_card)) },
-                        trailingContent = {
-                            Switch(
-                                checked = showWrappedCard,
-                                onCheckedChange = onShowWrappedCardChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (showWrappedCard) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onShowWrappedCardChange(!showWrappedCard) }
-                    )
-                )
-            )
-
-            Spacer(modifier = Modifier.height(27.dp))
-        }
-
-        if (section == null || section == "library") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.misc),
-                items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.trending_up),
-                        title = { Text(stringResource(R.string.top_length)) },
-                        description = { Text(lengthTop) },
-                        onClick = { showTopLengthDialog = true }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.home_outlined),
-                        title = { Text(stringResource(R.string.set_quick_picks)) },
-                        description = {
-                            Text(
-                                when (quickPicks) {
-                                    QuickPicks.QUICK_PICKS -> stringResource(R.string.quick_picks)
-                                    QuickPicks.LAST_LISTEN -> stringResource(R.string.last_song_listened)
-                                }
-                            )
-                        },
-                        onClick = { showQuickPicksDialog = true }
-                    )
-                )
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
     }
 
     TopAppBar(

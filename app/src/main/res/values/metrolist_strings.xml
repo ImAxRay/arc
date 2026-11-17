@@ -1121,7 +1121,7 @@
     <string name="arc_settings_queue_desc">Autoplay, radio, shuffle, duplicates</string>
     <string name="arc_settings_appearance_desc">Theme, player details, animated covers</string>
     <string name="arc_settings_library">Home and library</string>
-    <string name="arc_settings_library_desc">Auto playlists, artist pages, quick picks, Wrapped</string>
+    <string name="arc_settings_library_desc">Auto playlists, where added songs go, My Top length</string>
     <string name="arc_settings_lyrics_desc">Sources and their order</string>
     <string name="arc_settings_region">Language and region</string>
     <string name="arc_settings_region_desc">Content language, country, hidden videos, proxy</string>
