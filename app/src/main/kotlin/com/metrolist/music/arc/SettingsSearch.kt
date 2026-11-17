@@ -51,6 +51,14 @@ private class SettingsEntry(val title: Int, val route: String, val section: Int,
 
 private val RecentSettingsKey = stringPreferencesKey("arcRecentSettings")
 private const val RECENT_SETTINGS = 3
+private const val RECENT_FOR_MS = 3L * 24 * 60 * 60 * 1000
+
+/** Stored "key@millis" entries younger than three days, newest first; old keys-only entries have no time and drop out. */
+internal fun freshRecent(stored: String, now: Long): List<Pair<String, Long>> =
+    stored.split(',').mapNotNull { entry ->
+        val time = entry.substringAfter('@', "").toLongOrNull() ?: return@mapNotNull null
+        (entry.substringBefore('@') to time).takeIf { now - time < RECENT_FOR_MS }
+    }
 
 private val LOOKS = R.string.appearance
 
@@ -110,8 +118,9 @@ suspend fun trackRecentSettings(context: Context) {
             .let { if (ArcVisualModeKey.name in it) listOf(ArcVisualModeKey.name) else it }
         if (changed.isEmpty()) return@collect
         context.dataStore.edit { store ->
-            val recent = store[RecentSettingsKey].orEmpty().split(',').filter { it.isNotEmpty() }
-            store[RecentSettingsKey] = (changed + recent).distinct().take(RECENT_SETTINGS).joinToString(",")
+            val now = System.currentTimeMillis()
+            val recent = changed.map { it to now } + freshRecent(store[RecentSettingsKey].orEmpty(), now)
+            store[RecentSettingsKey] = recent.distinctBy { it.first }.take(RECENT_SETTINGS).joinToString(",") { "${it.first}@${it.second}" }
         }
     }
 }
@@ -120,7 +129,7 @@ suspend fun trackRecentSettings(context: Context) {
 @Composable
 fun RecentSettings(navController: NavController) {
     val recent by rememberPreference(RecentSettingsKey, "")
-    val entries = recent.split(',').mapNotNull { TRACKED_SETTINGS[it] }
+    val entries = remember(recent) { freshRecent(recent, System.currentTimeMillis()).mapNotNull { TRACKED_SETTINGS[it.first] } }
     if (entries.isEmpty()) return
     Text(
         stringResource(R.string.arc_recent_settings),

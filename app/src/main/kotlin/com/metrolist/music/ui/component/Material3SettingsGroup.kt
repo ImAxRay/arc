@@ -5,7 +5,6 @@
 
 package com.metrolist.music.ui.component
 
-import com.metrolist.music.arc.scrollRow
 import com.metrolist.music.arc.scrollSection
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -56,7 +55,7 @@ fun Material3SettingsGroup(
         modifier = Modifier
             .fillMaxWidth()
             .settingsHighlight()
-            .scrollSection(title)
+            .scrollSection(title, icon)
     ) {
         // Section title
         title?.let {
@@ -195,7 +194,7 @@ private fun Material3SettingsItemRow(
                         MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                Box(Modifier.scrollRow()) { item.title() }
+                item.title()
             }
 
             // Description if provided
