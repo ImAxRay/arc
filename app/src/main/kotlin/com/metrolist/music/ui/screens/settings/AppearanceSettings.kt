@@ -58,6 +58,9 @@ import com.metrolist.music.R
 import com.metrolist.music.arc.SpeedDialRowChoices
 import com.metrolist.music.arc.SpeedDialRowsKey
 import com.metrolist.music.arc.ArcAudioDetailsKey
+import com.metrolist.music.arc.DialGlyph
+import com.metrolist.music.arc.HomeBackdropAsSet
+import com.metrolist.music.arc.ThemeSwatches
 import com.metrolist.music.arc.SearchMicKey
 import com.metrolist.music.arc.resetHints
 import com.metrolist.music.constants.ChipSortTypeKey
@@ -277,7 +280,8 @@ fun AppearanceSettings(
                     ) {
                         Text(
                             text = scale.label,
-                            style = MaterialTheme.typography.bodyLarge,
+                            // each choice at the size it would give the app
+                            style = MaterialTheme.typography.bodyLarge.let { it.copy(fontSize = it.fontSize * scale.value / densityScale) },
                             color =
                                 if (densityScale == scale.value) {
                                     MaterialTheme.colorScheme.primary
@@ -291,6 +295,7 @@ fun AppearanceSettings(
         }
     }
 
+    HomeBackdropAsSet()
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
@@ -306,6 +311,7 @@ fun AppearanceSettings(
                         title = { Text(stringResource(R.string.theme)) },
                         // The theme screen's Dynamic palette is what turns cover colours on, so the row says which is in use.
                         description = { Text(stringResource(if (dynamicTheme) R.string.arc_theme_from_cover else R.string.theme_desc)) },
+                        trailingContent = { ThemeSwatches() },
                         opensPage = true,
                         onClick = { navController.navigate("settings/appearance/theme") },
                     ),
@@ -330,6 +336,7 @@ fun AppearanceSettings(
                         icon = painterResource(R.drawable.grid_view),
                         title = { Text(stringResource(R.string.arc_speed_dial_rows)) },
                         description = { Text(pluralStringResource(R.plurals.arc_speed_dial_rows_value, speedDialRows, speedDialRows)) },
+                        trailingContent = { DialGlyph(speedDialRows) },
                         onClick = { showSpeedDialRowsDialog = true },
                     ),
                     switchItem(R.drawable.group_outlined, R.string.listen_together_in_top_bar, R.string.listen_together_in_top_bar_desc, listenTogetherInTopBar, onListenTogetherInTopBarChange),

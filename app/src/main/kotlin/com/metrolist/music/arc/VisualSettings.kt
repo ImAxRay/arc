@@ -164,6 +164,8 @@ fun VisualSettings(navController: NavController) {
         HomeBackgroundPicker(current = homeBackground, onSelect = onHomeBackground, onDismiss = { picking = false }, label = backgroundText)
     }
 
+    // the picker sheet shows its own copy
+    HomeBackdropAsSet(paused = picking)
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)

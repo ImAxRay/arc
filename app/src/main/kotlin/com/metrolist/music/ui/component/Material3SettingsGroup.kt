@@ -218,7 +218,7 @@ private fun Material3SettingsItemRow(
             Spacer(modifier = Modifier.width(8.dp))
             trailing()
         }
-        if (item.opensPage && item.trailingContent == null) {
+        if (item.opensPage) {
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 painterResource(R.drawable.navigate_next),

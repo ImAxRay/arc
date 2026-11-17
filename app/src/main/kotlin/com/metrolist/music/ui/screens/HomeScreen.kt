@@ -62,17 +62,15 @@ import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.arc.ArcHomeBackgroundKey
 import com.metrolist.music.arc.ArcHomeLineKey
 import com.metrolist.music.arc.CapsuleGap
 import com.metrolist.music.arc.CapsuleSize
-import com.metrolist.music.arc.HomeBackdrop
+import com.metrolist.music.arc.HomeBackdropAsSet
 import com.metrolist.music.arc.ArcPressGlowKey
 import com.metrolist.music.arc.LocalMarqueeTouches
 import com.metrolist.music.arc.LocalPressGlow
 import com.metrolist.music.arc.PressGlowLayer
 import com.metrolist.music.arc.rememberPressGlow
-import com.metrolist.music.arc.HomeBackground
 import com.metrolist.music.arc.TopBarEndPadding
 import com.metrolist.music.arc.home.HomeEnv
 import com.metrolist.music.arc.home.HomeDayHeader
@@ -122,7 +120,6 @@ import com.metrolist.music.arc.homeLine
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.ui.component.LocalMenuState
-import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.HomeViewModel
 
@@ -265,7 +262,6 @@ fun HomeScreen(
     ) {
         val saver = com.metrolist.music.arc.rememberVisualsStill()
         val showHomeLine = rememberPreference(ArcHomeLineKey, true).value && !saver
-        val homeBackground = if (saver) HomeBackground.OFF else rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD).value
         val listenTogetherInTopBar by rememberPreference(ListenTogetherInTopBarKey, true)
         val pressGlowOn = rememberPreference(ArcPressGlowKey, true).value && !saver
         val pressGlow =
@@ -275,7 +271,7 @@ fun HomeScreen(
                 fallback = MaterialTheme.colorScheme.primary,
             )
         val marqueeTouches = remember { mutableIntStateOf(0) }
-        HomeBackdrop(homeBackground, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.primary)
+        HomeBackdropAsSet()
         BoxWithConstraints(
             modifier =
                 Modifier
