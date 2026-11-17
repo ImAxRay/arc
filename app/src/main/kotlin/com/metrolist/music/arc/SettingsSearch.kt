@@ -85,6 +85,7 @@ private val TRACKED_SETTINGS: Map<String, SettingsEntry> =
         ArcStartupSongKey.name to SettingsEntry(R.string.startup_song, "settings/queue", R.string.arc_settings_queue),
         DarkModeKey.name to SettingsEntry(R.string.theme, "settings/appearance", LOOKS),
         SearchMicKey.name to SettingsEntry(R.string.arc_search_mic, "settings/appearance", LOOKS),
+        ArcVisualModeKey.name to SettingsEntry(R.string.arc_visual_mode, "settings/visual", R.string.settings),
         ArcHomeLineKey.name to SettingsEntry(R.string.arc_home_line, "settings/visual", R.string.arc_visual_mode),
         ArcHomeBackgroundKey.name to SettingsEntry(R.string.arc_home_background, "settings/visual", R.string.arc_visual_mode),
         ArcTiltCoversKey.name to SettingsEntry(R.string.arc_tilt_covers, "settings/visual", R.string.arc_visual_mode),
@@ -107,6 +108,8 @@ suspend fun trackRecentSettings(context: Context) {
         before = now
         if (previous == null) return@collect
         val changed = TRACKED_SETTINGS.keys.filter { previous[it] != now[it] }
+            // A visual mode step rewrites several effect switches at once; only the mode itself counts.
+            .let { if (ArcVisualModeKey.name in it) listOf(ArcVisualModeKey.name) else it }
         if (changed.isEmpty()) return@collect
         context.dataStore.edit { store ->
             val recent = store[RecentSettingsKey].orEmpty().split(',').filter { it.isNotEmpty() }

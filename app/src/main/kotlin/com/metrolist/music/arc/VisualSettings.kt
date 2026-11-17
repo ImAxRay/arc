@@ -57,16 +57,16 @@ internal val VisualMode.desc get() = when (this) {
     VisualMode.FULL -> R.string.arc_visual_full_desc
 }
 
-/** Saver / Normal / Full at the top of Settings, a line on what the step does, and the way into each effect's own switch. */
+/** Saver / Normal / Full, a line on what the step does, and (on the settings home) the way into each effect's own switch. */
 @Composable
-fun VisualModeControl(navController: NavController) {
+fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mode by Visuals.mode.collectAsState()
     val phoneSaver by Visuals.phoneSaver.collectAsState()
     Material3SettingsGroup(
         title = stringResource(R.string.arc_visual_mode),
-        items = listOf(
+        items = listOfNotNull(
             Material3SettingsItem(
                 title = {
                     Column(Modifier.padding(vertical = 4.dp)) {
@@ -80,12 +80,14 @@ fun VisualModeControl(navController: NavController) {
                     }
                 },
             ),
-            Material3SettingsItem(
-                icon = painterResource(R.drawable.tune),
-                title = { Text(stringResource(R.string.arc_visual_fine_tune)) },
-                description = { Text(stringResource(R.string.arc_visual_fine_tune_desc)) },
-                onClick = { navController.navigate("settings/visual") },
-            ),
+            if (fineTune) {
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.tune),
+                    title = { Text(stringResource(R.string.arc_visual_fine_tune)) },
+                    description = { Text(stringResource(R.string.arc_visual_fine_tune_desc)) },
+                    onClick = { navController.navigate("settings/visual") },
+                )
+            } else null,
         ),
     )
     Spacer(Modifier.height(27.dp))
@@ -152,6 +154,7 @@ fun VisualSettings(navController: NavController) {
             .arcScroll()
             .padding(horizontal = 16.dp),
     ) {
+        VisualModeControl(navController, fineTune = false)
         Material3SettingsGroup(
             title = stringResource(R.string.home),
             items = listOf(

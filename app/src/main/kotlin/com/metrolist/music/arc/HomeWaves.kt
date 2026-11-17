@@ -69,7 +69,7 @@ private var wavesSeconds = 0.0
 @Composable
 fun HomeWaves(tint: Color, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val still = rememberVisualsStill() || remember {
+    val still = rememberPhoneSaver() || remember {
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
     val cell = with(LocalDensity.current) { CellSize.toPx().roundToInt().coerceAtLeast(1) }

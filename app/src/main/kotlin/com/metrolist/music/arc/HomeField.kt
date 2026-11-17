@@ -84,7 +84,7 @@ private var fieldSeconds = Random.nextFloat() * 20_000f
 @Composable
 private fun HomeField(look: FieldLook, dark: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val still = rememberVisualsStill() || remember {
+    val still = rememberPhoneSaver() || remember {
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
     var size by remember { mutableStateOf(IntSize.Zero) }

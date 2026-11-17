@@ -97,7 +97,7 @@ object MotionCovers {
     val liveFrame = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
 
     fun allowed(context: Context, onMobile: Boolean): Boolean {
-        if (Visuals.still.value) return false
+        if (Visuals.phoneSaver.value) return false
         val metered = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
         return onMobile || !metered
     }

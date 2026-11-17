@@ -57,12 +57,13 @@ object Visuals {
     val phoneSaver = MutableStateFlow(false)
     val mode = MutableStateFlow(VisualMode.NORMAL)
 
-    /** Effects with no switch of their own (moving backgrounds, glow, wobble, landing, marquees) stand still while this is true. */
+    /** Effects with no switch of their own (edit wobble, Home landing, marquees) stand still while this is true. Effects with a switch follow only [phoneSaver]. */
     val still = MutableStateFlow(false)
 
     fun init(context: Context, scope: CoroutineScope) {
         val power = context.getSystemService(PowerManager::class.java)
         phoneSaver.value = power?.isPowerSaveMode == true
+        still.value = phoneSaver.value
         val receiver =
             object : BroadcastReceiver() {
                 override fun onReceive(c: Context, intent: Intent) {
@@ -82,6 +83,12 @@ object Visuals {
             context.dataStore.data.map(::visualMode).distinctUntilChanged().collect { mode.value = it }
         }
     }
+}
+
+@Composable
+fun rememberPhoneSaver(): Boolean {
+    val saver by Visuals.phoneSaver.collectAsState()
+    return saver
 }
 
 @Composable
