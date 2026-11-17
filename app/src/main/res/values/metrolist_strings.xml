@@ -1433,4 +1433,17 @@
     <string name="arc_add_songs_to_keywords">add to playlist position, beginning, end</string>
     <string name="arc_weekly_monthly_top">Weekly and monthly top</string>
     <string name="arc_auto_playlists_keywords">show liked playlist, downloaded playlist, my top, cached, uploaded, weekly, monthly, most played</string>
+    <string name="arc_storage_free">%1$s free on this phone</string>
+    <string name="arc_storage_downloads">Downloads</string>
+    <string name="arc_storage_caches">Caches</string>
+    <string name="arc_storage_song_cache">Song cache</string>
+    <string name="arc_storage_image_cache">Image cache</string>
+    <string name="arc_storage_images">Images</string>
+    <string name="arc_storage_library">Library and settings</string>
+    <string name="arc_storage_of">%1$s of %2$s</string>
+    <plurals name="arc_storage_downloaded">
+        <item quantity="one">%1$s · %2$d song</item>
+        <item quantity="other">%1$s · %2$d songs</item>
+    </plurals>
+    <string name="arc_storage_cache_keywords">clear, size, limit, space, free up</string>
 </resources>

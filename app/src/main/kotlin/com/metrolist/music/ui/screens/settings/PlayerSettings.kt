@@ -47,7 +47,6 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.AudioNormalizationKey
 import com.metrolist.music.constants.AudioQuality
 import com.metrolist.music.constants.AudioQualityKey
-import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.AutoLoadMoreKey
@@ -160,10 +159,6 @@ fun PlayerSettings(
     val (autoRadioQueue, onAutoRadioQueueChange) = rememberPreference(
         AutoRadioQueueKey,
         defaultValue = true
-    )
-    val (autoDownloadOnLike, onAutoDownloadOnLikeChange) = rememberPreference(
-        AutoDownloadOnLikeKey,
-        defaultValue = false
     )
     val (similarContentEnabled, similarContentEnabledChange) = rememberPreference(
         key = SimilarContent,
@@ -589,7 +584,6 @@ fun PlayerSettings(
                 items = listOf(
                     switchItem(R.drawable.remove, R.string.arc_no_duplicates, R.string.prevent_duplicate_tracks_in_queue_desc, preventDuplicateTracksInQueue, onPreventDuplicateTracksInQueueChange),
                     switchItem(R.drawable.skip_next, R.string.arc_skip_unplayable, R.string.arc_skip_unplayable_desc, autoSkipNextOnError, onAutoSkipNextOnErrorChange),
-                    switchItem(R.drawable.download, R.string.arc_download_liked, R.string.auto_download_on_like_desc, autoDownloadOnLike, onAutoDownloadOnLikeChange),
                 )
             )
             Spacer(modifier = Modifier.height(27.dp))
