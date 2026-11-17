@@ -1446,4 +1446,7 @@
         <item quantity="other">%1$s · %2$d songs</item>
     </plurals>
     <string name="arc_storage_cache_keywords">clear, size, limit, space, free up</string>
+    <string name="arc_clear_history">Clear history</string>
+    <string name="arc_clear_history_keywords">listen history, search history, delete</string>
+    <string name="arc_privacy_screen">Screen</string>
 </resources>

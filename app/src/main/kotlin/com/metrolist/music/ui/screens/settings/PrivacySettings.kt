@@ -5,37 +5,31 @@
 
 package com.metrolist.music.ui.screens.settings
 
-import com.metrolist.music.arc.arcScroll
-import com.metrolist.music.arc.ArcLearnUsageKey
-import com.metrolist.music.arc.Usage
-import com.metrolist.music.arc.shareUsageExport
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.launch
-import timber.log.Timber
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import com.metrolist.music.arc.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,7 +37,15 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.arc.ArcLearnUsageKey
+import com.metrolist.music.arc.ArcSlider
+import com.metrolist.music.arc.TopAppBar
+import com.metrolist.music.arc.Usage
+import com.metrolist.music.arc.arcScroll
+import com.metrolist.music.arc.shareUsageExport
+import com.metrolist.music.arc.switchItem
 import com.metrolist.music.constants.DisableScreenshotKey
+import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.ui.component.DefaultDialog
@@ -52,6 +54,9 @@ import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,55 +64,54 @@ fun PrivacySettings(
     navController: NavController
 ) {
     val database = LocalDatabase.current
-    val (pauseListenHistory, onPauseListenHistoryChange) = rememberPreference(
-        key = PauseListenHistoryKey,
-        defaultValue = false
-    )
-    val (pauseSearchHistory, onPauseSearchHistoryChange) = rememberPreference(
-        key = PauseSearchHistoryKey,
-        defaultValue = false
-    )
-    val (disableScreenshot, onDisableScreenshotChange) = rememberPreference(
-        key = DisableScreenshotKey,
-        defaultValue = false
-    )
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val (pauseListenHistory, onPauseListenHistoryChange) = rememberPreference(PauseListenHistoryKey, defaultValue = false)
+    val (pauseSearchHistory, onPauseSearchHistoryChange) = rememberPreference(PauseSearchHistoryKey, defaultValue = false)
+    val (historyDuration, onHistoryDurationChange) = rememberPreference(HistoryDuration, defaultValue = 30f)
+    val (disableScreenshot, onDisableScreenshotChange) = rememberPreference(DisableScreenshotKey, defaultValue = false)
+    val (learnUsage, onLearnUsageChange) = rememberPreference(ArcLearnUsageKey, defaultValue = true)
 
-    var showClearListenHistoryDialog by remember {
-        mutableStateOf(false)
-    }
-
-    if (showClearListenHistoryDialog) {
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
+    if (showClearHistoryDialog) {
+        var clearListen by remember { mutableStateOf(true) }
+        var clearSearch by remember { mutableStateOf(true) }
+        @Composable
+        fun tick(label: Int, checked: Boolean, onChange: (Boolean) -> Unit) = Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 6.dp),
+        ) {
+            Checkbox(checked = checked, onCheckedChange = onChange)
+            Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+        }
         DefaultDialog(
-            onDismiss = { showClearListenHistoryDialog = false },
+            onDismiss = { showClearHistoryDialog = false },
+            horizontalAlignment = Alignment.Start,
+            title = { Text(stringResource(R.string.arc_clear_history)) },
             content = {
-                Text(
-                    text = stringResource(R.string.clear_listen_history_confirm),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                )
+                tick(R.string.listen_history, clearListen) { clearListen = it }
+                tick(R.string.search_history, clearSearch) { clearSearch = it }
             },
             buttons = {
-                TextButton(
-                    onClick = { showClearListenHistoryDialog = false },
-                ) {
+                TextButton(onClick = { showClearHistoryDialog = false }) {
                     Text(text = stringResource(android.R.string.cancel))
                 }
-
                 TextButton(
+                    enabled = clearListen || clearSearch,
                     onClick = {
-                        showClearListenHistoryDialog = false
+                        showClearHistoryDialog = false
                         database.query {
-                            clearListenHistory()
+                            if (clearListen) clearListenHistory()
+                            if (clearSearch) clearSearchHistory()
                         }
                     },
                 ) {
-                    Text(text = stringResource(android.R.string.ok))
+                    Text(text = stringResource(R.string.clear))
                 }
             },
         )
     }
 
-    val (learnUsage, onLearnUsageChange) = rememberPreference(key = ArcLearnUsageKey, defaultValue = true)
     var showForgetUsageDialog by remember { mutableStateOf(false) }
     if (showForgetUsageDialog) {
         DefaultDialog(
@@ -127,43 +131,6 @@ fun PrivacySettings(
                     onClick = {
                         showForgetUsageDialog = false
                         Usage.forget()
-                    },
-                ) {
-                    Text(text = stringResource(android.R.string.ok))
-                }
-            },
-        )
-    }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    var showClearSearchHistoryDialog by remember {
-        mutableStateOf(false)
-    }
-
-    if (showClearSearchHistoryDialog) {
-        DefaultDialog(
-            onDismiss = { showClearSearchHistoryDialog = false },
-            content = {
-                Text(
-                    text = stringResource(R.string.clear_search_history_confirm),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                )
-            },
-            buttons = {
-                TextButton(
-                    onClick = { showClearSearchHistoryDialog = false },
-                ) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-
-                TextButton(
-                    onClick = {
-                        showClearSearchHistoryDialog = false
-                        database.query {
-                            clearSearchHistory()
-                        }
                     },
                 ) {
                     Text(text = stringResource(android.R.string.ok))
@@ -191,66 +158,30 @@ fun PrivacySettings(
         )
 
         Material3SettingsGroup(
-            title = stringResource(R.string.listen_history),
+            title = stringResource(R.string.history),
+            icon = painterResource(R.drawable.history),
             items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.history),
-                    title = { Text(stringResource(R.string.pause_listen_history)) },
-                    trailingContent = {
-                        Switch(
-                            checked = pauseListenHistory,
-                            onCheckedChange = onPauseListenHistoryChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (pauseListenHistory) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onPauseListenHistoryChange(!pauseListenHistory) }
-                ),
+                switchItem(R.drawable.history, R.string.pause_listen_history, null, pauseListenHistory, onPauseListenHistoryChange),
+                switchItem(R.drawable.search_off, R.string.pause_search_history, null, pauseSearchHistory, onPauseSearchHistoryChange),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.delete_history),
-                    title = { Text(stringResource(R.string.clear_listen_history)) },
-                    onClick = { showClearListenHistoryDialog = true }
-                )
-            )
-        )
-
-        Spacer(modifier = Modifier.height(27.dp))
-
-        Material3SettingsGroup(
-            title = stringResource(R.string.search_history),
-            items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.search_off),
-                    title = { Text(stringResource(R.string.pause_search_history)) },
-                    trailingContent = {
-                        Switch(
-                            checked = pauseSearchHistory,
-                            onCheckedChange = onPauseSearchHistoryChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (pauseSearchHistory) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onPauseSearchHistoryChange(!pauseSearchHistory) }
+                    title = { Text(stringResource(R.string.arc_clear_history)) },
+                    onClick = { showClearHistoryDialog = true }
                 ),
                 Material3SettingsItem(
-                    icon = painterResource(R.drawable.clear_all),
-                    title = { Text(stringResource(R.string.clear_search_history)) },
-                    onClick = { showClearSearchHistoryDialog = true }
-                )
+                    icon = painterResource(R.drawable.timer),
+                    title = { Text(stringResource(R.string.arc_history_duration)) },
+                    description = {
+                        Column {
+                            Text(stringResource(R.string.arc_history_duration_desc, historyDuration.roundToInt()))
+                            ArcSlider(
+                                value = historyDuration,
+                                onValueChange = onHistoryDurationChange,
+                                valueRange = 1f..100f
+                            )
+                        }
+                    }
+                ),
             )
         )
 
@@ -258,26 +189,9 @@ fun PrivacySettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_usage),
+            icon = painterResource(R.drawable.trending_up),
             items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.trending_up),
-                    title = { Text(stringResource(R.string.arc_usage_learn)) },
-                    description = { Text(stringResource(R.string.arc_usage_learn_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = learnUsage,
-                            onCheckedChange = onLearnUsageChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(id = if (learnUsage) R.drawable.check else R.drawable.close),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onLearnUsageChange(!learnUsage) }
-                ),
+                switchItem(R.drawable.trending_up, R.string.arc_usage_learn, R.string.arc_usage_learn_desc, learnUsage, onLearnUsageChange),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.share),
                     title = { Text(stringResource(R.string.arc_usage_export)) },
@@ -295,29 +209,10 @@ fun PrivacySettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
-            title = stringResource(R.string.misc),
+            title = stringResource(R.string.arc_privacy_screen),
+            icon = painterResource(R.drawable.screenshot),
             items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.screenshot),
-                    title = { Text(stringResource(R.string.disable_screenshot)) },
-                    description = { Text(stringResource(R.string.disable_screenshot_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = disableScreenshot,
-                            onCheckedChange = onDisableScreenshotChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (disableScreenshot) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onDisableScreenshotChange(!disableScreenshot) }
-                )
+                switchItem(R.drawable.screenshot, R.string.disable_screenshot, R.string.disable_screenshot_desc, disableScreenshot, onDisableScreenshotChange),
             )
         )
         Spacer(modifier = Modifier.height(16.dp))

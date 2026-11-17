@@ -53,7 +53,6 @@ import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
 import com.metrolist.music.constants.EnableGoogleCastKey
-import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.LoudnessLevel
 import com.metrolist.music.constants.LoudnessLevelKey
@@ -80,7 +79,6 @@ import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
-import kotlin.math.roundToInt
 import com.metrolist.music.ui.component.SleepTimerDialog
 import com.metrolist.music.constants.SleepTimerEnabledKey
 import com.metrolist.music.constants.SleepTimerRepeatKey
@@ -195,10 +193,6 @@ fun PlayerSettings(
     val (keepScreenOn, onKeepScreenOnChange) = rememberPreference(
         KeepScreenOn,
         defaultValue = false
-    )
-    val (historyDuration, onHistoryDurationChange) = rememberPreference(
-        HistoryDuration,
-        defaultValue = 30f
     )
 
     val (startupSong, onStartupSongChange) = rememberEnumPreference(ArcStartupSongKey, DefaultStartupSong)
@@ -640,20 +634,6 @@ fun PlayerSettings(
                 title = stringResource(R.string.arc_sound_while_playing),
                 icon = painterResource(R.drawable.play),
                 items = listOf(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.history),
-                        title = { Text(stringResource(R.string.arc_history_duration)) },
-                        description = {
-                            Column {
-                                Text(stringResource(R.string.arc_history_duration_desc, historyDuration.roundToInt()))
-                                ArcSlider(
-                                    value = historyDuration,
-                                    onValueChange = onHistoryDurationChange,
-                                    valueRange = 1f..100f
-                                )
-                            }
-                        }
-                    ),
                     switchItem(R.drawable.screenshot, R.string.arc_keep_screen_on, R.string.arc_keep_screen_on_desc, keepScreenOn, onKeepScreenOnChange, enabled = !com.metrolist.music.arc.rememberVisualsStill()),
                     switchItem(R.drawable.volume_off_pause, R.string.pause_music_when_media_is_muted, null, pauseOnMute, onPauseOnMuteChange),
                     switchItem(R.drawable.bluetooth, R.string.resume_on_bluetooth_connect, null, resumeOnBluetoothConnect, onResumeOnBluetoothConnectChange),
