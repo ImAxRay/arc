@@ -1389,4 +1389,15 @@
     <string name="arc_usage_forget">Forget usage data</string>
     <string name="arc_usage_forget_confirm">Forget everything Arc has counted about how you use it? Your listen history stays.</string>
     <string name="arc_usage_keywords">telemetry, data, export, statistics, tracking, learn, usage</string>
+    <string name="arc_sound_quality">Quality</string>
+    <string name="arc_sound_between">Between songs</string>
+    <string name="arc_sound_loudness">Loudness</string>
+    <string name="arc_sound_controls">Controls</string>
+    <string name="arc_sound_while_playing">While playing</string>
+    <string name="arc_even_loudness">Even out loudness</string>
+    <string name="arc_even_loudness_keywords">normalization, loudness level, volume</string>
+    <string name="arc_off">Off</string>
+    <string name="arc_silence_speed">Speed through</string>
+    <string name="arc_silence_jump">Jump over</string>
+    <string name="arc_silence_keywords">instantly skip silence, silent</string>
 </resources>

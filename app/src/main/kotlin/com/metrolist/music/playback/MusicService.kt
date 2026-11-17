@@ -108,16 +108,13 @@ import com.metrolist.music.constants.AddToPlaylistPosition
 import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AndroidAutoTargetPlaylistKey
 import com.metrolist.music.constants.AudioNormalizationKey
-import com.metrolist.music.constants.AudioOffload
 import com.metrolist.music.constants.AudioQualityKey
-import com.metrolist.music.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
 import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
-import com.metrolist.music.constants.CrossfadeGaplessKey
 import com.metrolist.music.arc.ArcSkipOfftopicKey
 import com.metrolist.music.arc.SponsorSkip
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
@@ -195,7 +192,6 @@ import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.findNextMediaItemById
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
-import com.metrolist.music.extensions.setOffloadEnabled
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.extensions.toPersistQueue
@@ -982,18 +978,6 @@ class MusicService :
             setupAudioNormalization()
         }
 
-        combine(
-            dataStore.data.map { it[AudioOffload] ?: false },
-            dataStore.data.map { it[CrossfadeEnabledKey] ?: false },
-        ) { offloadPref, crossfadeEnabled ->
-            // Force disable offload if crossfade is enabled to prevent volume ramp issues
-            if (crossfadeEnabled) false else offloadPref
-        }.distinctUntilChanged()
-            .collectLatest(scope) { useOffload ->
-                player.setOffloadEnabled(useOffload)
-                secondaryPlayer?.setOffloadEnabled(useOffload)
-            }
-
         dataStore.data
             .map { (it[PauseListenHistoryKey] ?: false) to ((it[HistoryDuration] ?: 30f) * 1000).toLong() }
             .distinctUntilChanged()
@@ -1001,61 +985,6 @@ class MusicService :
                 historyPaused = paused
                 historyDurationMs = durationMs
                 historyReporters.values.forEach { it.refresh() }
-            }
-
-        var isFirstAudioTrackParamsEmit = true
-        dataStore.data
-            .map { it[AudioTrackPlaybackParamsKey] ?: true }
-            .distinctUntilChanged()
-            .collectLatest(scope) { useAudioTrackParams ->
-                if (isFirstAudioTrackParamsEmit) {
-                    isFirstAudioTrackParamsEmit = false
-                    return@collectLatest
-                }
-
-                Timber.tag("MusicService").i("AudioTrackPlaybackParams changed to: $useAudioTrackParams")
-
-                val currentIndex = player.currentMediaItemIndex
-                val currentPosition = player.currentPosition
-                val playWhenReady = player.playWhenReady
-                val repeatMode = player.repeatMode
-                val shuffleModeEnabled = player.shuffleModeEnabled
-                val shuffleOrder = player.shuffleOrder
-                val playbackParameters = player.playbackParameters
-                val volume = player.volume
-                val mediaItems = List(player.mediaItemCount) { index ->
-                    player.getMediaItemAt(index)
-                }
-
-                player.removeListener(this)
-                sleepTimer?.let { player.removeListener(it) }
-                releaseExoPlayer(player)
-
-                val newPlayer = createExoPlayer()
-                newPlayer.addListener(this@MusicService)
-                sleepTimer?.let { newPlayer.addListener(it) }
-
-                sleepTimer?.player = newPlayer
-
-                try {
-                    mediaSession?.let { (it as MediaSession).player = newPlayer }
-                } catch (e: Exception) {
-                    Timber.tag(TAG).e(e, "Failed to swap player in MediaSession")
-                }
-
-                newPlayer.setMediaItems(mediaItems, currentIndex, currentPosition)
-                newPlayer.repeatMode = repeatMode
-                newPlayer.shuffleModeEnabled = shuffleModeEnabled
-                newPlayer.setShuffleOrder(shuffleOrder)
-                newPlayer.playbackParameters = playbackParameters
-                newPlayer.volume = volume
-                newPlayer.playWhenReady = playWhenReady
-                newPlayer.prepare()
-
-                player = newPlayer
-                _playerFlow.value = newPlayer
-
-                Timber.tag("MusicService").i("Player recreated with AudioTrackPlaybackParams: $useAudioTrackParams")
             }
 
         // Initialize Discord RPC manager (rehydrates token, reconnects gateway)
@@ -1202,7 +1131,7 @@ class MusicService :
                 Triple(
                     prefs[CrossfadeEnabledKey] ?: false,
                     prefs[CrossfadeDurationKey] ?: 5f,
-                    prefs[CrossfadeGaplessKey] ?: true,
+                    true,
                 )
             },
             listenTogetherManager.roomState,
@@ -1353,17 +1282,15 @@ class MusicService :
         val vinylTap = VinylTapProcessor()
 
         // Set initial state — use pre-read prefs when available, otherwise fall back to DataStore
-        val useAudioTrackPlaybackParams = if (prefs != null) {
+        if (prefs != null) {
             val skipSilence = prefs[SkipSilenceKey] ?: false
             val instantSkip = prefs[SkipSilenceInstantKey] ?: false
             silenceProcessor.instantModeEnabled = skipSilence && instantSkip
-            prefs[AudioTrackPlaybackParamsKey] ?: true
         } else {
             runBlocking {
                 val skipSilence = dataStore.get(SkipSilenceKey, false)
                 val instantSkip = dataStore.get(SkipSilenceInstantKey, false)
                 silenceProcessor.instantModeEnabled = skipSilence && instantSkip
-                dataStore.get(AudioTrackPlaybackParamsKey, true)
             }
         }
 
@@ -1374,7 +1301,7 @@ class MusicService :
                 .setMediaSourceFactory(
                     createMediaSourceFactory(normalizationProcessor) { createdPlayer },
                 )
-                .setRenderersFactory(createRenderersFactory(normalizationProcessor, eqProcessor, silenceProcessor, vinylTap, useAudioTrackPlaybackParams))
+                .setRenderersFactory(createRenderersFactory(normalizationProcessor, eqProcessor, silenceProcessor, vinylTap))
                 .setLoadControl(
                     // Start playback once ~750ms is buffered (media3's default is 1000ms) so first
                     // audio is audible a touch sooner. min/max/after-rebuffer match the media3 1.x
@@ -1408,16 +1335,10 @@ class MusicService :
         equalizerService.addAudioProcessor(eqProcessor)
 
         if (prefs != null) {
-            val offload = prefs[AudioOffload] ?: false
-            val crossfade = prefs[CrossfadeEnabledKey] ?: false
-            player.setOffloadEnabled(if (crossfade) false else offload)
             player.skipSilenceEnabled = prefs[SkipSilenceKey] ?: false
         } else {
             player.apply {
                 runBlocking {
-                    val offload = dataStore.get(AudioOffload, false)
-                    val crossfade = dataStore.get(CrossfadeEnabledKey, false)
-                    setOffloadEnabled(if (crossfade) false else offload)
                     skipSilenceEnabled = dataStore.get(SkipSilenceKey, false)
                 }
             }
@@ -4215,7 +4136,6 @@ class MusicService :
         eqProcessor: CustomEqualizerAudioProcessor,
         silenceProcessor: SilenceDetectorAudioProcessor,
         vinylTap: VinylTapProcessor,
-        useAudioTrackPlaybackParams: Boolean,
     ) = object : DefaultRenderersFactory(this) {
         override fun buildAudioRenderers(
             context: Context,
@@ -4269,7 +4189,7 @@ class MusicService :
             DefaultAudioSink
             .Builder(this@MusicService)
             .setEnableFloatOutput(enableFloatOutput)
-            .setEnableAudioTrackPlaybackParams(useAudioTrackPlaybackParams)
+            .setEnableAudioTrackPlaybackParams(true)
             .setAudioProcessorChain(
                 DefaultAudioSink.DefaultAudioProcessorChain(
                     arrayOf(

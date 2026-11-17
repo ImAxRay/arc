@@ -57,8 +57,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -98,7 +96,6 @@ import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerHorizontalPadding
-import com.metrolist.music.constants.SeekExtraSeconds
 import com.metrolist.music.constants.SwipeThumbnailKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.listentogether.RoomRole
@@ -544,9 +541,6 @@ private fun ThumbnailItem(
     modifier: Modifier = Modifier,
 ) {
     val currentOnTap by rememberUpdatedState(onTap)
-    val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
-    var skipMultiplier by remember { mutableIntStateOf(1) }
-    var lastTapTime by remember { mutableLongStateOf(0L) }
 
     Box(
         modifier = modifier
@@ -582,15 +576,7 @@ private fun ThumbnailItem(
                         val currentPosition = playerConnection.player.currentPosition
                         val duration = playerConnection.player.duration
 
-                        val now = System.currentTimeMillis()
-                        if (incrementalSeekSkipEnabled && now - lastTapTime < 1000) {
-                            skipMultiplier++
-                        } else {
-                            skipMultiplier = 1
-                        }
-                        lastTapTime = now
-
-                        val skipAmount = 5000 * skipMultiplier
+                        val skipAmount = 5000
 
                         val isLeftSide = (layoutDirection == LayoutDirection.Ltr && offset.x < size.width / 2) ||
                                 (layoutDirection == LayoutDirection.Rtl && offset.x > size.width / 2)

@@ -49,6 +49,7 @@ fun MusicVideoSettings() {
 
     Material3SettingsGroup(
         title = stringResource(R.string.arc_music_videos),
+        icon = painterResource(R.drawable.arc_video),
         items = buildList {
             add(switchItem(R.drawable.arc_video, R.string.arc_music_videos, R.string.arc_music_videos_desc, enabled, onEnabled))
             if (enabled) {
@@ -74,12 +75,12 @@ fun MusicVideoSettings() {
 }
 
 @Composable
-internal fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) =
+internal fun switchItem(icon: Int, title: Int, description: Int?, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) =
     Material3SettingsItem(
         enabled = enabled,
         icon = painterResource(icon),
         title = { Text(stringResource(title)) },
-        description = { Text(stringResource(description)) },
+        description = description?.let { { Text(stringResource(it)) } },
         trailingContent = {
             Switch(
                 checked = checked,

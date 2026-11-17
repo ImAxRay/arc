@@ -174,7 +174,6 @@ import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.CrossfadeDurationKey
-import com.metrolist.music.constants.CrossfadeGaplessKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
 import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
@@ -1464,7 +1463,7 @@ private fun PlayerSheet(
                             sliderState.value = sliderValue
                             val crossfadeOn by rememberPreference(CrossfadeEnabledKey, false)
                             val crossfadeSeconds by rememberPreference(CrossfadeDurationKey, 5f)
-                            val keepAlbumsGapless by rememberPreference(CrossfadeGaplessKey, true)
+                            val keepAlbumsGapless = true
                             val handoverLead =
                                 remember(mediaMetadata.id, duration, crossfadeOn, crossfadeSeconds, keepAlbumsGapless) {
                                     songHandoverLeadMs(playerConnection.player, crossfadeOn, crossfadeSeconds, keepAlbumsGapless)
@@ -1877,7 +1876,7 @@ private fun PlayerSheet(
                     val shuffled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
                     val crossfadeOn by rememberPreference(CrossfadeEnabledKey, false)
                     val crossfadeSeconds by rememberPreference(CrossfadeDurationKey, 5f)
-                    val keepAlbumsGapless by rememberPreference(CrossfadeGaplessKey, true)
+                    val keepAlbumsGapless = true
                     val handoverLead =
                         remember(arcMetadata.id, duration, crossfadeOn, crossfadeSeconds, keepAlbumsGapless) {
                             songHandoverLeadMs(playerConnection.player, crossfadeOn, crossfadeSeconds, keepAlbumsGapless)
