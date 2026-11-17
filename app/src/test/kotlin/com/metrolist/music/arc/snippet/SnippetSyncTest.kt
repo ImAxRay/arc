@@ -62,4 +62,18 @@ class SnippetSyncTest {
         val found = take(song, mic).findSync()!!
         assertEquals(30.0, found.toDouble(), 10.0)
     }
+
+    @Test
+    fun givesUpWhenEveryNearMatchScoresBelowZero() {
+        val song = ShortArray(rate * 20)
+        var at = 0
+        while (at < song.size) {
+            for (i in 0 until minOf(2_000, song.size - at)) song[at + i] = (10_000 * (1 - i / 2_000.0)).toInt().toShort()
+            at += rate * 420 / 1000
+        }
+        // the mic's beats fall halfway between the song's, so near the expected lag nothing lines up
+        val delay = rate * 210 / 1000
+        val mic = ShortArray(song.size) { i -> if (i >= delay) (song[i - delay] / 2).toShort() else 0 }
+        assertNull(take(song, mic).findSync(expectedMs = 0, reachMs = 50))
+    }
 }
