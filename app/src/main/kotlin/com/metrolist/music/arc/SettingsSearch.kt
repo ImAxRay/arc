@@ -33,7 +33,6 @@ import com.metrolist.music.constants.AudioNormalizationKey
 import com.metrolist.music.constants.AudioQualityDownloadKey
 import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.AudioQualityMobileKey
-import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.DarkModeKey
@@ -75,7 +74,6 @@ private val TRACKED_SETTINGS: Map<String, SettingsEntry> =
         ArcSearchVideosKey.name to SettingsEntry(R.string.arc_search_videos, "settings/sound", R.string.arc_settings_sound),
         AudioNormalizationKey.name to SettingsEntry(R.string.arc_even_loudness, "settings/sound", R.string.arc_settings_sound, R.string.arc_even_loudness_keywords),
         VarispeedKey.name to SettingsEntry(R.string.arc_varispeed, "settings/sound", R.string.arc_settings_sound),
-        AutoplayKey.name to SettingsEntry(R.string.autoplay, "settings/queue", R.string.arc_settings_queue),
         StopMusicOnTaskClearKey.name to SettingsEntry(R.string.stop_music_on_task_clear, "settings/sound", R.string.arc_settings_sound),
         PauseOnMute.name to SettingsEntry(R.string.pause_music_when_media_is_muted, "settings/sound", R.string.arc_settings_sound),
         ResumeOnBluetoothConnectKey.name to SettingsEntry(R.string.resume_on_bluetooth_connect, "settings/sound", R.string.arc_settings_sound),
@@ -282,23 +280,18 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.arc_even_loudness, "settings/sound", R.string.arc_settings_sound, R.string.arc_even_loudness_keywords),
     SettingsEntry(R.string.arc_varispeed, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.google_cast, "settings/sound", R.string.arc_settings_sound),
-    SettingsEntry(R.string.enable_automatic_sleeptimer, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.sleep_timer_repeat, "settings/queue", R.string.arc_settings_queue),
+    SettingsEntry(R.string.enable_automatic_sleeptimer, "settings/queue", R.string.arc_settings_queue, R.string.arc_sleep_auto_keywords),
     SettingsEntry(R.string.sleep_timer_stop_after_current_song_title, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.sleep_timer_fade_out_title, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.startup_song, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.arc_hold_play, "settings/sound", R.string.arc_settings_sound),
-    SettingsEntry(R.string.auto_load_more, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.auto_radio_queue, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.autoplay, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.disable_load_more_when_repeat_all, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.auto_download_on_like, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.enable_similar_content, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.persistent_shuffle_title, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.remember_shuffle_and_repeat, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.shuffle_playlist_first, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.prevent_duplicate_tracks_in_queue, "settings/queue", R.string.arc_settings_queue),
-    SettingsEntry(R.string.auto_skip_next_on_error, "settings/queue", R.string.arc_settings_queue),
+    SettingsEntry(R.string.arc_queue_keep_going, "settings/queue", R.string.arc_settings_queue, R.string.arc_queue_keep_going_keywords),
+    SettingsEntry(R.string.arc_queue_radio, "settings/queue", R.string.arc_settings_queue, R.string.auto_radio_queue),
+    SettingsEntry(R.string.arc_download_liked, "settings/queue", R.string.arc_settings_queue, R.string.auto_download_on_like),
+    SettingsEntry(R.string.arc_shuffle_keep, "settings/queue", R.string.arc_settings_queue, R.string.arc_shuffle_keep_keywords),
+    SettingsEntry(R.string.arc_shuffle_playlist_first, "settings/queue", R.string.arc_settings_queue),
+    SettingsEntry(R.string.arc_no_duplicates, "settings/queue", R.string.arc_settings_queue, R.string.prevent_duplicate_tracks_in_queue),
+    SettingsEntry(R.string.arc_skip_unplayable, "settings/queue", R.string.arc_settings_queue, R.string.auto_skip_next_on_error),
     SettingsEntry(R.string.stop_music_on_task_clear, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.pause_music_when_media_is_muted, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.resume_on_bluetooth_connect, "settings/sound", R.string.arc_settings_sound),
@@ -309,6 +302,8 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.arc_sound_controls, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.sleep_timer, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.queue, "settings/queue", R.string.arc_settings_queue),
+    SettingsEntry(R.string.arc_queue_starting, "settings/queue", R.string.arc_settings_queue),
+    SettingsEntry(R.string.arc_queue_ends, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.arc_sound_while_playing, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.privacy, "settings/privacy", R.string.privacy),
     SettingsEntry(R.string.pause_listen_history, "settings/privacy", R.string.privacy),

@@ -112,12 +112,10 @@ import com.metrolist.music.constants.AudioQualityKey
 import com.metrolist.music.constants.AutoDownloadOnLikeKey
 import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
-import com.metrolist.music.constants.AutoplayKey
 import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.arc.ArcSkipOfftopicKey
 import com.metrolist.music.arc.SponsorSkip
-import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.DiscordActivityNameKey
 import com.metrolist.music.constants.DiscordActivityTypeKey
 import com.metrolist.music.constants.DiscordAdvancedModeKey
@@ -156,7 +154,6 @@ import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PlayerVolumeKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
-import com.metrolist.music.constants.RememberShuffleAndRepeatKey
 import com.metrolist.music.constants.RepeatModeKey
 import com.metrolist.music.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.music.constants.ScrobbleDelayPercentKey
@@ -519,10 +516,6 @@ class MusicService :
 
     // Cached preferences to avoid runBlocking DataStore reads in hot paths
     @Volatile
-    private var cachedAutoplay = true
-    @Volatile
-    private var cachedDisableLoadMoreWhenRepeatAll = false
-    @Volatile
     private var cachedHideExplicit = false
     @Volatile
     private var cachedHideVideoSongs = false
@@ -735,9 +728,7 @@ class MusicService :
                 .build()
         player.repeatMode = startupPrefs!![RepeatModeKey] ?: REPEAT_MODE_OFF
 
-        if (startupPrefs!![RememberShuffleAndRepeatKey] ?: true) {
-            player.shuffleModeEnabled = startupPrefs!![ShuffleModeKey] ?: false
-        }
+        player.shuffleModeEnabled = startupPrefs!![ShuffleModeKey] ?: false
 
         // Keep a connected controller so that notification works
         val sessionToken = SessionToken(this, ComponentName(this, MusicService::class.java))
@@ -1152,12 +1143,6 @@ class MusicService :
         }
 
         // Observe and cache common preferences to avoid runBlocking reads in playback callbacks
-        scope.launch {
-            dataStore.data.map { it[AutoplayKey] ?: true }.distinctUntilChanged().collect { cachedAutoplay = it }
-        }
-        scope.launch {
-            dataStore.data.map { it[DisableLoadMoreWhenRepeatAllKey] ?: false }.distinctUntilChanged().collect { cachedDisableLoadMoreWhenRepeatAll = it }
-        }
         scope.launch {
             dataStore.data.map { it[HideExplicitKey] ?: false }.distinctUntilChanged().collect { cachedHideExplicit = it }
         }
@@ -1960,7 +1945,7 @@ class MusicService :
 
     fun getAutomix(playlistId: String) {
         if (dataStore.get(SimilarContent, true) &&
-            !(dataStore.get(DisableLoadMoreWhenRepeatAllKey, false) && player.repeatMode == REPEAT_MODE_ALL)
+            player.repeatMode != REPEAT_MODE_ALL
         ) {
             scope.launch(SilentHandler) {
                 try {
@@ -2606,7 +2591,7 @@ class MusicService :
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
             player.mediaItemCount - player.currentMediaItemIndex <= 5 &&
             currentQueue.hasNextPage() &&
-            !(cachedDisableLoadMoreWhenRepeatAll && player.repeatMode == REPEAT_MODE_ALL)
+            player.repeatMode != REPEAT_MODE_ALL
         ) {
             scope.launch(SilentHandler) {
                 val mediaItems =
@@ -2660,7 +2645,7 @@ class MusicService :
                 return
             }
 
-            if (player.playWhenReady && cachedAutoplay && player.hasNextMediaItem()) {
+            if (player.playWhenReady && player.hasNextMediaItem()) {
                 player.seekToNextMediaItem()
                 player.prepare()
                 if (castConnectionHandler?.isCasting?.value != true) {
@@ -2848,11 +2833,9 @@ class MusicService :
             applyShuffleOrder(currentIndex, totalCount, shufflePlaylistFirst)
         }
 
-        if (dataStore.get(RememberShuffleAndRepeatKey, true)) {
-            scope.launch {
-                safeDataStoreEdit { settings ->
-                    settings[ShuffleModeKey] = shuffleModeEnabled
-                }
+        scope.launch {
+            safeDataStoreEdit { settings ->
+                settings[ShuffleModeKey] = shuffleModeEnabled
             }
         }
 
@@ -3483,10 +3466,9 @@ class MusicService :
      */
     private fun handleFinalFailure() {
         val autoSkipOnError = dataStore.get(AutoSkipNextOnErrorKey, false)
-        val autoplay = dataStore.get(AutoplayKey, true)
         val canAdvance = player.hasNextMediaItem()
 
-        if (autoSkipOnError || (autoplay && canAdvance)) {
+        if (autoSkipOnError || canAdvance) {
             Timber.tag(TAG).d("All recovery attempts exhausted, auto-skipping to next track")
             skipOnError()
         } else {

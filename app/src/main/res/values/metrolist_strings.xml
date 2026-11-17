@@ -1400,4 +1400,18 @@
     <string name="arc_silence_speed">Speed through</string>
     <string name="arc_silence_jump">Jump over</string>
     <string name="arc_silence_keywords">instantly skip silence, silent</string>
+    <string name="arc_queue_starting">Starting music</string>
+    <string name="arc_queue_radio">Start a radio from a single song</string>
+    <string name="arc_queue_ends">When the queue ends</string>
+    <string name="arc_queue_keep_going">Keep the music going</string>
+    <string name="arc_queue_keep_going_desc">Adds more from the same playlist or radio, then similar songs, when the queue runs out</string>
+    <string name="arc_queue_keep_going_keywords">auto load more, similar content</string>
+    <string name="arc_shuffle_keep">Keep shuffle on for new queues</string>
+    <string name="arc_shuffle_keep_keywords">persistent shuffle</string>
+    <string name="arc_shuffle_playlist_first">Shuffle the playlist before similar songs</string>
+    <string name="arc_no_duplicates">No duplicate songs</string>
+    <string name="arc_skip_unplayable">Skip songs that can\'t play</string>
+    <string name="arc_skip_unplayable_desc">Moves on to the next song instead of stopping</string>
+    <string name="arc_download_liked">Download songs you like</string>
+    <string name="arc_sleep_auto_keywords">automatic sleep timer, repeat, schedule</string>
 </resources>

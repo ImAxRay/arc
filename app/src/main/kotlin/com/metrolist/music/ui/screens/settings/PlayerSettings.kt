@@ -53,8 +53,6 @@ import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.AutoLoadMoreKey
 import com.metrolist.music.constants.AutoRadioQueueKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
-import com.metrolist.music.constants.AutoplayKey
-import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.EnableGoogleCastKey
 import com.metrolist.music.constants.HistoryDuration
 import com.metrolist.music.constants.KeepScreenOn
@@ -67,7 +65,6 @@ import com.metrolist.music.arc.StartupSong
 import com.metrolist.music.arc.startupSongLabel
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
-import com.metrolist.music.constants.RememberShuffleAndRepeatKey
 import com.metrolist.music.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.music.constants.ShufflePlaylistFirstKey
 import com.metrolist.music.constants.SimilarContent
@@ -164,10 +161,6 @@ fun PlayerSettings(
         AutoRadioQueueKey,
         defaultValue = true
     )
-    val (disableLoadMoreWhenRepeatAll, onDisableLoadMoreWhenRepeatAllChange) = rememberPreference(
-        DisableLoadMoreWhenRepeatAllKey,
-        defaultValue = false
-    )
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) = rememberPreference(
         AutoDownloadOnLikeKey,
         defaultValue = false
@@ -180,17 +173,9 @@ fun PlayerSettings(
         AutoSkipNextOnErrorKey,
         defaultValue = false
     )
-    val (autoplay, onAutoplayChange) = rememberPreference(
-        AutoplayKey,
-        defaultValue = true
-    )
     val (persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange) = rememberPreference(
         PersistentShuffleAcrossQueuesKey,
         defaultValue = false
-    )
-    val (rememberShuffleAndRepeat, onRememberShuffleAndRepeatChange) = rememberPreference(
-        RememberShuffleAndRepeatKey,
-        defaultValue = true
     )
     val (shufflePlaylistFirst, onShufflePlaylistFirstChange) = rememberPreference(
         ShufflePlaylistFirstKey,
@@ -562,365 +547,97 @@ fun PlayerSettings(
 
         if (section == "queue") {
             Material3SettingsGroup(
-                title = stringResource(R.string.sleep_timer),
-                icon = painterResource(R.drawable.bedtime),
-                items = buildList {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.time_auto),
-                            title = { Text(stringResource(R.string.enable_automatic_sleeptimer)) },
-                            description = { Text(stringResource(R.string.sleeptimer_description)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = sleepTimerEnabled,
-                                    onCheckedChange = onSleepTimerEnabledChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (sleepTimerEnabled) R.drawable.check else R.drawable.close
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                                        )
-                                    }
-                                )
-                            },
-                            onClick = { onSleepTimerEnabledChange(!sleepTimerEnabled) }
-                        )
-                    )
-
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.baseline_event_repeat_24),
-                                title = { Text(stringResource(R.string.sleep_timer_repeat)) },
-                                description = {
-                                    Text(
-                                        stringResource(R.string.sleep_timer_repeat_description)
-                                    )
-                                },
-                                trailingContent = {
-                                    Switch(
-                                        checked = sleepTimerEnabled,
-                                        onCheckedChange = {showSleepTimerDialog = true},
-                                        thumbContent = {
-                                            Icon(
-                                                painter = painterResource(
-                                                    id = if (sleepTimerEnabled) R.drawable.check else R.drawable.close
-                                                ),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(SwitchDefaults.IconSize)
-                                            )
-                                        }
-                                    )
-                                },
-                                onClick = { showSleepTimerDialog = true }
-                            )
-                        )
-
-
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.more_time),
-                            title = { Text(stringResource(R.string.sleep_timer_stop_after_current_song_title)) },
-                            description = { Text(stringResource(R.string.sleep_timer_stop_after_current_song_description)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = sleepTimerStopAfterCurrentSong,
-                                    onCheckedChange = onSleepTimerStopAfterCurrentSongChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (sleepTimerStopAfterCurrentSong) R.drawable.check else R.drawable.close
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                                        )
-                                    }
-                                )
-                            },
-                            onClick = { onSleepTimerStopAfterCurrentSongChange(!sleepTimerStopAfterCurrentSong) }
-                        )
-                    )
-
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.timer_arrow_down),
-                            title = { Text(stringResource(R.string.sleep_timer_fade_out_title)) },
-                            description = { Text(stringResource(R.string.sleep_timer_fade_out_description)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = sleepTimerFadeOut,
-                                    onCheckedChange = onSleepTimerFadeOutChange,
-                                    thumbContent = {
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (sleepTimerFadeOut) R.drawable.check else R.drawable.close
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                                        )
-                                    }
-                                )
-                            },
-                            onClick = { onSleepTimerFadeOutChange(!sleepTimerFadeOut) }
-                        )
-                    )
-
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        if (section == "queue") AlarmSettingsSection()
-
-        Spacer(modifier = Modifier.height(27.dp))
-
-        if (section == "queue") {
-            Material3SettingsGroup(
-                title = stringResource(R.string.queue),
-                icon = painterResource(R.drawable.queue_music),
+                title = stringResource(R.string.arc_queue_starting),
+                icon = painterResource(R.drawable.play),
                 items = listOf(
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.shuffle),
+                        icon = painterResource(R.drawable.play),
                         title = { Text(stringResource(R.string.startup_song)) },
                         description = { Text(startupSongLabel(startupSong)) },
                         onClick = { showStartupSongDialog = true }
                     ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.playlist_add),
-                        title = { Text(stringResource(R.string.auto_load_more)) },
-                        description = { Text(stringResource(R.string.auto_load_more_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = autoLoadMore,
-                                onCheckedChange = onAutoLoadMoreChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoLoadMore) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onAutoLoadMoreChange(!autoLoadMore) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.radio),
-                        title = { Text(stringResource(R.string.auto_radio_queue)) },
-                        description = { Text(stringResource(R.string.auto_radio_queue_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = autoRadioQueue,
-                                onCheckedChange = onAutoRadioQueueChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoRadioQueue) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onAutoRadioQueueChange(!autoRadioQueue) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.skip_next),
-                        title = { Text(stringResource(R.string.autoplay)) },
-                        description = { Text(stringResource(R.string.autoplay_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = autoplay,
-                                onCheckedChange = onAutoplayChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoplay) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onAutoplayChange(!autoplay) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.repeat),
-                        title = { Text(stringResource(R.string.disable_load_more_when_repeat_all)) },
-                        description = { Text(stringResource(R.string.disable_load_more_when_repeat_all_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = disableLoadMoreWhenRepeatAll,
-                                onCheckedChange = onDisableLoadMoreWhenRepeatAllChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (disableLoadMoreWhenRepeatAll) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onDisableLoadMoreWhenRepeatAllChange(!disableLoadMoreWhenRepeatAll) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.download),
-                        title = { Text(stringResource(R.string.auto_download_on_like)) },
-                        description = { Text(stringResource(R.string.auto_download_on_like_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = autoDownloadOnLike,
-                                onCheckedChange = onAutoDownloadOnLikeChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoDownloadOnLike) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onAutoDownloadOnLikeChange(!autoDownloadOnLike) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.similar),
-                        title = { Text(stringResource(R.string.enable_similar_content)) },
-                        description = { Text(stringResource(R.string.similar_content_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = similarContentEnabled,
-                                onCheckedChange = similarContentEnabledChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (similarContentEnabled) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { similarContentEnabledChange(!similarContentEnabled) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.shuffle),
-                        title = { Text(stringResource(R.string.persistent_shuffle_title)) },
-                        description = { Text(stringResource(R.string.persistent_shuffle_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = persistentShuffleAcrossQueues,
-                                onCheckedChange = onPersistentShuffleAcrossQueuesChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (persistentShuffleAcrossQueues) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onPersistentShuffleAcrossQueuesChange(!persistentShuffleAcrossQueues) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.shuffle),
-                        title = { Text(stringResource(R.string.remember_shuffle_and_repeat)) },
-                        description = { Text(stringResource(R.string.remember_shuffle_and_repeat_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = rememberShuffleAndRepeat,
-                                onCheckedChange = onRememberShuffleAndRepeatChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (rememberShuffleAndRepeat) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onRememberShuffleAndRepeatChange(!rememberShuffleAndRepeat) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.shuffle),
-                        title = { Text(stringResource(R.string.shuffle_playlist_first)) },
-                        description = { Text(stringResource(R.string.shuffle_playlist_first_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = shufflePlaylistFirst,
-                                onCheckedChange = onShufflePlaylistFirstChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (shufflePlaylistFirst) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onShufflePlaylistFirstChange(!shufflePlaylistFirst) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.queue_music),
-                        title = { Text(stringResource(R.string.prevent_duplicate_tracks_in_queue)) },
-                        description = { Text(stringResource(R.string.prevent_duplicate_tracks_in_queue_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = preventDuplicateTracksInQueue,
-                                onCheckedChange = onPreventDuplicateTracksInQueueChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (preventDuplicateTracksInQueue) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onPreventDuplicateTracksInQueueChange(!preventDuplicateTracksInQueue) }
-                    ),
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.skip_next),
-                        title = { Text(stringResource(R.string.auto_skip_next_on_error)) },
-                        description = { Text(stringResource(R.string.auto_skip_next_on_error_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = autoSkipNextOnError,
-                                onCheckedChange = onAutoSkipNextOnErrorChange,
-                                thumbContent = {
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (autoSkipNextOnError) R.drawable.check else R.drawable.close
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { onAutoSkipNextOnErrorChange(!autoSkipNextOnError) }
-                    )
+                    switchItem(R.drawable.radio, R.string.arc_queue_radio, R.string.auto_radio_queue_desc, autoRadioQueue, onAutoRadioQueueChange),
                 )
             )
+            Spacer(modifier = Modifier.height(27.dp))
 
+            Material3SettingsGroup(
+                title = stringResource(R.string.arc_queue_ends),
+                icon = painterResource(R.drawable.playlist_add),
+                items = listOf(
+                    switchItem(R.drawable.playlist_add, R.string.arc_queue_keep_going, R.string.arc_queue_keep_going_desc, autoLoadMore || similarContentEnabled, {
+                        onAutoLoadMoreChange(it)
+                        similarContentEnabledChange(it)
+                    }),
+                )
+            )
+            Spacer(modifier = Modifier.height(27.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.shuffle),
+                icon = painterResource(R.drawable.shuffle),
+                items = listOf(
+                    switchItem(R.drawable.shuffle, R.string.arc_shuffle_keep, R.string.persistent_shuffle_desc, persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange),
+                    switchItem(R.drawable.shuffle_on, R.string.arc_shuffle_playlist_first, R.string.shuffle_playlist_first_desc, shufflePlaylistFirst, onShufflePlaylistFirstChange),
+                )
+            )
+            Spacer(modifier = Modifier.height(27.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.queue),
+                icon = painterResource(R.drawable.queue_music),
+                items = listOf(
+                    switchItem(R.drawable.remove, R.string.arc_no_duplicates, R.string.prevent_duplicate_tracks_in_queue_desc, preventDuplicateTracksInQueue, onPreventDuplicateTracksInQueueChange),
+                    switchItem(R.drawable.skip_next, R.string.arc_skip_unplayable, R.string.arc_skip_unplayable_desc, autoSkipNextOnError, onAutoSkipNextOnErrorChange),
+                    switchItem(R.drawable.download, R.string.arc_download_liked, R.string.auto_download_on_like_desc, autoDownloadOnLike, onAutoDownloadOnLikeChange),
+                )
+            )
+            Spacer(modifier = Modifier.height(27.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.sleep_timer),
+                icon = painterResource(R.drawable.bedtime),
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.time_auto),
+                        title = { Text(stringResource(R.string.enable_automatic_sleeptimer)) },
+                        description = {
+                            Text(
+                                if (sleepTimerEnabled) {
+                                    stringResource(
+                                        when (sleepTimerRepeat) {
+                                            "daily" -> R.string.sleep_timer_daily
+                                            "custom" -> R.string.sleep_timer_custom
+                                            else -> R.string.sleep_timer_weekdays_weekends
+                                        }
+                                    ) + if (sleepTimerRepeat == "custom") "" else " · $sleepTimerStartTime–$sleepTimerEndTime"
+                                } else {
+                                    stringResource(R.string.sleeptimer_description)
+                                }
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = sleepTimerEnabled,
+                                onCheckedChange = onSleepTimerEnabledChange,
+                                thumbContent = {
+                                    Icon(
+                                        painter = painterResource(id = if (sleepTimerEnabled) R.drawable.check else R.drawable.close),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            )
+                        },
+                        onClick = { showSleepTimerDialog = true }
+                    ),
+                    switchItem(R.drawable.more_time, R.string.sleep_timer_stop_after_current_song_title, R.string.sleep_timer_stop_after_current_song_description, sleepTimerStopAfterCurrentSong, onSleepTimerStopAfterCurrentSongChange),
+                    switchItem(R.drawable.timer_arrow_down, R.string.sleep_timer_fade_out_title, R.string.sleep_timer_fade_out_description, sleepTimerFadeOut, onSleepTimerFadeOutChange),
+                )
+            )
+            Spacer(modifier = Modifier.height(27.dp))
+
+            AlarmSettingsSection()
             Spacer(modifier = Modifier.height(27.dp))
         }
 
