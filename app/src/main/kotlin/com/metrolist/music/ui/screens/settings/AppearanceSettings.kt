@@ -314,7 +314,7 @@ fun AppearanceSettings(
                         description = { Text(DensityScale.fromValue(densityScale).label) },
                         onClick = { showDensityScaleDialog = true },
                     ),
-                    switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange),
+                    switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange, enabled = !com.metrolist.music.arc.rememberVisualsStill()),
                     switchItem(R.drawable.palette, R.string.enable_dynamic_icon, R.string.enable_dynamic_icon_desc, enableDynamicIcon, onEnableDynamicIconChange),
                 ),
         )
@@ -425,8 +425,9 @@ fun AppearanceSettings(
 }
 
 @Composable
-private fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit) =
+private fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) =
     Material3SettingsItem(
+        enabled = enabled,
         icon = painterResource(icon),
         title = { Text(stringResource(title)) },
         description = { Text(stringResource(description)) },
@@ -434,6 +435,7 @@ private fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean
             Switch(
                 checked = checked,
                 onCheckedChange = onChange,
+                enabled = enabled,
                 thumbContent = {
                     Icon(
                         painter = painterResource(if (checked) R.drawable.check else R.drawable.close),

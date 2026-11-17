@@ -25,6 +25,7 @@ private const val BACKDROP_PX = 48
  */
 @Composable
 internal fun VinylBackdrop(art: ImageBitmap?, modifier: Modifier = Modifier) {
+    if (com.metrolist.music.arc.rememberVisualsStill()) return
     Crossfade(targetState = art, label = "vinylBackdrop", modifier = modifier) { image ->
         if (image == null) return@Crossfade
         val small =

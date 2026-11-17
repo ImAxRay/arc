@@ -7,7 +7,7 @@ package com.metrolist.music.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.arcMarquee
 import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -104,7 +104,7 @@ private fun NewActionButton(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS),
+                modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS),
             )
         }
     }

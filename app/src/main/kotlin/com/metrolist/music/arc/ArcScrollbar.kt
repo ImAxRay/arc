@@ -101,6 +101,9 @@ fun Modifier.scrollSection(title: String?): Modifier {
 @Composable
 fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: PaddingValues = PaddingValues()): Modifier {
     val sections = LocalScrollSections.current
+    val density = LocalDensity.current
+    val edgeTop = with(density) { insets.calculateTopPadding().toPx() + 12.dp.toPx() }
+    val edgeBottom = with(density) { insets.calculateBottomPadding().toPx() + 12.dp.toPx() }
     val proxy = remember(state) {
         ScrollProxy(
             fraction = { if (state.maxValue in 1 until Int.MAX_VALUE) state.value.toFloat() / state.maxValue else 0f },
@@ -116,10 +119,12 @@ fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: Paddi
             if (viewport == null || !viewport.isAttached || max !in 1 until Int.MAX_VALUE) {
                 emptyList()
             } else {
+                // The handle at f sits beside the page at edgeTop + f * (max + span), so a group is named and marked where it passes the handle.
+                val span = viewport.size.height - edgeTop - edgeBottom
                 s.groups.mapNotNull { (name, coords) ->
                     if (!coords.isAttached) return@mapNotNull null
                     val y = viewport.localPositionOf(coords, Offset.Zero).y + state.value
-                    Section(name, (y / max).coerceIn(0f, 1f))
+                    Section(name, ((y - edgeTop) / (max + span)).coerceIn(0f, 1f))
                 }.sortedBy { it.at }
             }
         }

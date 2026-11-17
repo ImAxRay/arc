@@ -27,14 +27,16 @@ class VisualModeTest {
     }
 
     @Test
-    fun normalKeepsChosenBackgroundAndSaverTurnsItOff() {
+    fun normalKeepsChosenBackgroundAndSaverLeavesSwitchesAlone() {
         val prefs = mutablePreferencesOf(ArcHomeBackgroundKey to HomeBackground.BLADES.name, ArcTiltCoversKey to true)
         prefs.applyVisualMode(VisualMode.NORMAL)
         assertEquals(HomeBackground.BLADES.name, prefs[ArcHomeBackgroundKey])
         assertEquals(false, prefs[ArcTiltCoversKey])
         prefs.applyVisualMode(VisualMode.SAVER)
-        assertEquals(HomeBackground.OFF.name, prefs[ArcHomeBackgroundKey])
-        assertEquals(false, prefs[ArcPressGlowKey])
+        assertEquals(VisualMode.SAVER, visualMode(prefs))
+        assertEquals(HomeBackground.BLADES.name, prefs[ArcHomeBackgroundKey])
+        assertEquals(true, prefs[ArcPressGlowKey])
+        prefs[ArcHomeBackgroundKey] = HomeBackground.OFF.name
         prefs.applyVisualMode(VisualMode.FULL)
         assertEquals(HomeBackground.FIELD.name, prefs[ArcHomeBackgroundKey])
         assertEquals(true, prefs[ArcTiltCoversKey])

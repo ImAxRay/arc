@@ -53,10 +53,10 @@ val LocalTiltEye = staticCompositionLocalOf<TiltEye?> { null }
 fun rememberTiltEye(): TiltEye? {
     val enabled by rememberPreference(ArcTiltCoversKey, false)
     val eye = remember { TiltEye() }
-    if (!enabled) return null
+    if (!enabled || rememberVisualsStill()) return null
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val covered = ArcLineSignals.playerExpanded || rememberPhoneSaver()
+    val covered = ArcLineSignals.playerExpanded
     DisposableEffect(lifecycle, context, covered) {
         val sensors = context.getSystemService(SensorManager::class.java)
         val sensor = sensors?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) ?: sensors?.getDefaultSensor(Sensor.TYPE_GRAVITY)

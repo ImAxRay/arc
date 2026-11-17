@@ -263,10 +263,11 @@ fun HomeScreen(
             }
         },
     ) {
-        val showHomeLine by rememberPreference(ArcHomeLineKey, true)
-        val homeBackground by rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD)
+        val saver = com.metrolist.music.arc.rememberVisualsStill()
+        val showHomeLine = rememberPreference(ArcHomeLineKey, true).value && !saver
+        val homeBackground = if (saver) HomeBackground.OFF else rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD).value
         val listenTogetherInTopBar by rememberPreference(ListenTogetherInTopBarKey, true)
-        val pressGlowOn by rememberPreference(ArcPressGlowKey, true)
+        val pressGlowOn = rememberPreference(ArcPressGlowKey, true).value && !saver
         val pressGlow =
             rememberPressGlow(
                 enabled = pressGlowOn,

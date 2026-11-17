@@ -1269,9 +1269,9 @@
     <string name="arc_visual_saver">Saver</string>
     <string name="arc_visual_normal">Normal</string>
     <string name="arc_visual_full">Full</string>
-    <string name="arc_visual_saver_desc">Still Home, no glow, still covers. Lightest on the battery.</string>
+    <string name="arc_visual_saver_desc">Everything for speed and battery: no effects, no glow or blur, no moving names, screen at 60 Hz. Effects stay locked until you leave Saver. Sound quality is untouched.</string>
     <string name="arc_visual_normal_desc">Moving Home background, Home line, glow on press, animated covers on Wi-Fi.</string>
-    <string name="arc_visual_full_desc">Everything in Normal, plus covers that tilt with the phone. Uses the motion sensor while covers are on screen.</string>
+    <string name="arc_visual_full_desc">Every effect on: everything in Normal plus covers that tilt with the phone.</string>
     <string name="arc_visual_phone_saver">Your phone\'s Battery Saver is on, so Arc runs as Saver until it turns off.</string>
     <string name="arc_visual_fine_tune">Fine-tune</string>
     <string name="arc_visual_fine_tune_desc">Turn each effect on or off</string>

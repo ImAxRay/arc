@@ -9,7 +9,7 @@ import com.metrolist.music.arc.dislikeMenuItem
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
-import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.arcMarquee
 import com.metrolist.music.arc.MARQUEE_LOOPS
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -194,7 +194,7 @@ fun YouTubeSongMenu(
         content = {
             Text(
                 text = song.title,
-                modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS),
+                modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

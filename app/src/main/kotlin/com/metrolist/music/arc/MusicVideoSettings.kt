@@ -74,8 +74,9 @@ fun MusicVideoSettings() {
 }
 
 @Composable
-internal fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit) =
+internal fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) =
     Material3SettingsItem(
+        enabled = enabled,
         icon = painterResource(icon),
         title = { Text(stringResource(title)) },
         description = { Text(stringResource(description)) },
@@ -83,6 +84,7 @@ internal fun switchItem(icon: Int, title: Int, description: Int, checked: Boolea
             Switch(
                 checked = checked,
                 onCheckedChange = onChange,
+                enabled = enabled,
                 thumbContent = {
                     Icon(
                         painter = painterResource(if (checked) R.drawable.check else R.drawable.close),

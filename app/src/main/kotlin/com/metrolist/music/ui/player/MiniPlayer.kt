@@ -15,7 +15,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.arcMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -642,7 +642,7 @@ private fun NewMiniPlayerSongInfo(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Clip,
-                modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                modifier = Modifier.arcMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                 style = MiniLineStyle,
                 lineHeight = 18.sp,
             )
@@ -673,7 +673,7 @@ private fun NewMiniPlayerSongInfo(
                         modifier =
                             Modifier
                                 .alignByBaseline()
-                                .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                                .arcMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
                         // the marquee clips to the text box; a centred line box leaves room for g and y in fonts
                         // whose descenders hang below it, without pushing the name down
                         style = MiniLineStyle,

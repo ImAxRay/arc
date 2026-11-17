@@ -207,7 +207,7 @@ internal fun CoverGlow(art: CoverArt?, coverBottom: Float, pivot: Offset, cutRad
     val current = live ?: shown
     val spill = art?.spill ?: EvenSpill
     val maskPaint = remember { Paint().apply { blendMode = BlendMode.DstIn } }
-    if (current == null || coverBottom <= 0f || alpha <= 0.01f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    if (rememberVisualsStill() || current == null || coverBottom <= 0f || alpha <= 0.01f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     Canvas(
         modifier
             .fillMaxSize()

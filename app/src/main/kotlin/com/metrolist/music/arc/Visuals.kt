@@ -5,7 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.PowerManager
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
@@ -36,19 +40,18 @@ fun visualMode(prefs: Preferences): VisualMode {
     }
 }
 
-/** Writes [mode] and the effect switches it stands for. A chosen Home background other than Off is kept. */
+/**
+ * Writes [mode]. Normal and Full also set the effect switches they stand for (a chosen Home background other than Off
+ * is kept); Saver leaves them alone and holds every effect off while it lasts, so leaving it brings them back.
+ */
 fun MutablePreferences.applyVisualMode(mode: VisualMode) {
-    val on = mode != VisualMode.SAVER
     this[ArcVisualModeKey] = mode.name
+    if (mode == VisualMode.SAVER) return
     val background = this[ArcHomeBackgroundKey]
-    if (!on) {
-        this[ArcHomeBackgroundKey] = HomeBackground.OFF.name
-    } else if (background == null || background == HomeBackground.OFF.name) {
-        this[ArcHomeBackgroundKey] = HomeBackground.FIELD.name
-    }
-    this[ArcHomeLineKey] = on
-    this[ArcPressGlowKey] = on
-    this[ArcMotionCoversKey] = on
+    if (background == null || background == HomeBackground.OFF.name) this[ArcHomeBackgroundKey] = HomeBackground.FIELD.name
+    this[ArcHomeLineKey] = true
+    this[ArcPressGlowKey] = true
+    this[ArcMotionCoversKey] = true
     this[ArcTiltCoversKey] = mode == VisualMode.FULL
 }
 
@@ -57,7 +60,7 @@ object Visuals {
     val phoneSaver = MutableStateFlow(false)
     val mode = MutableStateFlow(VisualMode.NORMAL)
 
-    /** Effects with no switch of their own (edit wobble, Home landing, marquees) stand still while this is true. Effects with a switch follow only [phoneSaver]. */
+    /** Saver, chosen or forced by the phone's Battery Saver: every visual effect is off and its switch locked. */
     val still = MutableStateFlow(false)
 
     fun init(context: Context, scope: CoroutineScope) {
@@ -86,13 +89,12 @@ object Visuals {
 }
 
 @Composable
-fun rememberPhoneSaver(): Boolean {
-    val saver by Visuals.phoneSaver.collectAsState()
-    return saver
-}
-
-@Composable
 fun rememberVisualsStill(): Boolean {
     val still by Visuals.still.collectAsState()
     return still
 }
+
+/** [basicMarquee] that stays still in Saver. */
+@Composable
+fun Modifier.arcMarquee(iterations: Int, initialDelayMillis: Int = 1200, velocity: Dp = 30.dp): Modifier =
+    if (rememberVisualsStill()) this else basicMarquee(iterations = iterations, initialDelayMillis = initialDelayMillis, velocity = velocity)

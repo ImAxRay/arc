@@ -134,6 +134,7 @@ fun VisualSettings(navController: NavController) {
     val (motionCovers, onMotionCovers) = rememberPreference(ArcMotionCoversKey, true)
     val (motionCoversMobile, onMotionCoversMobile) = rememberPreference(ArcMotionCoversMobileKey, false)
     var picking by rememberSaveable { mutableStateOf(false) }
+    val locked = rememberVisualsStill()
     val backgroundText: @Composable (HomeBackground) -> String = {
         stringResource(
             when (it) {
@@ -162,20 +163,21 @@ fun VisualSettings(navController: NavController) {
                     icon = painterResource(R.drawable.gradient),
                     title = { Text(stringResource(R.string.arc_home_background)) },
                     description = { Text(backgroundText(homeBackground)) },
+                    enabled = !locked,
                     onClick = { picking = true },
                 ),
-                switchItem(R.drawable.linear_scale, R.string.arc_home_line, R.string.arc_home_line_desc, homeLine, onHomeLine),
-                switchItem(R.drawable.gradient, R.string.arc_press_glow, R.string.arc_press_glow_desc, pressGlow, onPressGlow),
+                switchItem(R.drawable.linear_scale, R.string.arc_home_line, R.string.arc_home_line_desc, homeLine, onHomeLine, enabled = !locked),
+                switchItem(R.drawable.gradient, R.string.arc_press_glow, R.string.arc_press_glow_desc, pressGlow, onPressGlow, enabled = !locked),
             ),
         )
         Spacer(Modifier.height(27.dp))
         Material3SettingsGroup(
             title = stringResource(R.string.arc_visual_covers),
             items = listOfNotNull(
-                switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCovers),
-                switchItem(R.drawable.slow_motion_video, R.string.arc_motion_covers, R.string.arc_motion_covers_desc, motionCovers, onMotionCovers),
+                switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCovers, enabled = !locked),
+                switchItem(R.drawable.slow_motion_video, R.string.arc_motion_covers, R.string.arc_motion_covers_desc, motionCovers, onMotionCovers, enabled = !locked),
                 if (motionCovers) {
-                    switchItem(R.drawable.signal_cellular, R.string.arc_motion_covers_mobile, R.string.arc_motion_covers_mobile_desc, motionCoversMobile, onMotionCoversMobile)
+                    switchItem(R.drawable.signal_cellular, R.string.arc_motion_covers_mobile, R.string.arc_motion_covers_mobile_desc, motionCoversMobile, onMotionCoversMobile, enabled = !locked)
                 } else null,
             ),
         )

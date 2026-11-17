@@ -16,7 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.arc.arcMarquee
 import com.metrolist.music.arc.LocalMarqueeTouches
 import com.metrolist.music.arc.MarqueeText
 import com.metrolist.music.arc.MARQUEE_LOOPS
@@ -615,7 +615,7 @@ fun SongGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
+            modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
         )
     },
     subtitle = {
@@ -846,7 +846,7 @@ fun AlbumGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
+            modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
         )
     },
      subtitle = {
@@ -1012,7 +1012,7 @@ fun PlaylistGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
+            modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
         )
     },
     subtitle = {
@@ -1294,7 +1294,7 @@ fun YouTubeGridItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-                modifier = Modifier.basicMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
+                modifier = Modifier.arcMarquee(iterations = MARQUEE_LOOPS).fillMaxWidth()
             )
         }
     },
@@ -1377,7 +1377,7 @@ fun LocalSongsGrid(
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
+            modifier = Modifier.arcMarquee(
                 iterations = 3,
                 initialDelayMillis = 1000,
                 velocity = 30.dp
@@ -1419,7 +1419,7 @@ fun LocalArtistsGrid(
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
+            modifier = Modifier.arcMarquee(
                 iterations = 3,
                 initialDelayMillis = 1000,
                 velocity = 30.dp
@@ -1461,7 +1461,7 @@ fun LocalAlbumsGrid(
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(
+            modifier = Modifier.arcMarquee(
                 iterations = 3,
                 initialDelayMillis = 1000,
                 velocity = 30.dp
