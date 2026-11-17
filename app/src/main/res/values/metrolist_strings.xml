@@ -1449,4 +1449,9 @@
     <string name="arc_clear_history">Clear history</string>
     <string name="arc_clear_history_keywords">listen history, search history, delete</string>
     <string name="arc_privacy_screen">Screen</string>
+    <string name="arc_back_up">Back up</string>
+    <string name="arc_import_playlists">Import playlists</string>
+    <string name="arc_import_playlist_file">Playlist file</string>
+    <string name="arc_import_playlist_file_desc">An M3U or CSV file</string>
+    <string name="arc_import_playlist_file_keywords">m3u, csv, import</string>
 </resources>

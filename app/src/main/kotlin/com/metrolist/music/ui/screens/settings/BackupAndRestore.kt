@@ -67,6 +67,7 @@ import com.metrolist.music.viewmodels.BackupPreviewInfo
 import com.metrolist.music.viewmodels.BackupRestoreViewModel
 import com.metrolist.music.viewmodels.ConvertedSongLog
 import com.metrolist.music.viewmodels.CsvImportState
+import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -142,17 +143,20 @@ fun BackupAndRestore(
             }
         }
     var showSpotifyImport by remember { mutableStateOf(false) }
-    val importPlaylistFromCsv =
+    val importPlaylistFile =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
-            pendingCsvUri = uri
-            val previewState = viewModel.previewCsvFile(context, uri)
-            csvImportState = previewState
-            showCsvColumnMapping = true
-        }
-    val importM3uLauncherOnline =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri == null) return@rememberLauncherForActivityResult
+            val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { if (it.moveToFirst()) it.getString(0) else null }.orEmpty().lowercase()
+            val type = context.contentResolver.getType(uri).orEmpty()
+            val isM3u = name.endsWith(".m3u") || name.endsWith(".m3u8") || "mpegurl" in type ||
+                (type.startsWith("audio/") && !name.endsWith(".csv"))
+            if (!isM3u) {
+                pendingCsvUri = uri
+                csvImportState = viewModel.previewCsvFile(context, uri)
+                showCsvColumnMapping = true
+                return@rememberLauncherForActivityResult
+            }
             val result = viewModel.loadM3UOnline(context, uri)
             importedSongs.clear()
             importedSongs.addAll(result)
@@ -178,10 +182,12 @@ fun BackupAndRestore(
 
         val appName = stringResource(R.string.app_name)
         Material3SettingsGroup(
+            title = stringResource(R.string.action_backup),
+            icon = painterResource(R.drawable.backup),
             items =
                 listOf(
                     Material3SettingsItem(
-                        title = { Text(stringResource(R.string.action_backup)) },
+                        title = { Text(stringResource(R.string.arc_back_up)) },
                         description = { Text(stringResource(R.string.arc_backup_desc)) },
                         icon = painterResource(R.drawable.backup),
                         onClick = {
@@ -200,13 +206,15 @@ fun BackupAndRestore(
                             restoreLauncher.launch(arrayOf("application/octet-stream"))
                         },
                     ),
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.import_online)) },
-                        icon = painterResource(R.drawable.playlist_add),
-                        onClick = {
-                            importM3uLauncherOnline.launch(arrayOf("audio/*"))
-                        },
-                    ),
+                ),
+        )
+        Spacer(Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.arc_import_playlists),
+            icon = painterResource(R.drawable.playlist_add),
+            items =
+                listOf(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.arc_spotify_import)) },
                         description = { Text(stringResource(R.string.arc_spotify_import_desc)) },
@@ -214,11 +222,12 @@ fun BackupAndRestore(
                         onClick = { showSpotifyImport = true },
                     ),
                     Material3SettingsItem(
-                        title = { Text(stringResource(R.string.import_csv)) },
+                        title = { Text(stringResource(R.string.arc_import_playlist_file)) },
+                        description = { Text(stringResource(R.string.arc_import_playlist_file_desc)) },
                         icon = painterResource(R.drawable.playlist_add),
                         onClick = {
-                            importPlaylistFromCsv.launch(
-                                arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain"),
+                            importPlaylistFile.launch(
+                                arrayOf("audio/*", "text/csv", "text/comma-separated-values", "application/csv", "text/plain"),
                             )
                         },
                     ),
