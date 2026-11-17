@@ -1,7 +1,6 @@
 package com.metrolist.music.arc
 
 import android.graphics.Bitmap
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,9 +69,8 @@ private var wavesSeconds = 0.0
 @Composable
 fun HomeWaves(tint: Color, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val still = remember {
-        context.getSystemService(PowerManager::class.java).isPowerSaveMode ||
-            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    val still = rememberVisualsStill() || remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
     val cell = with(LocalDensity.current) { CellSize.toPx().roundToInt().coerceAtLeast(1) }
     var size by remember { mutableStateOf(IntSize.Zero) }

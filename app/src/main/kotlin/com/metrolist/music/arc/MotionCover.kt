@@ -2,7 +2,6 @@ package com.metrolist.music.arc
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.os.PowerManager
 import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.animateFloatAsState
@@ -98,7 +97,7 @@ object MotionCovers {
     val liveFrame = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
 
     fun allowed(context: Context, onMobile: Boolean): Boolean {
-        if (context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true) return false
+        if (Visuals.still.value) return false
         val metered = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
         return onMobile || !metered
     }

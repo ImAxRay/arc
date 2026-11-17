@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
@@ -490,7 +489,7 @@ private fun Modifier.homeLanding(index: Int): Modifier {
         remember {
             if (homeFirstShown == 0L) homeFirstShown = SystemClock.uptimeMillis()
             SystemClock.uptimeMillis() - homeFirstShown < 800 &&
-                context.getSystemService(PowerManager::class.java)?.isPowerSaveMode != true &&
+                !com.metrolist.music.arc.Visuals.still.value &&
                 Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         }
     val progress = remember { Animatable(if (land) 0f else 1f) }

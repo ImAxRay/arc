@@ -4,7 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.PowerManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
@@ -57,10 +56,9 @@ fun rememberTiltEye(): TiltEye? {
     if (!enabled) return null
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val covered = ArcLineSignals.playerExpanded
+    val covered = ArcLineSignals.playerExpanded || rememberVisualsStill()
     DisposableEffect(lifecycle, context, covered) {
         val sensors = context.getSystemService(SensorManager::class.java)
-        val power = context.getSystemService(PowerManager::class.java)
         val sensor = sensors?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) ?: sensors?.getDefaultSensor(Sensor.TYPE_GRAVITY)
         val matrix = FloatArray(9)
         var baseX = Float.NaN
@@ -101,7 +99,7 @@ fun rememberTiltEye(): TiltEye? {
         }
         var listening = false
         fun start() {
-            if (listening || covered || sensor == null || power?.isPowerSaveMode == true) return
+            if (listening || covered || sensor == null) return
             listening = sensors.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
         }
         fun stop() {

@@ -1,6 +1,5 @@
 package com.metrolist.music.arc.home
 
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,9 +92,10 @@ private const val EDIT_SCALE = 0.92f
 fun rememberWobbleClock(editing: Boolean): MutableLongState {
     val clock = remember { mutableLongStateOf(0L) }
     val context = LocalContext.current
-    LaunchedEffect(editing) {
+    val saving = com.metrolist.music.arc.rememberVisualsStill()
+    LaunchedEffect(editing, saving) {
         val still =
-            context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true ||
+            saving ||
                 Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         if (!editing || still) {
             clock.longValue = 0L

@@ -95,6 +95,7 @@ class App :
         applicationScope.launch(Dispatchers.IO) { com.metrolist.music.arc.OwnMusicSync.onAppStart(this@App, database) }
         InnerTubeXPlayer.initialize(this)
         com.metrolist.music.arc.Usage.init(this)
+        com.metrolist.music.arc.Visuals.init(this, applicationScope)
         applicationScope.launch {
             dataStore.data
                 .map { (it[com.metrolist.music.arc.ArcLearnUsageKey] ?: true) && it[com.metrolist.music.constants.PauseListenHistoryKey] != true }

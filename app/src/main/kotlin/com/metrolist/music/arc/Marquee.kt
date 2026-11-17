@@ -70,6 +70,7 @@ private fun marqueeRest(clockMs: Long, loop: Float, speed: Float, loops: Int): L
  * which keeps the screen from redrawing 120 times a second over still text.
  */
 internal suspend fun runMarqueeClock(loops: () -> List<Float>, speed: Float, times: Int = MARQUEE_LOOPS, fromMs: Long = 0L, onTime: (Long) -> Unit) {
+    if (Visuals.still.value) return
     val start = withFrameMillis { it } - fromMs
     while (true) {
         val now = withFrameMillis { it } - start

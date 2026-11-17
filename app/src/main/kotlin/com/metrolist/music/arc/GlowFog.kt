@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Paint
 import android.graphics.RuntimeShader
 import android.os.Build
-import android.os.PowerManager
 import android.provider.Settings
 import android.util.LruCache
 import androidx.annotation.RequiresApi
@@ -161,7 +160,7 @@ class PressGlow internal constructor(private val context: Context, private val s
 
 /** Whether a glow may animate right now: not in battery saver, and not with the phone's animations turned off. */
 private fun glowMayMove(context: Context, shader: Boolean = true) =
-    (!shader || Build.VERSION.SDK_INT >= 33) && context.getSystemService(PowerManager::class.java)?.isPowerSaveMode != true &&
+    (!shader || Build.VERSION.SDK_INT >= 33) && !Visuals.still.value &&
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
 
 /** How lit a glow is: rises while held, fades after, and runs frames only while it is doing either. */

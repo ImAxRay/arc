@@ -55,17 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
-import com.metrolist.music.arc.ArcHomeLineKey
-import com.metrolist.music.arc.ArcHomeBackgroundKey
-import com.metrolist.music.arc.ArcPressGlowKey
 import com.metrolist.music.arc.SpeedDialRowChoices
 import com.metrolist.music.arc.SpeedDialRowsKey
-import com.metrolist.music.arc.ArcTiltCoversKey
-import com.metrolist.music.arc.HomeBackground
-import com.metrolist.music.arc.HomeBackgroundPicker
 import com.metrolist.music.arc.ArcAudioDetailsKey
-import com.metrolist.music.arc.ArcMotionCoversKey
-import com.metrolist.music.arc.ArcMotionCoversMobileKey
 import com.metrolist.music.arc.SearchMicKey
 import com.metrolist.music.arc.resetHints
 import com.metrolist.music.constants.ChipSortTypeKey
@@ -179,29 +171,6 @@ fun AppearanceSettings(
     var showDensityScaleDialog by rememberSaveable { mutableStateOf(false) }
 
     val (searchMic, onSearchMicChange) = rememberPreference(SearchMicKey, defaultValue = true)
-    val (homeLine, onHomeLineChange) = rememberPreference(ArcHomeLineKey, defaultValue = true)
-    val (homeBackground, onHomeBackgroundChange) = rememberEnumPreference(ArcHomeBackgroundKey, defaultValue = HomeBackground.FIELD)
-    var showHomeBackgroundDialog by rememberSaveable { mutableStateOf(false) }
-    val homeBackgroundText: @Composable (HomeBackground) -> String = {
-        stringResource(
-            when (it) {
-                HomeBackground.FIELD -> R.string.arc_home_background_field
-                HomeBackground.BLADES -> R.string.arc_home_background_blades
-                HomeBackground.WAVES -> R.string.arc_home_background_waves
-                HomeBackground.OFF -> R.string.arc_home_background_off
-            },
-        )
-    }
-    if (showHomeBackgroundDialog) {
-        HomeBackgroundPicker(
-            current = homeBackground,
-            onSelect = onHomeBackgroundChange,
-            onDismiss = { showHomeBackgroundDialog = false },
-            label = homeBackgroundText,
-        )
-    }
-    val (tiltCovers, onTiltCoversChange) = rememberPreference(ArcTiltCoversKey, defaultValue = false)
-    val (pressGlow, onPressGlowChange) = rememberPreference(ArcPressGlowKey, defaultValue = true)
     val (speedDialRows, onSpeedDialRowsChange) = rememberPreference(SpeedDialRowsKey, defaultValue = 3)
     var showSpeedDialRowsDialog by rememberSaveable { mutableStateOf(false) }
     if (showSpeedDialRowsDialog) {
@@ -218,8 +187,6 @@ fun AppearanceSettings(
         )
     }
     val (audioDetails, onAudioDetailsChange) = rememberPreference(ArcAudioDetailsKey, defaultValue = true)
-    val (motionCovers, onMotionCoversChange) = rememberPreference(ArcMotionCoversKey, defaultValue = true)
-    val (motionCoversMobile, onMotionCoversMobileChange) = rememberPreference(ArcMotionCoversMobileKey, defaultValue = false)
     val hintScope = rememberCoroutineScope()
     val hintContext = LocalContext.current
     val (listenTogetherInTopBar, onListenTogetherInTopBarChange) =
@@ -349,8 +316,6 @@ fun AppearanceSettings(
                     ),
                     switchItem(R.drawable.speed, R.string.enable_high_refresh_rate, R.string.enable_high_refresh_rate_desc, enableHighRefreshRate, onEnableHighRefreshRateChange),
                     switchItem(R.drawable.palette, R.string.enable_dynamic_icon, R.string.enable_dynamic_icon_desc, enableDynamicIcon, onEnableDynamicIconChange),
-                    switchItem(R.drawable.grid_view, R.string.arc_tilt_covers, R.string.arc_tilt_covers_desc, tiltCovers, onTiltCoversChange),
-                    switchItem(R.drawable.gradient, R.string.arc_press_glow, R.string.arc_press_glow_desc, pressGlow, onPressGlowChange),
                 ),
         )
 
@@ -361,18 +326,11 @@ fun AppearanceSettings(
             items =
                 listOf(
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.gradient),
-                        title = { Text(stringResource(R.string.arc_home_background)) },
-                        description = { Text(homeBackgroundText(homeBackground)) },
-                        onClick = { showHomeBackgroundDialog = true },
-                    ),
-                    Material3SettingsItem(
                         icon = painterResource(R.drawable.grid_view),
                         title = { Text(stringResource(R.string.arc_speed_dial_rows)) },
                         description = { Text(pluralStringResource(R.plurals.arc_speed_dial_rows_value, speedDialRows, speedDialRows)) },
                         onClick = { showSpeedDialRowsDialog = true },
                     ),
-                    switchItem(R.drawable.linear_scale, R.string.arc_home_line, R.string.arc_home_line_desc, homeLine, onHomeLineChange),
                     switchItem(R.drawable.group_outlined, R.string.listen_together_in_top_bar, R.string.listen_together_in_top_bar_desc, listenTogetherInTopBar, onListenTogetherInTopBarChange),
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.nav_bar),
@@ -396,12 +354,8 @@ fun AppearanceSettings(
         Material3SettingsGroup(
             title = stringResource(R.string.player),
             items =
-                listOfNotNull(
+                listOf(
                     switchItem(R.drawable.info, R.string.arc_audio_details, R.string.arc_audio_details_desc, audioDetails, onAudioDetailsChange),
-                    switchItem(R.drawable.slow_motion_video, R.string.arc_motion_covers, R.string.arc_motion_covers_desc, motionCovers, onMotionCoversChange),
-                    if (motionCovers) {
-                        switchItem(R.drawable.signal_cellular, R.string.arc_motion_covers_mobile, R.string.arc_motion_covers_mobile_desc, motionCoversMobile, onMotionCoversMobileChange)
-                    } else null,
                 ),
         )
 

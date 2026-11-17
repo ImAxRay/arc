@@ -74,7 +74,7 @@ fun MusicVideoSettings() {
 }
 
 @Composable
-private fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit) =
+internal fun switchItem(icon: Int, title: Int, description: Int, checked: Boolean, onChange: (Boolean) -> Unit) =
     Material3SettingsItem(
         icon = painterResource(icon),
         title = { Text(stringResource(title)) },

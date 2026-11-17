@@ -14,7 +14,6 @@ import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
@@ -85,9 +84,8 @@ private var fieldSeconds = Random.nextFloat() * 20_000f
 @Composable
 private fun HomeField(look: FieldLook, dark: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val still = remember {
-        context.getSystemService(PowerManager::class.java).isPowerSaveMode ||
-            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    val still = rememberVisualsStill() || remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
