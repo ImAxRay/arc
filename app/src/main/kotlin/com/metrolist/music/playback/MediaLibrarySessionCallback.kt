@@ -35,7 +35,6 @@ import com.metrolist.innertube.models.SongItem
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.music.R
-import com.metrolist.music.constants.AndroidAutoSearchLocalLimitKey
 import com.metrolist.music.constants.HideExplicitKey
 import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MediaSessionConstants
@@ -591,9 +590,7 @@ constructor(
 
             try {
                 val searchResults = mutableListOf<MediaItem>()
-                val limit = context.dataStore.get(AndroidAutoSearchLocalLimitKey, 75)
-
-                val allLocalSongs = database.searchSongsExtended(query, limit).first()
+                val allLocalSongs = database.searchSongsExtended(query, 75).first()
                 allLocalSongs.forEach { song ->
                     searchResults.add(song.toMediaItem(
                         path = "${MusicService.SEARCH}/$query",
@@ -815,9 +812,7 @@ constructor(
                     }
 
                     val searchResults = mutableListOf<Song>()
-                    val limit = context.dataStore.get(AndroidAutoSearchLocalLimitKey, 75)
-
-                    val allLocalSongs = database.searchSongsExtended(searchQuery, limit).first()
+                    val allLocalSongs = database.searchSongsExtended(searchQuery, 75).first()
                     searchResults.addAll(allLocalSongs)
                     if (!isVoiceSearch && songId.isNotBlank() && searchResults.indexOfFirst { it.id == songId } == -1) {
                         database.song(songId).first()?.let { searchResults.add(it) }

@@ -1454,4 +1454,7 @@
     <string name="arc_import_playlist_file">Playlist file</string>
     <string name="arc_import_playlist_file_desc">An M3U or CSV file</string>
     <string name="arc_import_playlist_file_keywords">m3u, csv, import</string>
+    <string name="arc_android_auto_tabs">Tabs in the car</string>
+    <string name="arc_android_auto_tabs_hint">Tap to hide · hold to move · top opens first</string>
+    <string name="arc_android_auto_browsing">Browsing</string>
 </resources>

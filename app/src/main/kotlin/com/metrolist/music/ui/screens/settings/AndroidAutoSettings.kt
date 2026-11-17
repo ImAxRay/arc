@@ -5,8 +5,10 @@
 
 package com.metrolist.music.ui.screens.settings
 
-import com.metrolist.music.arc.ArcSlider
 import com.metrolist.music.arc.arcScroll
+import com.metrolist.music.arc.scrollSection
+import com.metrolist.music.arc.switchItem
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -47,7 +49,6 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
-import com.metrolist.music.constants.AndroidAutoSearchLocalLimitKey
 import com.metrolist.music.constants.AndroidAutoSectionsOrderKey
 import com.metrolist.music.constants.AndroidAutoTargetPlaylistKey
 import com.metrolist.music.constants.AndroidAutoYouTubePlaylistsKey
@@ -60,7 +61,6 @@ import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.flow.map
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import kotlin.math.roundToInt
 
 enum class AndroidAutoSection(val id: String) {
     SPEED_DIAL("speed_dial"),
@@ -125,11 +125,6 @@ fun AndroidAutoSettings(
         defaultValue = MediaSessionConstants.TARGET_PLAYLIST_AUTO
     )
 
-    val (androidAutoSearchLocalLimit, onAndroidAutoSearchLocalLimitChange) = rememberPreference(
-        AndroidAutoSearchLocalLimitKey,
-        defaultValue = 75
-    )
-
     var sections by remember(sectionsRaw) {
         mutableStateOf(deserializeSections(sectionsRaw))
     }
@@ -164,16 +159,27 @@ fun AndroidAutoSettings(
             .arcScroll()
             .padding(horizontal = 16.dp)
     ) {
-        // Visible sections
-        Material3SettingsGroup(
-            title = stringResource(R.string.android_auto_visible_sections),
-            items = listOf(
-                Material3SettingsItem(
-                    title = {},
-                    description = { Text(stringResource(R.string.android_auto_reorder_hint)) },
-                    onClick = null
-                )
+        val tabsIcon = painterResource(R.drawable.ic_android_auto)
+        // The group spans the reorderable list too, so the scroll bar shows all six tabs for it.
+        Column(Modifier.scrollSection(stringResource(R.string.arc_android_auto_tabs), tabsIcon)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+        ) {
+            Icon(tabsIcon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.arc_android_auto_tabs),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
             )
+        }
+        Text(
+            text = stringResource(R.string.arc_android_auto_tabs_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 10.dp),
         )
 
         LazyColumn(
@@ -246,6 +252,7 @@ fun AndroidAutoSettings(
         }
             }
         }
+        }
 
         Spacer(Modifier.height(27.dp))
 
@@ -293,82 +300,16 @@ fun AndroidAutoSettings(
         }
         
         Material3SettingsGroup(
-            title = stringResource(R.string.android_auto_target_playlist),
+            title = stringResource(R.string.arc_android_auto_browsing),
+            icon = painterResource(R.drawable.explore_outlined),
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.playlist_add),
                     title = { Text(stringResource(R.string.android_auto_target_playlist)) },
                     description = { Text(playlistLabels(targetPlaylist)) },
                     onClick = { showTargetPlaylistDialog = true }
-                )
-            )
-        )
-
-        Spacer(Modifier.height(27.dp))
-
-        // YouTube playlists
-        Material3SettingsGroup(
-            title = stringResource(R.string.mixes),
-            items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.queue_music),
-                    title = { Text(stringResource(R.string.android_auto_youtube_playlists)) },
-                    description = { Text(stringResource(R.string.android_auto_youtube_playlists_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = youtubePlaylistsEnabled,
-                            onCheckedChange = onYoutubePlaylistsChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        if (youtubePlaylistsEnabled) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onYoutubePlaylistsChange(!youtubePlaylistsEnabled) }
-                )
-            )
-        )
-
-        Spacer(Modifier.height(27.dp))
-
-        // Search options
-        Material3SettingsGroup(
-            title = stringResource(R.string.android_auto_search_options),
-            items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.manage_search),
-                    title = { Text(stringResource(R.string.android_auto_search_local_songs_limit)) },
-                    description = {
-                        val limitValues =
-                            remember { listOf(10, 25, 50, 75, 100, 150, 200, -1) }
-                        Column {
-                            Text(stringResource(R.string.android_auto_search_local_songs_limit_desc))
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text =
-                                    when (androidAutoSearchLocalLimit) {
-                                        -1 -> stringResource(R.string.unlimited)
-                                        else -> "$androidAutoSearchLocalLimit ${stringResource(R.string.songs)}"
-                                    },
-                            )
-                            ArcSlider(
-                                value = limitValues.indexOf(androidAutoSearchLocalLimit).toFloat(),
-                                enabled = true,
-                                onValueChange = {
-                                    val newValue = limitValues[it.roundToInt()]
-                                    onAndroidAutoSearchLocalLimitChange(newValue)
-                                },
-                                steps = limitValues.size - 2,
-                                valueRange = 0f..(limitValues.size - 1).toFloat(),
-                            )
-                        }
-                    }
-                )
+                ),
+                switchItem(R.drawable.queue_music, R.string.android_auto_youtube_playlists, R.string.android_auto_youtube_playlists_desc, youtubePlaylistsEnabled, onYoutubePlaylistsChange),
             )
         )
 
