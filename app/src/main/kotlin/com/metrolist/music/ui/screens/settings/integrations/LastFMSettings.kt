@@ -291,9 +291,9 @@ fun LastFMSettings(
             )
         )
 
-        // Options section (card-based)
         Material3SettingsGroup(
             title = stringResource(R.string.account),
+            icon = painterResource(R.drawable.account),
             items = listOf(
                 Material3SettingsItem(
                     title = {
@@ -321,10 +321,11 @@ fun LastFMSettings(
             )
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(27.dp))
 
         Material3SettingsGroup(
-            title = stringResource(R.string.options),
+            title = stringResource(R.string.arc_scrobbling),
+            icon = painterResource(R.drawable.music_note),
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.enable_scrobbling)) },
@@ -588,10 +589,11 @@ fun LastFMSettings(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(27.dp))
 
         Material3SettingsGroup(
-            title = stringResource(R.string.scrobbling_configuration),
+            title = stringResource(R.string.arc_scrobble_counts),
+            icon = painterResource(R.drawable.timer),
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.scrobble_min_track_duration)) },

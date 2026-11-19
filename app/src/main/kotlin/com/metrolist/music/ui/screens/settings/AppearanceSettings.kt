@@ -302,7 +302,7 @@ fun AppearanceSettings(
             .arcScroll()
             .padding(horizontal = 16.dp),
     ) {
-        VisualModeControl(navController, fineTune = false)
+        VisualModeControl()
         VisualEffects(picking) { picking = it }
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_look),

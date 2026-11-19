@@ -79,7 +79,7 @@ fun SettingsScreen(
 
         val settingsSearching = ArcSettingsSearch(navController)
         if (!settingsSearching) {
-        com.metrolist.music.arc.VisualModeControl(navController)
+        com.metrolist.music.arc.VisualModeControl()
         RecentSettings(navController)
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_listening),

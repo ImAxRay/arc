@@ -1119,7 +1119,7 @@
     <string name="arc_settings_sound_desc">Quality, equalizer, crossfade, loudness</string>
     <string name="arc_settings_queue">Queue and sleep timer</string>
     <string name="arc_settings_queue_desc">Autoplay, radio, shuffle, duplicates</string>
-    <string name="arc_settings_appearance_desc">Theme, player details, animated covers</string>
+    <string name="arc_settings_appearance_desc">Theme, effects and what they cost, Home, player</string>
     <string name="arc_settings_library">Home and library</string>
     <string name="arc_settings_library_desc">Auto playlists, where added songs go, My Top length</string>
     <string name="arc_settings_lyrics_desc">Sources and their order</string>
@@ -1273,8 +1273,6 @@
     <string name="arc_visual_normal_desc">Moving Home background, Home line, glow on press, animated covers on Wi-Fi.</string>
     <string name="arc_visual_full_desc">Every effect on: everything in Normal plus covers that tilt with the phone.</string>
     <string name="arc_visual_phone_saver">Your phone\'s Battery Saver is on, so Arc runs as Saver until it turns off.</string>
-    <string name="arc_visual_fine_tune">Fine-tune</string>
-    <string name="arc_visual_fine_tune_desc">Each effect, what it costs, and the rest of the look</string>
     <string name="arc_visual_effects">Effects</string>
     <string name="arc_cost_heavy">HEAVY</string>
     <string name="arc_cost_light">LIGHT</string>
@@ -1409,6 +1407,17 @@
     <string name="arc_queue_keep_going">Keep the music going</string>
     <string name="arc_queue_keep_going_desc">Adds more from the same playlist or radio, then similar songs, when the queue runs out</string>
     <string name="arc_queue_keep_going_keywords">auto load more, similar content</string>
+    <string name="arc_romanize_what">What to romanize</string>
+    <string name="arc_romanize_how">How it shows</string>
+    <string name="arc_updater_this_version">This version</string>
+    <string name="arc_updater_automatic">Automatic</string>
+    <string name="arc_account_youtube">YouTube</string>
+    <string name="arc_scrobbling">Scrobbling</string>
+    <string name="arc_scrobble_counts">When a song counts</string>
+    <string name="arc_shuffle_repeat">Shuffle and repeat</string>
+    <string name="arc_repeat_one_persists">Keep repeating one song</string>
+    <string name="arc_repeat_one_persists_desc">Off: Repeat one stops when you move to another song</string>
+    <string name="arc_repeat_one_keywords">repeat one, loop</string>
     <string name="arc_shuffle_keep">Keep shuffle on for new queues</string>
     <string name="arc_shuffle_keep_keywords">persistent shuffle</string>
     <string name="arc_shuffle_playlist_first">Shuffle the playlist before similar songs</string>

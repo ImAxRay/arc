@@ -153,6 +153,7 @@ import com.metrolist.music.constants.PauseOnMute
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PlayerVolumeKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
+import com.metrolist.music.constants.ArcRepeatOnePersistsKey
 import com.metrolist.music.constants.RepeatModeKey
 import com.metrolist.music.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.music.constants.ScrobbleDelayPercentKey
@@ -2522,6 +2523,14 @@ class MusicService :
             lastTransitionedMediaId?.let { previousId ->
                 scope.launch(Dispatchers.IO) { markCachedIfFullyDownloaded(previousId) }
             }
+        }
+        // Another song picked by the user (skip, queue tap, new list) ends Repeat one unless it is set to persist.
+        if (player.repeatMode == REPEAT_MODE_ONE &&
+            (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) &&
+            lastTransitionedMediaId != null && mediaItem != null && mediaItem.mediaId != lastTransitionedMediaId &&
+            !dataStore.get(ArcRepeatOnePersistsKey, true)
+        ) {
+            player.repeatMode = REPEAT_MODE_OFF
         }
         lastTransitionedMediaId = mediaItem?.mediaId
         skipIfDisliked()

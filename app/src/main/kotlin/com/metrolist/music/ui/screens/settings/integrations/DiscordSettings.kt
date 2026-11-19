@@ -493,6 +493,7 @@ fun DiscordSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.options),
+            icon = painterResource(R.drawable.discord),
             items =
                 listOf(
                     Material3SettingsItem(
@@ -559,6 +560,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_presence),
+                    icon = painterResource(R.drawable.music_note),
                     items =
                         listOf(
                             Material3SettingsItem(
@@ -588,6 +590,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_buttons),
+                    icon = painterResource(R.drawable.link),
                     items =
                         buildList {
                             add(
@@ -683,6 +686,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_status),
+                    icon = painterResource(R.drawable.person),
                     items =
                         listOf(
                             Material3SettingsItem(

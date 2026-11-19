@@ -64,6 +64,7 @@ import com.metrolist.music.arc.startupSongLabel
 import com.metrolist.music.constants.PersistentShuffleAcrossQueuesKey
 import com.metrolist.music.constants.PreventDuplicateTracksInQueueKey
 import com.metrolist.music.constants.ResumeOnBluetoothConnectKey
+import com.metrolist.music.constants.ArcRepeatOnePersistsKey
 import com.metrolist.music.constants.ShufflePlaylistFirstKey
 import com.metrolist.music.constants.SimilarContent
 import com.metrolist.music.constants.SkipSilenceInstantKey
@@ -174,6 +175,7 @@ fun PlayerSettings(
         ShufflePlaylistFirstKey,
         defaultValue = false
     )
+    val (repeatOnePersists, onRepeatOnePersistsChange) = rememberPreference(ArcRepeatOnePersistsKey, defaultValue = true)
     val (preventDuplicateTracksInQueue, onPreventDuplicateTracksInQueueChange) = rememberPreference(
         PreventDuplicateTracksInQueueKey,
         defaultValue = false
@@ -563,11 +565,12 @@ fun PlayerSettings(
             Spacer(modifier = Modifier.height(27.dp))
 
             Material3SettingsGroup(
-                title = stringResource(R.string.shuffle),
+                title = stringResource(R.string.arc_shuffle_repeat),
                 icon = painterResource(R.drawable.shuffle),
                 items = listOf(
                     switchItem(R.drawable.shuffle, R.string.arc_shuffle_keep, R.string.persistent_shuffle_desc, persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange),
                     switchItem(R.drawable.shuffle_on, R.string.arc_shuffle_playlist_first, R.string.shuffle_playlist_first_desc, shufflePlaylistFirst, onShufflePlaylistFirstChange),
+                    switchItem(R.drawable.repeat_one, R.string.arc_repeat_one_persists, R.string.arc_repeat_one_persists_desc, repeatOnePersists, onRepeatOnePersistsChange),
                 )
             )
             Spacer(modifier = Modifier.height(27.dp))

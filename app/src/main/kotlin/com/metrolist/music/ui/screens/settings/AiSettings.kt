@@ -494,6 +494,7 @@ fun AiSettings(navController: NavController) {
 
         Material3SettingsGroup(
             title = stringResource(R.string.ai_provider),
+            icon = painterResource(R.drawable.cloud),
             items =
                 listOf(
                     Material3SettingsItem(
@@ -528,6 +529,7 @@ fun AiSettings(navController: NavController) {
 
         Material3SettingsGroup(
             title = stringResource(R.string.ai_setup_guide),
+            icon = painterResource(R.drawable.key),
             items =
                 buildList {
                     if (aiProvider == "DeepL") {
@@ -597,6 +599,7 @@ fun AiSettings(navController: NavController) {
 
         Material3SettingsGroup(
             title = stringResource(R.string.ai_translation_mode),
+            icon = painterResource(R.drawable.translate),
             items =
                 buildList {
                     if (aiProvider != "DeepL") {

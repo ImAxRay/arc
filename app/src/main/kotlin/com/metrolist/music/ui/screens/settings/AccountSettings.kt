@@ -43,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,7 +81,6 @@ fun AccountSettings(
     latestVersionName: String
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
 
     val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
     val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
@@ -255,6 +253,8 @@ fun AccountSettings(
         }
 
         Material3SettingsGroup(
+            title = stringResource(R.string.account),
+            icon = painterResource(R.drawable.account),
             items = listOfNotNull(
                 Material3SettingsItem(
                     title = {
@@ -321,23 +321,29 @@ fun AccountSettings(
         Spacer(Modifier.height(8.dp))
 
         Material3SettingsGroup(
+            title = stringResource(R.string.arc_account_youtube),
+            icon = painterResource(R.drawable.cached),
             items = listOf(
                 Material3SettingsItem(
-                    title = {
-                        Text(
-                            when {
-                                !isLoggedIn -> stringResource(R.string.advanced_login)
-                                showToken -> stringResource(R.string.token_shown)
-                                else -> stringResource(R.string.token_hidden)
+                    title = { Text(stringResource(R.string.yt_sync)) },
+                    icon = painterResource(R.drawable.cached),
+                    trailingContent = {
+                        Switch(
+                            enabled = isLoggedIn,
+                            checked = ytmSync,
+                            onCheckedChange = onYtmSyncChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (ytmSync) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
                             }
                         )
                     },
-                    icon = painterResource(R.drawable.token),
-                    onClick = {
-                        if (!isLoggedIn) showTokenEditor = true
-                        else if (!showToken) showToken = true
-                        else showTokenEditor = true
-                    }
+                    enabled = isLoggedIn
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.more_content)) },
@@ -364,25 +370,21 @@ fun AccountSettings(
                     enabled = isLoggedIn
                 ),
                 Material3SettingsItem(
-                    title = { Text(stringResource(R.string.yt_sync)) },
-                    icon = painterResource(R.drawable.cached),
-                    trailingContent = {
-                        Switch(
-                            enabled = isLoggedIn,
-                            checked = ytmSync,
-                            onCheckedChange = onYtmSyncChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (ytmSync) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
+                    title = {
+                        Text(
+                            when {
+                                !isLoggedIn -> stringResource(R.string.advanced_login)
+                                showToken -> stringResource(R.string.token_shown)
+                                else -> stringResource(R.string.token_hidden)
                             }
                         )
                     },
-                    enabled = isLoggedIn
+                    icon = painterResource(R.drawable.token),
+                    onClick = {
+                        if (!isLoggedIn) showTokenEditor = true
+                        else if (!showToken) showToken = true
+                        else showTokenEditor = true
+                    }
                 )
             ),
             useLowContrast = true
@@ -392,17 +394,6 @@ fun AccountSettings(
 
         Material3SettingsGroup(
             items = buildList {
-                add(
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.integrations)) },
-                        icon = painterResource(R.drawable.integration),
-                        opensPage = true,
-                        onClick = {
-                            onClose()
-                            navController.navigate("settings/integrations")
-                        }
-                    )
-                )
                 add(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.settings)) },
@@ -427,7 +418,10 @@ fun AccountSettings(
                                 description = { Text(displayVersion(latestVersionName)) },
                                 icon = painterResource(R.drawable.update),
                                 showBadge = true,
-                                onClick = { uriHandler.openUri(downloadUrl) }
+                                onClick = {
+                                    onClose()
+                                    navController.navigate("settings/updater")
+                                }
                             )
                         )
                     }

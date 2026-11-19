@@ -118,7 +118,8 @@ fun UpdaterScreen(
         Spacer(Modifier.height(4.dp))
 
         Material3SettingsGroup(
-            title = stringResource(R.string.current_version),
+            title = stringResource(R.string.arc_updater_this_version),
+            icon = painterResource(R.drawable.info),
             items =
                 listOf(
                     Material3SettingsItem(
@@ -131,53 +132,6 @@ fun UpdaterScreen(
                             Text("$arch - $variant")
                         },
                     ),
-                ),
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Material3SettingsGroup(
-            title = stringResource(R.string.update_settings),
-            items =
-                buildList {
-                    add(
-                        Material3SettingsItem(
-                            title = { Text(stringResource(R.string.check_for_updates)) },
-                            icon = painterResource(R.drawable.update),
-                            trailingContent = {
-                                Switch(
-                                    checked = checkForUpdates,
-                                    onCheckedChange = onCheckForUpdatesChange,
-                                )
-                            },
-                            onClick = { onCheckForUpdatesChange(!checkForUpdates) },
-                        ),
-                    )
-
-                    if (checkForUpdates) {
-                        add(
-                            Material3SettingsItem(
-                                title = { Text(stringResource(R.string.update_notifications)) },
-                                icon = painterResource(R.drawable.notification),
-                                trailingContent = {
-                                    Switch(
-                                        checked = updateNotifications,
-                                        onCheckedChange = onUpdateNotificationsChange,
-                                    )
-                                },
-                                onClick = { onUpdateNotificationsChange(!updateNotifications) },
-                            ),
-                        )
-                    }
-                },
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Material3SettingsGroup(
-            title = stringResource(R.string.check_for_updates_title),
-            items =
-                listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.refresh),
                         title = {
@@ -258,6 +212,45 @@ fun UpdaterScreen(
                 )
             }
         }
+
+        Spacer(Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.arc_updater_automatic),
+            icon = painterResource(R.drawable.update),
+            items =
+                buildList {
+                    add(
+                        Material3SettingsItem(
+                            title = { Text(stringResource(R.string.check_for_updates)) },
+                            icon = painterResource(R.drawable.update),
+                            trailingContent = {
+                                Switch(
+                                    checked = checkForUpdates,
+                                    onCheckedChange = onCheckForUpdatesChange,
+                                )
+                            },
+                            onClick = { onCheckForUpdatesChange(!checkForUpdates) },
+                        ),
+                    )
+
+                    if (checkForUpdates) {
+                        add(
+                            Material3SettingsItem(
+                                title = { Text(stringResource(R.string.update_notifications)) },
+                                icon = painterResource(R.drawable.notification),
+                                trailingContent = {
+                                    Switch(
+                                        checked = updateNotifications,
+                                        onCheckedChange = onUpdateNotificationsChange,
+                                    )
+                                },
+                                onClick = { onUpdateNotificationsChange(!updateNotifications) },
+                            ),
+                        )
+                    }
+                },
+        )
 
         Spacer(Modifier.height(32.dp))
     }

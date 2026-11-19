@@ -36,7 +36,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.metrolist.music.constants.EnableHighRefreshRateKey
 import androidx.datastore.preferences.core.edit
-import androidx.navigation.NavController
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
@@ -63,9 +62,9 @@ internal val VisualMode.desc get() = when (this) {
     VisualMode.FULL -> R.string.arc_visual_full_desc
 }
 
-/** Saver / Normal / Full, a line on what the step does, and (on the settings home) the way into each effect's own switch. */
+/** Saver / Normal / Full and a line on what the step does. */
 @Composable
-fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
+fun VisualModeControl() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mode by Visuals.mode.collectAsState()
@@ -73,7 +72,7 @@ fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
     Material3SettingsGroup(
         title = stringResource(R.string.arc_visual_mode),
         icon = painterResource(R.drawable.contrast),
-        items = listOfNotNull(
+        items = listOf(
             Material3SettingsItem(
                 title = {
                     Column(Modifier.padding(vertical = 4.dp)) {
@@ -87,15 +86,6 @@ fun VisualModeControl(navController: NavController, fineTune: Boolean = true) {
                     }
                 },
             ),
-            if (fineTune) {
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.tune),
-                    title = { Text(stringResource(R.string.arc_visual_fine_tune)) },
-                    description = { Text(stringResource(R.string.arc_visual_fine_tune_desc)) },
-                    opensPage = true,
-                    onClick = { navController.navigate("settings/appearance") },
-                )
-            } else null,
         ),
     )
     Spacer(Modifier.height(27.dp))

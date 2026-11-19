@@ -120,8 +120,65 @@ fun RomanizationSettings(
             .arcScroll()
             .padding(horizontal = 16.dp)
     ) {
+        val dictionaryInstalled by JapaneseDictionary.installed.collectAsState()
+        val dictionaryProgress by JapaneseDictionary.progress.collectAsState()
+        val dictionaryScope = rememberCoroutineScope()
+        val dictionaryContext = LocalContext.current
         Material3SettingsGroup(
-            title = stringResource(R.string.options),
+            title = stringResource(R.string.arc_romanize_what),
+            icon = painterResource(R.drawable.language),
+            items = listOf(
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.romanize_languages)) },
+                    description = {
+                        Text(
+                            states
+                                .filter { it.second }
+                                .joinToString { it.first }
+                                .ifEmpty { stringResource(R.string.romanize_languages_none) },
+                        )
+                    },
+                    icon = painterResource(R.drawable.language),
+                    onClick = { showLanguagePicker = true },
+                ),
+                Material3SettingsItem(
+                    title = { Text(stringResource(R.string.arc_japanese_dictionary)) },
+                    description = {
+                        Text(
+                            when {
+                                dictionaryProgress != null -> stringResource(R.string.arc_japanese_dictionary_loading, ((dictionaryProgress ?: 0f) * 100).toInt())
+                                dictionaryInstalled -> stringResource(R.string.arc_japanese_dictionary_installed)
+                                else -> stringResource(R.string.arc_japanese_dictionary_desc, JapaneseDictionary.DOWNLOAD_MB)
+                            },
+                        )
+                    },
+                    icon = painterResource(R.drawable.language_korean_latin),
+                    trailingContent = {
+                        if (dictionaryProgress == null) {
+                            TextButton(onClick = {
+                                if (dictionaryInstalled) {
+                                    JapaneseDictionary.remove()
+                                } else {
+                                    dictionaryScope.launch {
+                                        JapaneseDictionary.install().onFailure {
+                                            android.widget.Toast.makeText(dictionaryContext, it.message, android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            }) {
+                                Text(stringResource(if (dictionaryInstalled) R.string.arc_japanese_dictionary_remove else R.string.arc_japanese_dictionary_download))
+                            }
+                        }
+                    },
+                ),
+            ),
+        )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.arc_romanize_how),
+            icon = painterResource(R.drawable.lyrics),
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.lyrics_romanize_as_main)) },
@@ -162,69 +219,6 @@ fun RomanizationSettings(
                     icon = painterResource(R.drawable.info)
                 )
             )
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val dictionaryInstalled by JapaneseDictionary.installed.collectAsState()
-        val dictionaryProgress by JapaneseDictionary.progress.collectAsState()
-        val dictionaryScope = rememberCoroutineScope()
-        val dictionaryContext = LocalContext.current
-        Material3SettingsGroup(
-            title = stringResource(R.string.arc_japanese_dictionary),
-            items = listOf(
-                Material3SettingsItem(
-                    title = { Text(stringResource(R.string.arc_japanese_dictionary)) },
-                    description = {
-                        Text(
-                            when {
-                                dictionaryProgress != null -> stringResource(R.string.arc_japanese_dictionary_loading, ((dictionaryProgress ?: 0f) * 100).toInt())
-                                dictionaryInstalled -> stringResource(R.string.arc_japanese_dictionary_installed)
-                                else -> stringResource(R.string.arc_japanese_dictionary_desc, JapaneseDictionary.DOWNLOAD_MB)
-                            },
-                        )
-                    },
-                    icon = painterResource(R.drawable.language_korean_latin),
-                    trailingContent = {
-                        if (dictionaryProgress == null) {
-                            TextButton(onClick = {
-                                if (dictionaryInstalled) {
-                                    JapaneseDictionary.remove()
-                                } else {
-                                    dictionaryScope.launch {
-                                        JapaneseDictionary.install().onFailure {
-                                            android.widget.Toast.makeText(dictionaryContext, it.message, android.widget.Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                }
-                            }) {
-                                Text(stringResource(if (dictionaryInstalled) R.string.arc_japanese_dictionary_remove else R.string.arc_japanese_dictionary_download))
-                            }
-                        }
-                    },
-                ),
-            ),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Material3SettingsGroup(
-            items =
-                listOf(
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.romanize_languages)) },
-                        description = {
-                            Text(
-                                states
-                                    .filter { it.second }
-                                    .joinToString { it.first }
-                                    .ifEmpty { stringResource(R.string.romanize_languages_none) },
-                            )
-                        },
-                        icon = painterResource(R.drawable.language),
-                        onClick = { showLanguagePicker = true },
-                    ),
-                ),
         )
     }
 
