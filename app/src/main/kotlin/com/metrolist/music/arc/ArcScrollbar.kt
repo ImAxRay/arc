@@ -40,10 +40,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.translate
 import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
@@ -78,6 +78,10 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.ui.layout.layout
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -105,6 +109,8 @@ class ScrollSections {
     // Resource ids, not the groups' painters: a vector painter drawn at two sizes blurs its other copy.
     internal val icons = HashMap<String, Int>()
     internal var viewport: LayoutCoordinates? = null
+    /** Blank space below the page so a group near the end can still sit at the top after a bar jump. */
+    internal var tail by mutableIntStateOf(0)
 }
 
 val LocalScrollSections = compositionLocalOf<ScrollSections?> { null }
@@ -130,7 +136,10 @@ fun Modifier.arcScroll(state: ScrollState = rememberScrollState(), insets: Paddi
     val sections = LocalScrollSections.current
     val grouped by remember(sections) { derivedStateOf { (sections?.groups?.size ?: 0) >= 2 } }
     if (sections != null && grouped) {
-        return groupBar(state, sections).onPlaced { sections.viewport = it }.verticalScroll(state)
+        return groupBar(state, sections).onPlaced { sections.viewport = it }.verticalScroll(state).layout { measurable, constraints ->
+            val page = measurable.measure(constraints)
+            layout(page.width, page.height + sections.tail) { page.place(0, 0) }
+        }
     }
     val proxy = remember(state) {
         ScrollProxy(
@@ -150,11 +159,19 @@ private fun Density.barY(slot: Float, n: Int, top: Float, bottom: Float) = (top 
 
 private fun Density.barSlot(y: Float, n: Int, top: Float, bottom: Float) = (y - (top + bottom) / 2) / barPitch(n, top, bottom) + (n - 1) / 2f
 
+/** The icon column's crest reaches at least this far in, and follows the finger out to [BAR_REACH_MAX] of the width. */
+private val BarReachMin = 36.dp
+private const val BAR_REACH_MAX = 0.5f
+
+/** Crest of a drag started on the far edge: fixed, since that finger is nowhere near the column. */
+private val BarReachFar = 56.dp
+
 /**
  * Settings pages, like Niagara's letter strip: each group's icon down the edge, still while the page scrolls, the
  * current group's in the accent colour. Dragging along the edge picks a group by its slot (a tick each), shows only
- * that group in the middle with its name in a bubble beside the finger, and the icons near the finger bulge out on a
- * curve (flat in Saver). Letting go leaves the page at that group.
+ * that group just under the top bar (every group at the same spot) with its name in a bubble beside the crest, and the
+ * whole icon column bows out towards the finger as one curve, the picked icon under it (flat in Saver). A drag along
+ * the far edge works the same column with a fixed bow. Letting go leaves the group where it was shown.
  */
 @Composable
 private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Modifier {
@@ -169,6 +186,8 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
     var picked by remember { mutableIntStateOf(-1) }
     var pickedName by remember { mutableStateOf<String?>(null) }
     var fingerY by remember { mutableFloatStateOf(0f) }
+    var reach by remember { mutableFloatStateOf(0f) }
+    var jump by remember { mutableStateOf<Job?>(null) }
     val grab = remember { Animatable(0f) }
     val context = LocalContext.current
     val iconImages = remember { HashMap<Int, ImageBitmap?>() }
@@ -185,6 +204,21 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
         }.sortedBy { it.second.top }
     }
 
+    // the blank tail goes once the page is scrolled back up past it, so nothing on screen moves
+    LaunchedEffect(state, sections) {
+        snapshotFlow { !holding && sections.tail > 0 && state.value <= state.maxValue - sections.tail }
+            .collect { if (it) sections.tail = 0 }
+    }
+
+    // waits for the tail to be laid out, so a group near the end can reach the top
+    fun jumpTo(target: Int) {
+        jump?.cancel()
+        jump = scope.launch {
+            withTimeoutOrNull(300) { snapshotFlow { state.maxValue }.first { it >= target } }
+            state.scrollTo(target)
+        }
+    }
+
     fun grabTo(target: Float) = scope.launch {
         if (still) grab.snapTo(target) else grab.animateTo(target, spring(dampingRatio = 0.8f, stiffness = 500f))
     }
@@ -195,7 +229,8 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val fromEdge = if (rtl) down.position.x else size.width - down.position.x
-                if (fromEdge > strip || state.maxValue !in 1 until Int.MAX_VALUE) return@awaitEachGesture
+                val far = size.width - fromEdge <= strip
+                if ((fromEdge > strip && !far) || state.maxValue !in 1 until Int.MAX_VALUE) return@awaitEachGesture
                 // a tap goes through to whatever is under the edge; only a vertical drag takes the bar
                 var taken = false
                 try {
@@ -223,14 +258,21 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                         val list = groups()
                         if (list.isEmpty()) break
                         fingerY = change.position.y
+                        reach = if (far) {
+                            BarReachFar.toPx()
+                        } else {
+                            val x = if (rtl) change.position.x else size.width - change.position.x
+                            (x - 8.dp.toPx()).coerceIn(BarReachMin.toPx(), size.width * BAR_REACH_MAX)
+                        }
                         val cover = covered()
                         val i = barSlot(fingerY, list.size, cover, size.height.toFloat()).roundToInt().coerceIn(0, list.lastIndex)
                         if (i != picked) {
                             if (picked >= 0) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                             picked = i
                             pickedName = list[i].first
-                            val target = if (i == 0) 0 else (list[i].second.top + state.value - cover).roundToInt()
-                            scope.launch { state.scrollTo(target) }
+                            val target = (list[i].second.top + state.value - cover).roundToInt().coerceAtLeast(0)
+                            sections.tail = (target - (state.maxValue - sections.tail)).coerceAtLeast(0)
+                            jumpTo(target)
                         }
                         change.consume()
                     }
@@ -251,16 +293,15 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
             if (shown == null) {
                 drawContent()
             } else {
-                // Only the picked group, eased from where it sits towards the middle; the rest of the page fades out.
-                if (g < 1f) drawContent()
-                drawRect(colors.background.copy(alpha = g.coerceIn(0f, 1f)))
+                // Only the picked group, where the page put it; the rest of the page fades out around it. The group is
+                // drawn once: twice would double its see-through tiles while the fade runs.
                 val top = shown.top.coerceAtLeast(cover)
                 val bottom = shown.bottom.coerceAtMost(size.height)
-                val band = size.height - cover
-                val middle = if (bottom - top < band) cover + (band - (bottom - top)) / 2 - top else 0f
-                translate(top = middle * g) {
-                    clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
+                clipRect(top = top, bottom = bottom, clipOp = ClipOp.Difference) {
+                    if (g < 1f) this@drawWithContent.drawContent()
+                    drawRect(colors.background.copy(alpha = g.coerceIn(0f, 1f)))
                 }
+                clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() }
             }
             val n = list.size
             if (n < 2 || state.maxValue !in 1 until Int.MAX_VALUE) return@drawWithContent
@@ -270,11 +311,18 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
             val slot = barSlot(fingerY, n, cover, size.height).coerceIn(-0.5f, n - 0.5f)
             val lift = if (still) 0f else g.coerceIn(0f, 1.2f)
             val iconSize = 12.dp.toPx()
+            val crestY = barY(slot, n, cover, size.height)
+            val firstY = barY(0f, n, cover, size.height)
+            val lastY = barY(n - 1f, n, cover, size.height)
+            // one raised-cosine bow over the whole column: wide enough that both ends sit near the edge
+            val span = maxOf(crestY - firstY, lastY - crestY) + 0.75f * barPitch(n, cover, size.height)
+            val crestX = edgeX + out * reach * lift
             list.forEachIndexed { i, (name, _) ->
-                val d = abs(i - slot)
-                val near = if (d < 2.5f) cos(d / 2.5f * (PI / 2)).toFloat() * lift else 0f
-                val cx = edgeX + out * 36.dp.toPx() * near
                 val cy = barY(i.toFloat(), n, cover, size.height)
+                val bow = abs(cy - crestY).let { if (it < span) (1f + cos(PI * it / span).toFloat()) / 2f else 0f }
+                val cx = edgeX + out * reach * bow * lift
+                val d = abs(i - slot)
+                val near = if (d < 1.5f) cos(d / 1.5f * (PI / 2)).toFloat() * lift else 0f
                 val s = iconSize * (1f + 0.6f * near)
                 val tint = when {
                     i == current && holding -> {
@@ -297,8 +345,7 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                 }
             }
             if (holding) pickedName?.let {
-                val y = barY(slot, n, cover, size.height)
-                drawBubble(measurer, it, edgeX + out * (if (still) 24.dp.toPx() else 60.dp.toPx()), y, rtl, colors.primaryContainer, colors.onPrimaryContainer, 26f)
+                drawBubble(measurer, it, crestX + out * 24.dp.toPx(), crestY, rtl, colors.primaryContainer, colors.onPrimaryContainer, 26f)
             }
         }
 }
@@ -549,7 +596,7 @@ private fun DrawScope.drawBubble(measurer: TextMeasurer, text: String, x: Float,
     val pad = 14.dp.toPx()
     val w = layout.size.width + pad * 2
     val h = layout.size.height + pad
-    val left = if (rtl) x + 8.dp.toPx() else x - 8.dp.toPx() - w
+    val left = (if (rtl) x + 8.dp.toPx() else x - 8.dp.toPx() - w).coerceIn(8.dp.toPx(), (size.width - w - 8.dp.toPx()).coerceAtLeast(8.dp.toPx()))
     val topY = (y - h / 2).coerceIn(0f, size.height - h)
     drawRoundRect(fill, Offset(left, topY), Size(w, h), CornerRadius(h / 2))
     drawText(layout, topLeft = Offset(left + pad, topY + pad / 2))
