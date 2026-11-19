@@ -50,7 +50,7 @@ object NewSettings {
     class Entry(val id: String, val title: Int, val desc: Int, val route: String)
 
     // Bump the version and replace the list for the next release; the seen set resets with it.
-    private const val VERSION = 907
+    private const val VERSION = 908
     val entries = listOf(
         Entry("visual_mode", R.string.arc_visual_mode, R.string.arc_new_visual_mode, "settings/appearance"),
         Entry("repeat_one", R.string.arc_repeat_one_persists, R.string.arc_new_repeat_one, "settings/queue"),
