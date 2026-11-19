@@ -59,7 +59,8 @@ fun Modifier.settingsHighlight(): Modifier {
         val scroller = generateSequence(found.parent) { it.parent }
             .firstOrNull { it.config.getOrNull(SemanticsActions.ScrollBy) != null }
         if (scroller != null) {
-            val dy = row.boundsInRoot.center.y - scroller.boundsInRoot.center.y
+            // boundsInRoot is clipped to the viewport, so a row below the fold reads as empty
+            val dy = row.positionInRoot.y + row.size.height / 2f - scroller.boundsInRoot.center.y
             if (kotlin.math.abs(dy) > 1f) {
                 scroller.config.getOrNull(SemanticsActions.ScrollBy)?.action?.invoke(0f, dy)
                 delay(SCROLL_SETTLE_MS)
@@ -97,7 +98,10 @@ fun Modifier.settingsHighlight(): Modifier {
 
 private fun findTitle(node: SemanticsNode, wanted: String, windowWidth: Float): SemanticsNode? {
     val texts = node.config.getOrNull(SemanticsProperties.Text)
-    if (texts != null && texts.any { it.text == wanted } && node.boundsInRoot.center.x in 0f..windowWidth) return node
+    // The page navigated from keeps an unplaced copy of the title (the search result) for a moment.
+    if (texts != null && texts.any { it.text == wanted } && node.layoutInfo.isPlaced &&
+        node.positionInRoot.x + node.size.width / 2f in 0f..windowWidth
+    ) return node
     for (child in node.children) findTitle(child, wanted, windowWidth)?.let { return it }
     return null
 }
