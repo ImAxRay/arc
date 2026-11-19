@@ -570,7 +570,7 @@ fun PlayerSettings(
                 items = listOf(
                     switchItem(R.drawable.shuffle, R.string.arc_shuffle_keep, R.string.persistent_shuffle_desc, persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange),
                     switchItem(R.drawable.shuffle_on, R.string.arc_shuffle_playlist_first, R.string.shuffle_playlist_first_desc, shufflePlaylistFirst, onShufflePlaylistFirstChange),
-                    switchItem(R.drawable.repeat_one, R.string.arc_repeat_one_persists, R.string.arc_repeat_one_persists_desc, repeatOnePersists, onRepeatOnePersistsChange),
+                    switchItem(R.drawable.repeat_one, R.string.arc_repeat_one_persists, R.string.arc_repeat_one_persists_desc, repeatOnePersists, onRepeatOnePersistsChange).copy(newId = "repeat_one"),
                 )
             )
             Spacer(modifier = Modifier.height(27.dp))

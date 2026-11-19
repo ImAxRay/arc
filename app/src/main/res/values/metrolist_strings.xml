@@ -1415,6 +1415,14 @@
     <string name="arc_save_listen_history">Save listen history</string>
     <string name="arc_save_search_history">Save search history</string>
     <string name="arc_save_history_keywords">pause history, track history, record</string>
+    <string name="arc_new_tag">NEW</string>
+    <string name="arc_new_in">NEW IN %1$s</string>
+    <string name="arc_new_hide">Hide what\'s new</string>
+    <string name="arc_new_visual_mode">Saver, Normal or Full: how much motion and glow Arc uses, and what each costs</string>
+    <string name="arc_new_repeat_one">Choose whether Repeat one ends when you move to another song</string>
+    <string name="arc_new_storage">See what takes space on your phone and clear caches in one place</string>
+    <string name="arc_new_playlist_file">Import an M3U or CSV playlist file</string>
+    <string name="arc_new_android_auto">Pick and order the tabs your car shows</string>
     <string name="arc_scrobbling">Scrobbling</string>
     <string name="arc_scrobble_counts">When a song counts</string>
     <string name="arc_shuffle_repeat">Shuffle and repeat</string>

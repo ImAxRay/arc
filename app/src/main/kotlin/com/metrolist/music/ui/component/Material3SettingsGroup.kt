@@ -118,12 +118,17 @@ fun Material3SettingsGroup(
 private fun Material3SettingsItemRow(
     item: Material3SettingsItem
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isNew = item.newId != null && item.newId in com.metrolist.music.arc.rememberNewSettings()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(
                 enabled = item.enabled && item.onClick != null,
-                onClick = { item.onClick?.invoke() }
+                onClick = {
+                    item.newId?.let { com.metrolist.music.arc.NewSettings.seen(context, it) }
+                    item.onClick?.invoke()
+                }
             )
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -195,7 +200,15 @@ private fun Material3SettingsItemRow(
                         MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                item.title()
+                if (isNew) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f, fill = false)) { item.title() }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        com.metrolist.music.arc.NewTag()
+                    }
+                } else {
+                    item.title()
+                }
             }
 
             // Description if provided
@@ -244,5 +257,7 @@ data class Material3SettingsItem(
     val isHighlighted: Boolean = false,
     val enabled: Boolean = true,
     val opensPage: Boolean = false,
-    val onClick: (() -> Unit)? = null
+    val onClick: (() -> Unit)? = null,
+    /** Id in [com.metrolist.music.arc.NewSettings]: the row wears a NEW tag until it's tapped. */
+    val newId: String? = null,
 )

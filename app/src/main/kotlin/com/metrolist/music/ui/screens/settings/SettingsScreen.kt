@@ -80,6 +80,7 @@ fun SettingsScreen(
         val settingsSearching = ArcSettingsSearch(navController)
         if (!settingsSearching) {
         com.metrolist.music.arc.VisualModeControl()
+        com.metrolist.music.arc.NewSettingsList(navController)
         RecentSettings(navController)
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_listening),
@@ -105,7 +106,8 @@ fun SettingsScreen(
                             icon = painterResource(R.drawable.ic_android_auto),
                             title = { Text(stringResource(R.string.android_auto)) },
                             opensPage = true,
-                            onClick = { navController.navigate("settings/android_auto") }
+                            onClick = { navController.navigate("settings/android_auto") },
+                            newId = "android_auto"
                         )
                     )
                 }
@@ -221,7 +223,8 @@ fun SettingsScreen(
                     icon = painterResource(R.drawable.storage),
                     title = { Text(stringResource(R.string.storage)) },
                     opensPage = true,
-                    onClick = { navController.navigate("settings/storage") }
+                    onClick = { navController.navigate("settings/storage") },
+                    newId = "storage"
                 ))
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.restore),

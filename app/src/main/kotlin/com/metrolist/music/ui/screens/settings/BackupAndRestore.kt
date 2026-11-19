@@ -230,6 +230,7 @@ fun BackupAndRestore(
                                 arrayOf("audio/*", "text/csv", "text/comma-separated-values", "application/csv", "text/plain"),
                             )
                         },
+                        newId = "playlist_file",
                     ),
                 ),
         )
