@@ -318,10 +318,12 @@ fun AddToPlaylistDialogOnline(
                                                 if (media == null) {
                                                     missing.incrementAndGet()
                                                 } else {
-                                                    try {
-                                                        database.insert(media)
-                                                    } catch (e: Exception) {
-                                                        Timber.tag("Exception").e(e.toString())
+                                                    withContext(Dispatchers.IO) {
+                                                        try {
+                                                            database.insert(media)
+                                                        } catch (e: Exception) {
+                                                            Timber.tag("Exception").e(e.toString())
+                                                        }
                                                     }
                                                     resolvedSongIds[index] = media.id
                                                 }
@@ -375,13 +377,16 @@ fun AddToPlaylistDialogOnline(
                                                 if (media == null) {
                                                     missing.incrementAndGet()
                                                 } else {
-                                                    try {
-                                                        database.insert(media)
-                                                        database.query {
-                                                            update(media.toSongEntity().toggleLike())
+                                                    withContext(Dispatchers.IO) {
+                                                        try {
+                                                            database.insert(media)
+                                                            // Like the stored row, so a song already in the library keeps its plays and downloads.
+                                                            database.getSongByIdBlocking(media.id)?.song?.takeIf { !it.liked }?.let {
+                                                                database.query { update(it.toggleLike()) }
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            Timber.tag("Exception").e(e.toString())
                                                         }
-                                                    } catch (e: Exception) {
-                                                        Timber.tag("Exception").e(e.toString())
                                                     }
                                                 }
                                             } catch (e: Exception) {
@@ -509,5 +514,6 @@ private suspend fun importedSong(song: Song): MediaMetadata? =
             song.title,
             song.artists.map { runCatching { URLDecoder.decode(it.name, StandardCharsets.UTF_8.toString()) }.getOrDefault(it.name) },
             song.song.duration,
+            song.song.albumName.orEmpty(),
         )?.toMediaMetadata()
     }

@@ -56,6 +56,7 @@ object NewSettings {
         Entry("repeat_one", R.string.arc_repeat_one_persists, R.string.arc_new_repeat_one, "settings/queue"),
         Entry("storage", R.string.storage, R.string.arc_new_storage, "settings/storage"),
         Entry("playlist_file", R.string.arc_import_playlist_file, R.string.arc_new_playlist_file, "settings/backup_restore"),
+        Entry("spotify_export", R.string.arc_spotify_export, R.string.arc_new_spotify_export, "settings/backup_restore"),
         Entry("android_auto", R.string.android_auto, R.string.arc_new_android_auto, "settings/android_auto"),
     )
 

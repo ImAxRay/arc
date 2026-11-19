@@ -1243,6 +1243,11 @@
     <string name="arc_spotify_import_desc">Beta · Paste a playlist link; Arc finds each song on YouTube Music</string>
     <string name="arc_spotify_reading_playlist">Reading the Spotify playlist…</string>
     <string name="arc_spotify_not_playlist">That link isn\'t a public Spotify playlist</string>
+    <string name="arc_spotify_export">Spotify data export</string>
+    <string name="arc_spotify_export_desc">Beta · Every playlist and your Liked Songs, from the zip Spotify emails you after Download your data (Privacy on spotify.com)</string>
+    <string name="arc_spotify_export_keywords">spotify, liked songs, zip, download your data, account data</string>
+    <string name="arc_spotify_export_empty">No Spotify playlists in that file</string>
+    <string name="arc_new_spotify_export">Import every Spotify playlist and your Liked Songs, without the 100-song limit</string>
     <string name="arc_import_missing">%1$d of %2$d songs weren\'t found</string>
     <string name="arc_spotify_playlist_cap">Spotify only shares the first %d songs of a playlist without signing in</string>
     <string name="arc_backup_desc">Library, playlists, stats, settings, EQ presets and snippets in one file. Pick Google Drive in the save screen to keep it there</string>

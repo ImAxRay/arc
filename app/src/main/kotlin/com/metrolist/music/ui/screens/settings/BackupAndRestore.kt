@@ -6,6 +6,7 @@
 package com.metrolist.music.ui.screens.settings
 
 import com.metrolist.music.arc.arcScroll
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -143,6 +144,19 @@ fun BackupAndRestore(
             }
         }
     var showSpotifyImport by remember { mutableStateOf(false) }
+    var spotifyExport by remember { mutableStateOf<List<com.metrolist.music.arc.SpotifyLinks.Found>?>(null) }
+    val importSpotifyExport =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            coroutineScope.launch {
+                val found = com.metrolist.music.arc.SpotifyExport.read(context, uri, context.getString(R.string.liked_songs))
+                if (found.isEmpty()) {
+                    Toast.makeText(context, R.string.arc_spotify_export_empty, Toast.LENGTH_LONG).show()
+                } else {
+                    spotifyExport = found
+                }
+            }
+        }
     val importPlaylistFile =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
@@ -222,6 +236,17 @@ fun BackupAndRestore(
                         onClick = { showSpotifyImport = true },
                     ),
                     Material3SettingsItem(
+                        title = { Text(stringResource(R.string.arc_spotify_export)) },
+                        description = { Text(stringResource(R.string.arc_spotify_export_desc)) },
+                        icon = painterResource(R.drawable.playlist_add),
+                        onClick = {
+                            importSpotifyExport.launch(
+                                arrayOf("application/zip", "application/x-zip-compressed", "application/json", "application/octet-stream"),
+                            )
+                        },
+                        newId = "spotify_export",
+                    ),
+                    Material3SettingsItem(
                         title = { Text(stringResource(R.string.arc_import_playlist_file)) },
                         description = { Text(stringResource(R.string.arc_import_playlist_file_desc)) },
                         icon = painterResource(R.drawable.playlist_add),
@@ -254,6 +279,7 @@ fun BackupAndRestore(
     if (showSpotifyImport) {
         com.metrolist.music.arc.SpotifyImportDialog(onDismiss = { showSpotifyImport = false })
     }
+    spotifyExport?.let { com.metrolist.music.arc.SpotifyExportDialog(it, onDismiss = { spotifyExport = null }) }
 
     AddToPlaylistDialogOnline(
         isVisible = showChoosePlaylistDialogOnline,

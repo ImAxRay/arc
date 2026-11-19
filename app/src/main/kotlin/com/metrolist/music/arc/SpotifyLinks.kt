@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 object SpotifyLinks {
     enum class Kind { SONG, ALBUM, PLAYLIST, OTHER }
 
-    data class Track(val title: String, val artists: List<String>, val seconds: Int = -1)
+    data class Track(val title: String, val artists: List<String>, val seconds: Int = -1, val album: String = "")
 
     data class Found(val kind: Kind, val title: String, val artist: String?, val tracks: List<Track> = emptyList())
 

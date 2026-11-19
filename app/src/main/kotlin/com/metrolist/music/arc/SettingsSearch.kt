@@ -250,6 +250,7 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.arc_import_playlists, "settings/backup_restore", R.string.backup_restore),
     SettingsEntry(R.string.arc_import_playlist_file, "settings/backup_restore", R.string.backup_restore, R.string.arc_import_playlist_file_keywords),
     SettingsEntry(R.string.arc_spotify_import, "settings/backup_restore", R.string.backup_restore),
+    SettingsEntry(R.string.arc_spotify_export, "settings/backup_restore", R.string.backup_restore, R.string.arc_spotify_export_keywords),
     SettingsEntry(R.string.restore_confirm_title, "settings/backup_restore", R.string.backup_restore),
     SettingsEntry(R.string.arc_lyrics_sources, "settings/lyrics", R.string.lyrics, R.string.arc_lyrics_sources_keywords),
     SettingsEntry(R.string.top_length, "settings/library", R.string.arc_settings_library),

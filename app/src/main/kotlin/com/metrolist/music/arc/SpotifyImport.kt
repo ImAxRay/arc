@@ -33,12 +33,13 @@ import kotlinx.coroutines.launch
 object SpotifyImport {
     private val pending = MutableStateFlow<SpotifyLinks.Found?>(null)
 
-    fun show(context: Context, found: SpotifyLinks.Found) {
+    /** [fromLink]: the songs came from the embed page, which stops at 100. */
+    fun show(context: Context, found: SpotifyLinks.Found, fromLink: Boolean = true) {
         if (found.tracks.isEmpty()) {
             Toast.makeText(context, R.string.arc_spotify_not_found, Toast.LENGTH_LONG).show()
             return
         }
-        if (found.tracks.size >= SpotifyLinks.EMBED_TRACK_LIMIT) {
+        if (fromLink && found.tracks.size >= SpotifyLinks.EMBED_TRACK_LIMIT) {
             Toast.makeText(context, context.getString(R.string.arc_spotify_playlist_cap, SpotifyLinks.EMBED_TRACK_LIMIT), Toast.LENGTH_LONG).show()
         }
         pending.value = found
@@ -80,7 +81,7 @@ fun SpotifyImportHost() {
         val playlist = found ?: return@LaunchedEffect
         songs.clear()
         playlist.tracks.mapTo(songs) { track ->
-            Song(song = SongEntity(id = "", title = track.title, duration = track.seconds), artists = track.artists.map { ArtistEntity(id = "", name = it) })
+            Song(song = SongEntity(id = "", title = track.title, duration = track.seconds, albumName = track.album.ifEmpty { null }), artists = track.artists.map { ArtistEntity(id = "", name = it) })
         }
     }
 
