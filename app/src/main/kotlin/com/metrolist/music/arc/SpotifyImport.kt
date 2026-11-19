@@ -80,7 +80,7 @@ fun SpotifyImportHost() {
         val playlist = found ?: return@LaunchedEffect
         songs.clear()
         playlist.tracks.mapTo(songs) { track ->
-            Song(song = SongEntity(id = "", title = track.title), artists = track.artists.map { ArtistEntity(id = "", name = it) })
+            Song(song = SongEntity(id = "", title = track.title, duration = track.seconds), artists = track.artists.map { ArtistEntity(id = "", name = it) })
         }
     }
 

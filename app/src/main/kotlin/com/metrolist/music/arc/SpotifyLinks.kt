@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 object SpotifyLinks {
     enum class Kind { SONG, ALBUM, PLAYLIST, OTHER }
 
-    data class Track(val title: String, val artists: List<String>)
+    data class Track(val title: String, val artists: List<String>, val seconds: Int = -1)
 
     data class Found(val kind: Kind, val title: String, val artist: String?, val tracks: List<Track> = emptyList())
 
@@ -76,8 +76,12 @@ object SpotifyLinks {
         val list = org.json.JSONObject(data).getJSONObject("props").getJSONObject("pageProps").getJSONObject("state")
             .getJSONObject("data").getJSONObject("entity").getJSONArray("trackList")
         (0 until list.length()).map { list.getJSONObject(it) }.mapNotNull { t ->
-            val name = t.optString("title").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            Track(name, t.optString("subtitle").split(", ").map { it.trim() }.filter { it.isNotEmpty() })
+            // org.json reads a JSON null as the text "null".
+            fun text(key: String) = if (t.isNull(key)) "" else t.optString(key).trim()
+            val name = text("title").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            // The embed separates artists with a comma and a no-break space.
+            val artists = text("subtitle").replace('\u00A0', ' ').split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            Track(name, artists, (t.optLong("duration") / 1000).toInt().takeIf { it > 0 } ?: -1)
         }
     }.getOrDefault(emptyList())
 

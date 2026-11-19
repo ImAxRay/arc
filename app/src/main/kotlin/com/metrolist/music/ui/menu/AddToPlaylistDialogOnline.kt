@@ -5,6 +5,7 @@
 
 package com.metrolist.music.ui.menu
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -34,10 +36,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.metrolist.innertube.YouTube
-import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.R
+import com.metrolist.music.arc.ImportMatch
 import com.metrolist.music.constants.AddToPlaylistPosition
 import com.metrolist.music.constants.AddToPlaylistPositionKey
 import com.metrolist.music.constants.AddToPlaylistSortDescendingKey
@@ -47,6 +48,7 @@ import com.metrolist.music.constants.PlaylistSortType
 import com.metrolist.music.db.entities.Playlist
 import com.metrolist.music.db.entities.Song
 import com.metrolist.music.models.ItemsPage
+import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.ui.component.CreatePlaylistDialog
 import com.metrolist.music.ui.component.DefaultDialog
@@ -56,7 +58,6 @@ import com.metrolist.music.ui.component.PlaylistListItem
 import com.metrolist.music.ui.component.SortHeader
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
-import com.metrolist.music.utils.reportException
 import com.metrolist.music.viewmodels.PlaylistsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -103,6 +104,7 @@ fun AddToPlaylistDialogOnline(
     viewModel: PlaylistsViewModel = hiltViewModel()
 ) {
     val database = LocalDatabase.current
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val viewStateMap = remember { mutableStateMapOf<String, ItemsPage?>() }
     val (addToPlaylistPosition) = rememberEnumPreference(
@@ -303,7 +305,8 @@ fun AddToPlaylistDialogOnline(
                             if (songsTot == 0) return@launch
                             
                             val songsIdx = AtomicInteger(0)
-                            val semaphore = kotlinx.coroutines.sync.Semaphore(15)
+                            val semaphore = kotlinx.coroutines.sync.Semaphore(6)
+                            val missing = AtomicInteger(0)
                             val resolvedSongIds = arrayOfNulls<String>(songsTot)
                             onProgressStart(true)
                             try {
@@ -311,31 +314,17 @@ fun AddToPlaylistDialogOnline(
                                     coroutineScope.launch {
                                         semaphore.withPermit {
                                             try {
-                                                var allArtists = ""
-                                                song.artists.forEach { artist ->
-                                                    allArtists += " ${URLDecoder.decode(artist.name, StandardCharsets.UTF_8.toString())}"
-                                                }
-                                                val query = "${song.title} - $allArtists"
-
-                                                YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
-                                                    .onSuccess { result ->
-                                                        val items = result.items.distinctBy { it.id }
-                                                        if (items.isNotEmpty()) {
-                                                            val firstSong = items.firstOrNull() as? SongItem
-                                                            if (firstSong != null) {
-                                                                val firstSongMedia = firstSong.toMediaMetadata()
-                                                                withContext(Dispatchers.IO) {
-                                                                    try {
-                                                                        database.insert(firstSongMedia)
-                                                                    } catch (e: Exception) {
-                                                                        Timber.tag("Exception").e(e.toString())
-                                                                    }
-                                                                    resolvedSongIds[index] = firstSong.id
-                                                                }
-                                                            }
-                                                        }
+                                                val media = importedSong(song)
+                                                if (media == null) {
+                                                    missing.incrementAndGet()
+                                                } else {
+                                                    try {
+                                                        database.insert(media)
+                                                    } catch (e: Exception) {
+                                                        Timber.tag("Exception").e(e.toString())
                                                     }
-                                                    .onFailure { reportException(it) }
+                                                    resolvedSongIds[index] = media.id
+                                                }
                                             } catch (e: Exception) {
                                                 Timber.tag("ERROR").v(e.toString())
                                             } finally {
@@ -355,6 +344,9 @@ fun AddToPlaylistDialogOnline(
                             } finally {
                                 withContext(Dispatchers.Main) {
                                     onProgressStart(false)
+                                    missing.get().takeIf { it > 0 }?.let {
+                                        Toast.makeText(context, context.getString(R.string.arc_import_missing, it, songsTot), Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             }
                         }
@@ -371,41 +363,27 @@ fun AddToPlaylistDialogOnline(
                             if (songsTot == 0) return@launch
 
                             val songsIdx = AtomicInteger(0)
-                            val semaphore = kotlinx.coroutines.sync.Semaphore(15)
+                            val semaphore = kotlinx.coroutines.sync.Semaphore(6)
+                            val missing = AtomicInteger(0)
                             onProgressStart(true)
                             try {
                                 val jobs = songs.reversed().map { song ->
                                     coroutineScope.launch {
                                         semaphore.withPermit {
                                             try {
-                                                var allArtists = ""
-                                                song.artists.forEach { artist ->
-                                                    allArtists += " ${URLDecoder.decode(artist.name, StandardCharsets.UTF_8.toString())}"
-                                                }
-                                                val query = "${song.title} - $allArtists"
-
-                                                YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
-                                                    .onSuccess { result ->
-                                                        val items = result.items.distinctBy { it.id }
-                                                        if (items.isNotEmpty()) {
-                                                            val firstSong = items.firstOrNull() as? SongItem
-                                                            if (firstSong != null) {
-                                                                val firstSongMedia = firstSong.toMediaMetadata()
-                                                                val firstSongEnt = firstSong.toMediaMetadata().toSongEntity()
-                                                                withContext(Dispatchers.IO) {
-                                                                    try {
-                                                                        database.insert(firstSongMedia)
-                                                                        database.query {
-                                                                            update(firstSongEnt.toggleLike())
-                                                                        }
-                                                                    } catch (e: Exception) {
-                                                                        Timber.tag("Exception").e(e.toString())
-                                                                    }
-                                                                }
-                                                            }
+                                                val media = importedSong(song)
+                                                if (media == null) {
+                                                    missing.incrementAndGet()
+                                                } else {
+                                                    try {
+                                                        database.insert(media)
+                                                        database.query {
+                                                            update(media.toSongEntity().toggleLike())
                                                         }
+                                                    } catch (e: Exception) {
+                                                        Timber.tag("Exception").e(e.toString())
                                                     }
-                                                    .onFailure { reportException(it) }
+                                                }
                                             } catch (e: Exception) {
                                                 Timber.tag("ERROR").v(e.toString())
                                             } finally {
@@ -420,6 +398,9 @@ fun AddToPlaylistDialogOnline(
                             } finally {
                                 withContext(Dispatchers.Main) {
                                     onProgressStart(false)
+                                    missing.get().takeIf { it > 0 }?.let {
+                                        Toast.makeText(context, context.getString(R.string.arc_import_missing, it, songsTot), Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             }
                         }
@@ -518,3 +499,15 @@ fun AddToPlaylistDialogOnline(
         }
     }
 }
+
+/** Songs that already carry a YouTube id are kept as they are; the rest are looked up by title and artist. */
+private suspend fun importedSong(song: Song): MediaMetadata? =
+    if (song.id.isNotBlank()) {
+        song.toMediaMetadata()
+    } else {
+        ImportMatch.find(
+            song.title,
+            song.artists.map { runCatching { URLDecoder.decode(it.name, StandardCharsets.UTF_8.toString()) }.getOrDefault(it.name) },
+            song.song.duration,
+        )?.toMediaMetadata()
+    }

@@ -1243,6 +1243,7 @@
     <string name="arc_spotify_import_desc">Beta · Paste a playlist link; Arc finds each song on YouTube Music</string>
     <string name="arc_spotify_reading_playlist">Reading the Spotify playlist…</string>
     <string name="arc_spotify_not_playlist">That link isn\'t a public Spotify playlist</string>
+    <string name="arc_import_missing">%1$d of %2$d songs weren\'t found</string>
     <string name="arc_spotify_playlist_cap">Spotify only shares the first %d songs of a playlist without signing in</string>
     <string name="arc_backup_desc">Library, playlists, stats, settings, EQ presets and snippets in one file. Pick Google Drive in the save screen to keep it there</string>
     <string name="arc_save">Save</string>
