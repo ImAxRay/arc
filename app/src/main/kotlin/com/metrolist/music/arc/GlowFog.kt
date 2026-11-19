@@ -243,7 +243,8 @@ private const val RESTING = 0.45f
 fun GlowFogSurface(cover: String?, interactions: InteractionSource, corner: Dp, modifier: Modifier = Modifier) {
     if (Build.VERSION.SDK_INT < 33) return
     val on by rememberPreference(ArcPressGlowKey, true)
-    if (!on || rememberVisualsStill()) return
+    val still = rememberVisualsStill()
+    if (!on || still) return
     val context = LocalContext.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val fallback = MaterialTheme.colorScheme.primary
@@ -277,7 +278,8 @@ fun GlowFogSurface(cover: String?, interactions: InteractionSource, corner: Dp, 
 @Composable
 fun rememberPressDisc(interactions: InteractionSource): State<Float> {
     val context = LocalContext.current
-    val on = rememberPreference(ArcPressGlowKey, true).value && !rememberVisualsStill()
+    val still = rememberVisualsStill()
+    val on = rememberPreference(ArcPressGlowKey, true).value && !still
     val level = remember { Animatable(0f) }
     LaunchedEffect(interactions, on) {
         interactions.interactions.collect {

@@ -124,7 +124,8 @@ private fun Material3SettingsItemRow(
     item: Material3SettingsItem
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val isNew = item.newId != null && item.newId in com.metrolist.music.arc.rememberNewSettings()
+    val newSettings = com.metrolist.music.arc.rememberNewSettings()
+    val isNew = item.newId != null && item.newId in newSettings
     Row(
         modifier = Modifier
             .fillMaxWidth()

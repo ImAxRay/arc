@@ -53,7 +53,8 @@ val LocalTiltEye = staticCompositionLocalOf<TiltEye?> { null }
 fun rememberTiltEye(): TiltEye? {
     val enabled by rememberPreference(ArcTiltCoversKey, false)
     val eye = remember { TiltEye() }
-    if (!enabled || rememberVisualsStill()) return null
+    val still = rememberVisualsStill()
+    if (!enabled || still) return null
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val covered = ArcLineSignals.playerExpanded

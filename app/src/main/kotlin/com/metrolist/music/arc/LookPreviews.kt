@@ -16,7 +16,8 @@ import com.metrolist.music.utils.rememberEnumPreference
 fun HomeBackdropAsSet(paused: Boolean = false) {
     val style = rememberEnumPreference(ArcHomeBackgroundKey, HomeBackground.FIELD).value
     val colors = MaterialTheme.colorScheme
-    HomeBackdrop(if (paused || rememberVisualsStill()) HomeBackground.OFF else style, colors.background, colors.primary)
+    val still = rememberVisualsStill()
+    HomeBackdrop(if (paused || still) HomeBackground.OFF else style, colors.background, colors.primary)
 }
 
 /** The theme's three accent colours, so the row shows the palette in use. */

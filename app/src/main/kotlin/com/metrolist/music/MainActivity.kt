@@ -594,8 +594,9 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        val enableDynamicTheme = rememberPreference(DynamicThemeKey, defaultValue = true).value && !com.metrolist.music.arc.rememberVisualsStill()
-        val enableHighRefreshRate = rememberPreference(EnableHighRefreshRateKey, defaultValue = true).value && !com.metrolist.music.arc.rememberVisualsStill()
+        val visualsStill = com.metrolist.music.arc.rememberVisualsStill()
+        val enableDynamicTheme = rememberPreference(DynamicThemeKey, defaultValue = true).value && !visualsStill
+        val enableHighRefreshRate = rememberPreference(EnableHighRefreshRateKey, defaultValue = true).value && !visualsStill
 
         LaunchedEffect(enableHighRefreshRate) {
             val window = this@MainActivity.window

@@ -342,7 +342,9 @@ private fun PlayerSheet(
     // Arc: the player is the only place that holds the screen on; the lyrics view used to clear it whenever it was rebuilt.
     // a video in the cover spot is watched like the full-screen one, so it holds the screen on too
     val videoShown = com.metrolist.music.arc.VideoState.current.value != null && com.metrolist.music.arc.VideoState.view.value == com.metrolist.music.arc.VideoView.VIDEO
-    val keepScreenOn = isPlaying && ((isKeepScreenOn && !com.metrolist.music.arc.rememberVisualsStill()) || showInlineLyrics || videoShown)
+    // called on every pass: a composable call inside && or || shifts the state below it when the left side flips
+    val visualsStill = com.metrolist.music.arc.rememberVisualsStill()
+    val keepScreenOn = isPlaying && ((isKeepScreenOn && !visualsStill) || showInlineLyrics || videoShown)
 
     // Holding the main control opens the lyrics menu in lyrics mode. The song list opens by swiping up.
     // 0 is the thumb arc, 1 the small corner arc. A stored 2 is the removed cluster layout.
