@@ -592,7 +592,7 @@ fun ContentSettings(
         if (section == null || section == "region") {
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_language),
-                icon = painterResource(R.drawable.language),
+                icon = R.drawable.language,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.language),
@@ -642,7 +642,7 @@ fun ContentSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_filters),
-                icon = painterResource(R.drawable.tune),
+                icon = R.drawable.tune,
                 items = listOf(
                     switchItem(R.drawable.explicit, R.string.hide_explicit, null, hideExplicit, onHideExplicitChange),
                     Material3SettingsItem(
@@ -658,7 +658,7 @@ fun ContentSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_network),
-                icon = painterResource(R.drawable.wifi_proxy),
+                icon = R.drawable.wifi_proxy,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.wifi_proxy),
@@ -677,7 +677,7 @@ fun ContentSettings(
         if (section == null || section == "library") {
             Material3SettingsGroup(
                 title = stringResource(R.string.playlists),
-                icon = painterResource(R.drawable.queue_music),
+                icon = R.drawable.queue_music,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.playlist_add),
@@ -722,7 +722,7 @@ fun ContentSettings(
         if (section == null || section == "lyrics") {
             Material3SettingsGroup(
                 title = stringResource(R.string.lyrics),
-                icon = painterResource(R.drawable.lyrics),
+                icon = R.drawable.lyrics,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.lyrics),

@@ -159,10 +159,10 @@ fun PrivacySettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.history),
-            icon = painterResource(R.drawable.history),
+            icon = R.drawable.history,
             items = listOf(
-                switchItem(R.drawable.history, R.string.pause_listen_history, null, pauseListenHistory, onPauseListenHistoryChange),
-                switchItem(R.drawable.search_off, R.string.pause_search_history, null, pauseSearchHistory, onPauseSearchHistoryChange),
+                switchItem(R.drawable.history, R.string.arc_save_listen_history, null, !pauseListenHistory, { onPauseListenHistoryChange(!it) }),
+                switchItem(R.drawable.search, R.string.arc_save_search_history, null, !pauseSearchHistory, { onPauseSearchHistoryChange(!it) }),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.delete_history),
                     title = { Text(stringResource(R.string.arc_clear_history)) },
@@ -189,7 +189,7 @@ fun PrivacySettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_usage),
-            icon = painterResource(R.drawable.trending_up),
+            icon = R.drawable.trending_up,
             items = listOf(
                 switchItem(R.drawable.trending_up, R.string.arc_usage_learn, R.string.arc_usage_learn_desc, learnUsage, onLearnUsageChange),
                 Material3SettingsItem(
@@ -210,7 +210,7 @@ fun PrivacySettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_privacy_screen),
-            icon = painterResource(R.drawable.screenshot),
+            icon = R.drawable.screenshot,
             items = listOf(
                 switchItem(R.drawable.screenshot, R.string.disable_screenshot, R.string.disable_screenshot_desc, disableScreenshot, onDisableScreenshotChange),
             )

@@ -237,7 +237,7 @@ fun SpeedDialModule(env: HomeEnv) {
                                 isActive = env.isActive(item.id),
                                 isPlaying = env.isPlaying.value,
                                 thumbnailSize = if (slot.span > 1) 544 else 200,
-                                modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = DialCornerRadius).fillMaxSize(),
+                                modifier = Modifier.homeTile(onClick = { env.openYtItem(item) }, onLongClick = { env.showYtItemMenu(item) }, cover = item.thumbnail, glowCorner = if (item is com.metrolist.innertube.models.ArtistItem) com.metrolist.music.arc.CircleGlowCorner else DialCornerRadius).fillMaxSize(),
                             )
                         }
                     }

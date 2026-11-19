@@ -49,7 +49,7 @@ fun MusicVideoSettings() {
 
     Material3SettingsGroup(
         title = stringResource(R.string.arc_music_videos),
-        icon = painterResource(R.drawable.arc_video),
+        icon = R.drawable.arc_video,
         items = buildList {
             add(switchItem(R.drawable.arc_video, R.string.arc_music_videos, R.string.arc_music_videos_desc, enabled, onEnabled))
             if (enabled) {

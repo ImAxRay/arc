@@ -1910,7 +1910,7 @@ private fun PlayerSheet(
                                 ) { player.removeMediaItem(index) }
                             }
                         }
-                    val showAudioDetails by rememberPreference(ArcAudioDetailsKey, true)
+                    val showAudioDetails by rememberPreference(ArcAudioDetailsKey, false)
                     val storedFormat by LocalDatabase.current.format(arcMetadata.id).collectAsStateWithLifecycle(null)
                     val audioDetails = if (showAudioDetails) rememberAudioDetails(playerConnection.player, storedFormat?.bitrate) else null
                     val videoBottom by com.metrolist.music.arc.VideoState.videoBottom

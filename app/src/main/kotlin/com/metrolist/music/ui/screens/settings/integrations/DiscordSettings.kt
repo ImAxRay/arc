@@ -147,7 +147,7 @@ fun DiscordSettings(
     val (btn1Enabled, onBtn1EnabledChange) = rememberPreference(DiscordButton1EnabledKey, true)
     val (btn1Label, onBtn1LabelChange) = rememberPreference(DiscordButton1LabelKey, DiscordDefaults.BUTTON1_LABEL)
     val (btn1Url, onBtn1UrlChange) = rememberPreference(DiscordButton1UrlKey, DiscordDefaults.BUTTON1_URL_TEMPLATE)
-    val (btn2Enabled, onBtn2EnabledChange) = rememberPreference(DiscordButton2EnabledKey, true)
+    val (btn2Enabled, onBtn2EnabledChange) = rememberPreference(DiscordButton2EnabledKey, false)
     val (btn2Label, onBtn2LabelChange) = rememberPreference(DiscordButton2LabelKey, DiscordDefaults.BUTTON2_LABEL)
     val (btn2Url, onBtn2UrlChange) = rememberPreference(DiscordButton2UrlKey, DiscordDefaults.BUTTON2_URL)
     val (userStatus, onUserStatusChange) = rememberPreference(DiscordUserStatusKey, DiscordDefaults.USER_STATUS)
@@ -493,7 +493,7 @@ fun DiscordSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.options),
-            icon = painterResource(R.drawable.discord),
+            icon = R.drawable.discord,
             items =
                 listOf(
                     Material3SettingsItem(
@@ -560,7 +560,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_presence),
-                    icon = painterResource(R.drawable.music_note),
+                    icon = R.drawable.music_note,
                     items =
                         listOf(
                             Material3SettingsItem(
@@ -590,7 +590,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_buttons),
-                    icon = painterResource(R.drawable.link),
+                    icon = R.drawable.link,
                     items =
                         buildList {
                             add(
@@ -686,7 +686,7 @@ fun DiscordSettings(
 
                 Material3SettingsGroup(
                     title = stringResource(R.string.discord_status),
-                    icon = painterResource(R.drawable.person),
+                    icon = R.drawable.person,
                     items =
                         listOf(
                             Material3SettingsItem(

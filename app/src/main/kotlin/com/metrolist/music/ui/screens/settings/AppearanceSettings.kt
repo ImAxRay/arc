@@ -186,7 +186,7 @@ fun AppearanceSettings(
             valueText = { pluralStringResource(R.plurals.arc_speed_dial_rows_value, it, it) },
         )
     }
-    val (audioDetails, onAudioDetailsChange) = rememberPreference(ArcAudioDetailsKey, defaultValue = true)
+    val (audioDetails, onAudioDetailsChange) = rememberPreference(ArcAudioDetailsKey, defaultValue = false)
     val hintScope = rememberCoroutineScope()
     val hintContext = LocalContext.current
     val (listenTogetherInTopBar, onListenTogetherInTopBarChange) =
@@ -306,7 +306,7 @@ fun AppearanceSettings(
         VisualEffects(picking) { picking = it }
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_look),
-            icon = painterResource(R.drawable.palette),
+            icon = R.drawable.palette,
             items =
                 listOf(
                     Material3SettingsItem(
@@ -332,7 +332,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.home),
-            icon = painterResource(R.drawable.home_outlined),
+            icon = R.drawable.home_outlined,
             items =
                 listOf(
                     Material3SettingsItem(
@@ -364,7 +364,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.player),
-            icon = painterResource(R.drawable.play),
+            icon = R.drawable.play,
             items =
                 listOf(
                     switchItem(R.drawable.info, R.string.arc_audio_details, R.string.arc_audio_details_desc, audioDetails, onAudioDetailsChange),
@@ -375,7 +375,7 @@ fun AppearanceSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_library_search),
-            icon = painterResource(R.drawable.library_music),
+            icon = R.drawable.library_music,
             items =
                 listOf(
                     Material3SettingsItem(

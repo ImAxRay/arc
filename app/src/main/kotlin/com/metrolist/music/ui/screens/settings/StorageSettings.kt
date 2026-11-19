@@ -359,7 +359,7 @@ fun StorageSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_storage_downloads),
-            icon = painterResource(R.drawable.download),
+            icon = R.drawable.download,
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.download),
@@ -378,7 +378,7 @@ fun StorageSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_storage_caches),
-            icon = painterResource(R.drawable.cached),
+            icon = R.drawable.cached,
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.music_note),

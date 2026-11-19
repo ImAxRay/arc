@@ -183,7 +183,7 @@ fun BackupAndRestore(
         val appName = stringResource(R.string.app_name)
         Material3SettingsGroup(
             title = stringResource(R.string.action_backup),
-            icon = painterResource(R.drawable.backup),
+            icon = R.drawable.backup,
             items =
                 listOf(
                     Material3SettingsItem(
@@ -212,7 +212,7 @@ fun BackupAndRestore(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_import_playlists),
-            icon = painterResource(R.drawable.playlist_add),
+            icon = R.drawable.playlist_add,
             items =
                 listOf(
                     Material3SettingsItem(

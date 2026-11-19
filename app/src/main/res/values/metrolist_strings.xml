@@ -772,7 +772,7 @@
     <string name="column_label">Column %d</string>
 
     <string name="discord_connect_description">Sign in with Discord to share what you\'re listening to</string>
-    <string name="discord_information_warning">Arc uses Discord\'s public OAuth2 and Gateway APIs to share what you\'re listening to. Authorization happens through a local browser session that closes itself after capturing the code — nothing is sent to third-party servers. Your token is stored on this device in encrypted preferences and is never shared. Metrolist connects directly to wss://gateway.discord.gg to publish your activity, and only requests the minimum scope required (sdk.social_layer_presence).</string>
+    <string name="discord_information_warning">Arc uses Discord\'s public OAuth2 and Gateway APIs to share what you\'re listening to. Authorization happens through a local browser session that closes itself after capturing the code — nothing is sent to third-party servers. Your token is stored on this device in encrypted preferences and is never shared. Arc connects directly to wss://gateway.discord.gg to publish your activity, and only requests the minimum scope required (sdk.social_layer_presence).</string>
     <string name="discord_status_connected">Connected</string>
     <string name="discord_status_authorizing">Authorizing…</string>
     <string name="discord_status_authorized">Authorized</string>
@@ -1412,6 +1412,9 @@
     <string name="arc_updater_this_version">This version</string>
     <string name="arc_updater_automatic">Automatic</string>
     <string name="arc_account_youtube">YouTube</string>
+    <string name="arc_save_listen_history">Save listen history</string>
+    <string name="arc_save_search_history">Save search history</string>
+    <string name="arc_save_history_keywords">pause history, track history, record</string>
     <string name="arc_scrobbling">Scrobbling</string>
     <string name="arc_scrobble_counts">When a song counts</string>
     <string name="arc_shuffle_repeat">Shuffle and repeat</string>

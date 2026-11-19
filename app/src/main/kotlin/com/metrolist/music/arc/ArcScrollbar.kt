@@ -44,7 +44,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.painter.Painter
+import android.content.Context
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -94,7 +102,8 @@ private class Section(val name: String, val at: Float)
  */
 class ScrollSections {
     internal val groups = mutableStateMapOf<String, LayoutCoordinates>()
-    internal val icons = HashMap<String, Painter>()
+    // Resource ids, not the groups' painters: a vector painter drawn at two sizes blurs its other copy.
+    internal val icons = HashMap<String, Int>()
     internal var viewport: LayoutCoordinates? = null
 }
 
@@ -102,7 +111,7 @@ val LocalScrollSections = compositionLocalOf<ScrollSections?> { null }
 
 /** Puts a titled block on the page's scroll bar, shown there as its [icon] (a dot without one). */
 @Composable
-fun Modifier.scrollSection(title: String?, icon: Painter? = null): Modifier {
+fun Modifier.scrollSection(title: String?, @DrawableRes icon: Int? = null): Modifier {
     val sections = LocalScrollSections.current ?: return this
     if (title.isNullOrBlank()) return this
     SideEffect { if (icon != null) sections.icons[title] = icon else sections.icons.remove(title) }
@@ -161,6 +170,8 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
     var pickedName by remember { mutableStateOf<String?>(null) }
     var fingerY by remember { mutableFloatStateOf(0f) }
     val grab = remember { Animatable(0f) }
+    val context = LocalContext.current
+    val iconImages = remember { HashMap<Int, ImageBitmap?>() }
     val barsTop by rememberUpdatedState(LocalPlayerAwareWindowInsets.current.getTop(LocalDensity.current).toFloat())
 
     /** How much of the page's top the top bar covers: most pages scroll under it, some start below it. */
@@ -273,11 +284,16 @@ private fun Modifier.groupBar(state: ScrollState, sections: ScrollSections): Mod
                     i == current -> colors.primary
                     else -> colors.onSurface.copy(alpha = 0.38f + 0.4f * g.coerceIn(0f, 1f))
                 }
-                val icon = sections.icons[name]
+                val icon = sections.icons[name]?.let { id -> iconImages.getOrPut(id) { iconImage(context, id, (iconSize * 1.6f).roundToInt()) } }
                 if (icon == null) {
                     drawCircle(tint, 2.5.dp.toPx() * (1f + 0.6f * near), Offset(cx, cy))
                 } else {
-                    translate(cx - s / 2, cy - s / 2) { with(icon) { draw(Size(s, s), colorFilter = ColorFilter.tint(tint)) } }
+                    drawImage(
+                        icon,
+                        dstOffset = IntOffset((cx - s / 2).roundToInt(), (cy - s / 2).roundToInt()),
+                        dstSize = IntSize(s.roundToInt(), s.roundToInt()),
+                        colorFilter = ColorFilter.tint(tint),
+                    )
                 }
             }
             if (holding) pickedName?.let {
@@ -600,3 +616,6 @@ fun ListSectionHeader(name: String, modifier: Modifier = Modifier) {
         )
     }
 }
+
+private fun iconImage(context: Context, @DrawableRes id: Int, px: Int): ImageBitmap? =
+    AppCompatResources.getDrawable(context, id)?.toBitmap(px, px)?.asImageBitmap()

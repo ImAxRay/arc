@@ -254,7 +254,7 @@ fun AccountSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.account),
-            icon = painterResource(R.drawable.account),
+            icon = R.drawable.account,
             items = listOfNotNull(
                 Material3SettingsItem(
                     title = {
@@ -322,7 +322,7 @@ fun AccountSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_account_youtube),
-            icon = painterResource(R.drawable.cached),
+            icon = R.drawable.cached,
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.yt_sync)) },

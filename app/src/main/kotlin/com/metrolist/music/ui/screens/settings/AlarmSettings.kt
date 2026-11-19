@@ -175,7 +175,7 @@ fun AlarmSettingsSection(showTitle: Boolean = true) {
     }
 
     Material3SettingsGroup(
-        icon = painterResource(R.drawable.timer),
+        icon = R.drawable.timer,
         title = if (showTitle) stringResource(R.string.alarm) else null,
         items = buildList {
             add(

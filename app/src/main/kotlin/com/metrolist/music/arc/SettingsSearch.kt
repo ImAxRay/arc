@@ -184,6 +184,7 @@ fun ArcSettingsSearch(navController: NavController): Boolean {
         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
     )
     val trimmed = query.trim()
+    if (trimmed.equals("aks", ignoreCase = true)) androidx.compose.runtime.LaunchedEffect(Unit) { SettingsBalloons.shots++ }
     if (trimmed.isEmpty()) return false
     entries.filter { (entry, keywords) -> entry.first.contains(trimmed, ignoreCase = true) || keywords.any { it.contains(trimmed, ignoreCase = true) } }.forEach { (entry) ->
         val (title, section, route) = entry
@@ -298,10 +299,10 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.arc_queue_ends, "settings/queue", R.string.arc_settings_queue),
     SettingsEntry(R.string.arc_sound_while_playing, "settings/sound", R.string.arc_settings_sound),
     SettingsEntry(R.string.privacy, "settings/privacy", R.string.privacy),
-    SettingsEntry(R.string.pause_listen_history, "settings/privacy", R.string.privacy),
+    SettingsEntry(R.string.arc_save_listen_history, "settings/privacy", R.string.privacy, R.string.arc_save_history_keywords),
     SettingsEntry(R.string.arc_clear_history, "settings/privacy", R.string.privacy, R.string.arc_clear_history_keywords),
     SettingsEntry(R.string.arc_history_duration, "settings/privacy", R.string.privacy),
-    SettingsEntry(R.string.pause_search_history, "settings/privacy", R.string.privacy),
+    SettingsEntry(R.string.arc_save_search_history, "settings/privacy", R.string.privacy, R.string.arc_save_history_keywords),
     SettingsEntry(R.string.disable_screenshot, "settings/privacy", R.string.privacy),
     SettingsEntry(R.string.arc_privacy_screen, "settings/privacy", R.string.privacy),
     SettingsEntry(R.string.arc_usage, "settings/privacy", R.string.privacy, R.string.arc_usage_keywords),
@@ -386,3 +387,8 @@ private val SETTINGS_INDEX = listOf(
     SettingsEntry(R.string.arc_japanese_dictionary, "settings/content/romanization", R.string.lyrics_romanization),
     SettingsEntry(R.string.romanize_languages, "settings/content/romanization", R.string.lyrics_romanization),
 )
+
+/** Typing the author's name into settings search sends up the lyrics' balloons. */
+object SettingsBalloons {
+    var shots by mutableStateOf(-1)
+}

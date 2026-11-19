@@ -293,7 +293,7 @@ fun LastFMSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.account),
-            icon = painterResource(R.drawable.account),
+            icon = R.drawable.account,
             items = listOf(
                 Material3SettingsItem(
                     title = {
@@ -325,7 +325,7 @@ fun LastFMSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_scrobbling),
-            icon = painterResource(R.drawable.music_note),
+            icon = R.drawable.music_note,
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.enable_scrobbling)) },
@@ -593,7 +593,7 @@ fun LastFMSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_scrobble_counts),
-            icon = painterResource(R.drawable.timer),
+            icon = R.drawable.timer,
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.scrobble_min_track_duration)) },

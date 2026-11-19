@@ -6,6 +6,7 @@
 package com.metrolist.music.ui.component
 
 import com.metrolist.music.arc.scrollSection
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,7 +50,7 @@ fun Material3SettingsGroup(
     title: String? = null,
     items: List<Material3SettingsItem>,
     useLowContrast: Boolean = false,
-    icon: Painter? = null,
+    @DrawableRes icon: Int? = null,
 ) {
     Column(
         modifier = Modifier
@@ -64,7 +65,7 @@ fun Material3SettingsGroup(
                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 10.dp),
             ) {
                 if (icon != null) {
-                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(painterResource(icon), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(

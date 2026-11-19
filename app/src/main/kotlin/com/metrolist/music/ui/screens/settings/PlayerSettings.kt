@@ -344,7 +344,7 @@ fun PlayerSettings(
         if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_sound_quality),
-                icon = painterResource(R.drawable.headphones),
+                icon = R.drawable.headphones,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.wifi),
@@ -370,7 +370,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_sound_between),
-                icon = painterResource(R.drawable.linear_scale),
+                icon = R.drawable.linear_scale,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.linear_scale),
@@ -418,7 +418,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_sound_loudness),
-                icon = painterResource(R.drawable.volume_up),
+                icon = R.drawable.volume_up,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.volume_up),
@@ -434,7 +434,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_sound_controls),
-                icon = painterResource(R.drawable.tune),
+                icon = R.drawable.tune,
                 items = buildList {
                     add(Material3SettingsItem(
                         icon = painterResource(R.drawable.equalizer),
@@ -461,7 +461,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_snippets),
-                icon = painterResource(R.drawable.mic),
+                icon = R.drawable.mic,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.list),
@@ -539,7 +539,7 @@ fun PlayerSettings(
         if (section == "queue") {
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_queue_starting),
-                icon = painterResource(R.drawable.play),
+                icon = R.drawable.play,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.play),
@@ -554,7 +554,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_queue_ends),
-                icon = painterResource(R.drawable.playlist_add),
+                icon = R.drawable.playlist_add,
                 items = listOf(
                     switchItem(R.drawable.playlist_add, R.string.arc_queue_keep_going, R.string.arc_queue_keep_going_desc, autoLoadMore || similarContentEnabled, {
                         onAutoLoadMoreChange(it)
@@ -566,7 +566,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_shuffle_repeat),
-                icon = painterResource(R.drawable.shuffle),
+                icon = R.drawable.shuffle,
                 items = listOf(
                     switchItem(R.drawable.shuffle, R.string.arc_shuffle_keep, R.string.persistent_shuffle_desc, persistentShuffleAcrossQueues, onPersistentShuffleAcrossQueuesChange),
                     switchItem(R.drawable.shuffle_on, R.string.arc_shuffle_playlist_first, R.string.shuffle_playlist_first_desc, shufflePlaylistFirst, onShufflePlaylistFirstChange),
@@ -577,7 +577,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.queue),
-                icon = painterResource(R.drawable.queue_music),
+                icon = R.drawable.queue_music,
                 items = listOf(
                     switchItem(R.drawable.remove, R.string.arc_no_duplicates, R.string.prevent_duplicate_tracks_in_queue_desc, preventDuplicateTracksInQueue, onPreventDuplicateTracksInQueueChange),
                     switchItem(R.drawable.skip_next, R.string.arc_skip_unplayable, R.string.arc_skip_unplayable_desc, autoSkipNextOnError, onAutoSkipNextOnErrorChange),
@@ -587,7 +587,7 @@ fun PlayerSettings(
 
             Material3SettingsGroup(
                 title = stringResource(R.string.sleep_timer),
-                icon = painterResource(R.drawable.bedtime),
+                icon = R.drawable.bedtime,
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.time_auto),
@@ -635,7 +635,7 @@ fun PlayerSettings(
         if (section == "sound") {
             Material3SettingsGroup(
                 title = stringResource(R.string.arc_sound_while_playing),
-                icon = painterResource(R.drawable.play),
+                icon = R.drawable.play,
                 items = listOf(
                     switchItem(R.drawable.screenshot, R.string.arc_keep_screen_on, R.string.arc_keep_screen_on_desc, keepScreenOn, onKeepScreenOnChange, enabled = !com.metrolist.music.arc.rememberVisualsStill()),
                     switchItem(R.drawable.volume_off_pause, R.string.pause_music_when_media_is_muted, null, pauseOnMute, onPauseOnMuteChange),

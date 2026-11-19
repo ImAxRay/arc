@@ -126,7 +126,7 @@ fun RomanizationSettings(
         val dictionaryContext = LocalContext.current
         Material3SettingsGroup(
             title = stringResource(R.string.arc_romanize_what),
-            icon = painterResource(R.drawable.language),
+            icon = R.drawable.language,
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.romanize_languages)) },
@@ -178,7 +178,7 @@ fun RomanizationSettings(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_romanize_how),
-            icon = painterResource(R.drawable.lyrics),
+            icon = R.drawable.lyrics,
             items = listOf(
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.lyrics_romanize_as_main)) },

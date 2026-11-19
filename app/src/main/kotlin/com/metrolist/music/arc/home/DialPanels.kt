@@ -140,6 +140,7 @@ const val FLIP_STAGGER_MS = 70
 val LocalDialEdit = staticCompositionLocalOf<DialEdit?> { null }
 
 private const val ROLL_MS = 750L
+private const val ROLL_QUARTERS = 6
 
 /** Pip spots on a 3x3 grid (0..2, 0..2) for faces 1 to 6. */
 private val PIPS =
@@ -160,11 +161,12 @@ private val PIPS =
 fun DiceTile(env: HomeEnv, modifier: Modifier) {
     val store = remember { DialStore.get(env.viewModel.context) }
     val saved by store.dice.collectAsStateWithLifecycle()
-    var shown by remember { mutableIntStateOf(0) }
+    // the faces the die shows during a roll, one per quarter turn, ending on the one it lands on
+    var path by remember { mutableStateOf(listOf<Int>()) }
     val spin = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     var rolling by remember { mutableStateOf(false) }
-    val face = (if (rolling) shown else saved).takeIf { it in 1..6 } ?: 5
+    val face = saved.takeIf { it in 1..6 } ?: 5
     val colors = MaterialTheme.colorScheme
     Box(
         contentAlignment = Alignment.Center,
@@ -173,9 +175,16 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                 .homeTile(
                     onClick = {
                         if (rolling || env.isListenTogetherGuest) return@homeTile
-                        shown = face
                         rolling = true
                         val landed = Random.nextInt(1, 7)
+                        path = buildList {
+                            add(face)
+                            // every face differs from the one before it, and the last tumbling face isn't the landing one
+                            repeat(ROLL_QUARTERS - 1) { i ->
+                                add((1..6).filter { it != last() && (i < ROLL_QUARTERS - 2 || it != landed) }.random())
+                            }
+                            add(landed)
+                        }
                         // the mix is fetched and played on the screen's scope, so scrolling the die away doesn't drop it
                         Usage.homeTap("dial:dice", null)
                         env.scope.launch {
@@ -190,20 +199,8 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                             }
                         }
                         scope.launch {
-                            // faces flick by fast, then slower, like a die running out of push
-                            val flick =
-                                launch {
-                                    var wait = 45L
-                                    while (true) {
-                                        shown = (1..6).filter { it != shown }.random()
-                                        delay(wait)
-                                        wait = (wait * 1.25f).toLong()
-                                    }
-                                }
                             spin.snapTo(0f)
                             spin.animateTo(1f, tween(ROLL_MS.toInt(), easing = FastOutSlowInEasing))
-                            flick.cancel()
-                            shown = landed
                             rolling = false
                         }
                     },
@@ -219,7 +216,7 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                 .fillMaxSize(0.52f)
                 .graphicsLayer {
                     val t = spin.value
-                    rotationZ = t * 540f
+                    rotationZ = t * ROLL_QUARTERS * 90f
                     // a hop: up and back while it turns
                     val hop = sin(t * Math.PI).toFloat()
                     scaleX = 1f + hop * 0.18f
@@ -229,7 +226,9 @@ fun DiceTile(env: HomeEnv, modifier: Modifier) {
                     drawRoundRect(body, cornerRadius = CornerRadius(corner))
                     val cell = size.minDimension / 4f
                     val r = size.minDimension * 0.085f
-                    PIPS[face - 1].forEach { (x, y) -> drawCircle(pip, r, Offset(cell * (x + 1), cell * (y + 1))) }
+                    // the face turns over each time the die passes a diagonal, so the landing face is already up for the last, slowest quarter
+                    val shown = if (rolling && path.size == ROLL_QUARTERS + 1) path[((spin.value * ROLL_QUARTERS + 0.5f).toInt()).coerceIn(0, ROLL_QUARTERS)] else face
+                    PIPS[shown - 1].forEach { (x, y) -> drawCircle(pip, r, Offset(cell * (x + 1), cell * (y + 1))) }
                 },
         )
     }

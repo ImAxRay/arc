@@ -71,7 +71,7 @@ fun VisualModeControl() {
     val phoneSaver by Visuals.phoneSaver.collectAsState()
     Material3SettingsGroup(
         title = stringResource(R.string.arc_visual_mode),
-        icon = painterResource(R.drawable.contrast),
+        icon = R.drawable.contrast,
         items = listOf(
             Material3SettingsItem(
                 title = {
@@ -183,7 +183,7 @@ fun VisualEffects(picking: Boolean, onPicking: (Boolean) -> Unit) {
     }
     Material3SettingsGroup(
         title = stringResource(R.string.arc_visual_effects),
-        icon = painterResource(R.drawable.gradient),
+        icon = R.drawable.gradient,
         items = listOfNotNull(
             Material3SettingsItem(
                 icon = painterResource(R.drawable.gradient),

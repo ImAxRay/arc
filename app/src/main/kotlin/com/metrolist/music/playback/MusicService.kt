@@ -3676,7 +3676,7 @@ class MusicService :
         val btn1Enabled = dataStore.get(DiscordButton1EnabledKey, true)
         val btn1Label = dataStore.get(DiscordButton1LabelKey, DiscordDefaults.BUTTON1_LABEL)
         val btn1Url = dataStore.get(DiscordButton1UrlKey, DiscordDefaults.BUTTON1_URL_TEMPLATE)
-        val btn2Enabled = dataStore.get(DiscordButton2EnabledKey, true)
+        val btn2Enabled = dataStore.get(DiscordButton2EnabledKey, false)
         val btn2Label = dataStore.get(DiscordButton2LabelKey, DiscordDefaults.BUTTON2_LABEL)
         val btn2Url = dataStore.get(DiscordButton2UrlKey, DiscordDefaults.BUTTON2_URL)
 

@@ -119,7 +119,7 @@ fun UpdaterScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_updater_this_version),
-            icon = painterResource(R.drawable.info),
+            icon = R.drawable.info,
             items =
                 listOf(
                     Material3SettingsItem(
@@ -217,7 +217,7 @@ fun UpdaterScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_updater_automatic),
-            icon = painterResource(R.drawable.update),
+            icon = R.drawable.update,
             items =
                 buildList {
                     add(

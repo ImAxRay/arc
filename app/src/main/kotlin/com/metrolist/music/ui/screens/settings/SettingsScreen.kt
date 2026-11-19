@@ -83,7 +83,7 @@ fun SettingsScreen(
         RecentSettings(navController)
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_listening),
-            icon = painterResource(R.drawable.headphones),
+            icon = R.drawable.headphones,
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.tune),
@@ -116,7 +116,7 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_look),
-            icon = painterResource(R.drawable.palette),
+            icon = R.drawable.palette,
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.palette),
@@ -139,7 +139,7 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.lyrics),
-            icon = painterResource(R.drawable.lyrics),
+            icon = R.drawable.lyrics,
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -167,7 +167,7 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_sources),
-            icon = painterResource(R.drawable.library_music),
+            icon = R.drawable.library_music,
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.language),
@@ -209,7 +209,7 @@ fun SettingsScreen(
 
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_your_data),
-            icon = painterResource(R.drawable.storage),
+            icon = R.drawable.storage,
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.security),
@@ -237,7 +237,7 @@ fun SettingsScreen(
         // System & About Section
         Material3SettingsGroup(
             title = stringResource(R.string.arc_settings_app),
-            icon = painterResource(R.drawable.settings),
+            icon = R.drawable.settings,
             items = buildList {
                 if (isAndroid12OrLater) {
                     add(
@@ -352,4 +352,9 @@ fun SettingsScreen(
             }
         }
     )
+
+    // only shots fired while this screen is open, so coming back to Settings doesn't replay them
+    val shotsAtOpen = remember { com.metrolist.music.arc.SettingsBalloons.shots }
+    val shots = com.metrolist.music.arc.SettingsBalloons.shots
+    com.metrolist.music.arc.ShoutBalloons(if (shots == shotsAtOpen) -1 else shots)
 }

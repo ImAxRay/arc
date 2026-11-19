@@ -159,14 +159,13 @@ fun AndroidAutoSettings(
             .arcScroll()
             .padding(horizontal = 16.dp)
     ) {
-        val tabsIcon = painterResource(R.drawable.ic_android_auto)
         // The group spans the reorderable list too, so the scroll bar shows all six tabs for it.
-        Column(Modifier.scrollSection(stringResource(R.string.arc_android_auto_tabs), tabsIcon)) {
+        Column(Modifier.scrollSection(stringResource(R.string.arc_android_auto_tabs), R.drawable.ic_android_auto)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 4.dp, top = 8.dp),
         ) {
-            Icon(tabsIcon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Icon(painterResource(R.drawable.ic_android_auto), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.arc_android_auto_tabs),
@@ -301,7 +300,7 @@ fun AndroidAutoSettings(
         
         Material3SettingsGroup(
             title = stringResource(R.string.arc_android_auto_browsing),
-            icon = painterResource(R.drawable.explore_outlined),
+            icon = R.drawable.explore_outlined,
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.playlist_add),
