@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.TextButton
@@ -26,8 +26,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,6 +50,10 @@ import com.metrolist.music.arc.ArcUntitledOnKey
 import com.metrolist.music.arc.TopAppBar
 import com.metrolist.music.arc.UntitledMusic
 import com.metrolist.music.arc.arcScroll
+import com.metrolist.music.arc.switchItem
+import com.metrolist.music.ui.component.Material3SettingsGroup
+import com.metrolist.music.ui.component.Material3SettingsItem
+import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.launch
 
@@ -93,18 +95,14 @@ fun UntitledSettings(navController: NavController) {
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
             .arcScroll()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp),
     ) {
         Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
-        Spacer(Modifier.height(72.dp))
-        Text(stringResource(R.string.arc_beta).uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.arc_untitled_intro), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(16.dp))
         // same notice as Discord's
         AnimatedVisibility(visible = !noteDismissed) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
@@ -120,35 +118,56 @@ fun UntitledSettings(navController: NavController) {
                 }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.arc_untitled_switch), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            Switch(checked = on, onCheckedChange = onChange)
-        }
+        Material3SettingsGroup(
+            title = stringResource(R.string.arc_untitled) + " · " + stringResource(R.string.arc_beta),
+            icon = R.drawable.cloud,
+            items = listOf(
+                switchItem(R.drawable.cloud, R.string.arc_untitled_switch, R.string.arc_untitled_intro, on, onChange),
+            ),
+        )
+
+        Spacer(Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.account),
+            icon = R.drawable.account,
+            items = if (!signedIn) {
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.login),
+                        title = { Text(stringResource(R.string.arc_untitled_sign_in)) },
+                        description = { Text(stringResource(R.string.arc_untitled_sign_in_hint)) },
+                        enabled = on,
+                        onClick = { signingIn = true },
+                    ),
+                )
+            } else {
+                listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.sync),
+                        title = { Text(stringResource(R.string.arc_untitled_sync)) },
+                        description = message?.let { { Text(it) } },
+                        trailingContent = if (busy) { { CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) } } else null,
+                        enabled = on && !busy,
+                        onClick = ::syncNow,
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.logout),
+                        title = { Text(stringResource(R.string.arc_untitled_sign_out)) },
+                        onClick = { scope.launch { UntitledMusic.signOut(context, database) } },
+                    ),
+                )
+            },
+        )
         Spacer(Modifier.height(16.dp))
-        if (!signedIn) {
-            Text(stringResource(R.string.arc_untitled_sign_in_hint), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(12.dp))
-            Button(enabled = on, onClick = { signingIn = true }) { Text(stringResource(R.string.arc_untitled_sign_in)) }
-        } else {
-            Row {
-                Button(enabled = on && !busy, onClick = ::syncNow) { Text(stringResource(R.string.arc_untitled_sync)) }
-                Spacer(Modifier.width(12.dp))
-                OutlinedButton(onClick = { scope.launch { UntitledMusic.signOut(context, database) } }) {
-                    Text(stringResource(R.string.arc_untitled_sign_out))
-                }
-            }
-        }
-        if (busy) CircularProgressIndicator(Modifier.padding(16.dp))
-        message?.let {
-            Spacer(Modifier.height(12.dp))
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
     }
 
     TopAppBar(
         title = { Text(stringResource(R.string.arc_untitled)) },
         navigationIcon = {
-            IconButton(onClick = navController::navigateUp) { Icon(painterResource(R.drawable.arrow_back), null) }
+            com.metrolist.music.ui.component.IconButton(onClick = navController::navigateUp, onLongClick = navController::backToMain) {
+                Icon(painterResource(R.drawable.arrow_back), null)
+            }
         },
     )
 }
