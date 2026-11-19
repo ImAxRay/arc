@@ -1,5 +1,31 @@
 # Arc changelog
 
+## 0.9.5
+
+### SETTINGS OVERHAULED
+
+- **Visual mode** at the top: Saver, Normal or Full. Saver turns off every heavy effect, caps the screen at 60 Hz and follows the phone's Battery Saver.
+- **One Appearance page** with Home's background live behind it, and what each effect costs.
+- Every page regrouped: values on the rows, fewer rows, fewer taps.
+- **Group bar on the edge**, niagara style. Hold the sidebar to scroll thru settings.
+- Storage shows what Arc keeps on your phone.
+- **NEW tags** and a "New in" list point at new settings.
+- New option: either the Song Repeat resets on new tracks or it does not, u choose
+- Android Auto: choose and order the tabs in the car.
+
+### Import
+
+- **Spotify data export**: whole playlists and Liked Songs.
+- Better song matching for Spotify, CSV and M3U imports.
+- One Playlist file row for M3U and CSV.
+
+### Fixes
+
+- Songs play after a reboot on Android 17.
+- No crash when the phone starts locked.
+- Settings search lands on rows further down the page.
+- Restoring a backup refreshes the speed dial.
+
 ## 0.9.4a
 
 - Improved telemetry (it never leaves your phone).
