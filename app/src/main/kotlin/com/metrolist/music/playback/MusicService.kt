@@ -2466,6 +2466,7 @@ class MusicService :
     }
 
     private var previousMediaItemIndex = C.INDEX_UNSET
+    private var forcingRepeatOne = false
     private var previousEpisodeId: String? = null
 
     // Tracks the mediaId that was playing immediately before the current
@@ -2527,11 +2528,13 @@ class MusicService :
         // Another song picked by the user (skip, queue tap, new list) ends Repeat one unless it is set to persist.
         if (player.repeatMode == REPEAT_MODE_ONE &&
             (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK || reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) &&
+            !forcingRepeatOne &&
             lastTransitionedMediaId != null && mediaItem != null && mediaItem.mediaId != lastTransitionedMediaId &&
             !dataStore.get(ArcRepeatOnePersistsKey, true)
         ) {
             player.repeatMode = REPEAT_MODE_OFF
         }
+        forcingRepeatOne = false
         lastTransitionedMediaId = mediaItem?.mediaId
         skipIfDisliked()
         armOfftopicSkips()
@@ -2565,6 +2568,7 @@ class MusicService :
                 previousMediaItemIndex != C.INDEX_UNSET &&
                 previousMediaItemIndex != player.currentMediaItemIndex
             ) {
+                forcingRepeatOne = true
                 player.seekTo(previousMediaItemIndex, 0)
             }
         }
