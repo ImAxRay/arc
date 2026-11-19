@@ -629,9 +629,9 @@ class MusicService :
         // On some OEMs (e.g. MIUI), even a DataStore read can be slow
         // enough to miss the window, so we promote before any I/O.
         ensureForegroundChannelExists()
-        if (!ensureStartedAsForegroundOrStop()) {
-            return
-        }
+        // Refused when the system binds this service in the background (Android 17, media resume
+        // after a reboot). Setup must still finish: the app reuses this instance for playback.
+        ensureStartedAsForegroundOrStop()
 
         // Read ALL startup preferences in one shot so that subsequent code
         // never calls dataStore.get() (which does runBlocking internally).
