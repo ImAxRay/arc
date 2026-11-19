@@ -187,6 +187,9 @@ internal fun encodeDialCache(items: List<YTItem>): String =
 internal fun decodeDialCache(text: String): List<YTItem> =
     runCatching { dialCacheJson.decodeFromString(ListSerializer(SpeedDialItem.serializer()), text).map { it.toYTItem() } }.getOrDefault(emptyList())
 
+/** Cached speed dial; a backup restore deletes it so the old library's tiles never show. */
+const val HOME_DIAL_FILE = "arc-home-dial.json"
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext val context: Context,
@@ -256,7 +259,7 @@ class HomeViewModel @Inject constructor(
     private var dialBuiltFor = 0
 
     /** Next cold start's dial: the latest full build, so Home opens with tiles at once and they still change per launch. */
-    private val dialCache = File(context.filesDir, "arc-home-dial.json")
+    private val dialCache = File(context.filesDir, HOME_DIAL_FILE)
     private var dialCacheJob: Job? = null
     private val homeLoaded = MutableStateFlow(false)
 

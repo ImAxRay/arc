@@ -334,6 +334,7 @@ class BackupRestoreViewModel @Inject constructor(
                     context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
                     context.filesDir.resolve(PERSISTENT_AUTOMIX_FILE).delete()
                     context.filesDir.resolve(PERSISTENT_PLAYER_STATE_FILE).delete()
+                    context.filesDir.resolve(HOME_DIAL_FILE).delete()
                     ArtistNameAliases.restore(context, restoredArtistNameAliases.orEmpty())
                     (staged / "files").takeIf { it.isDirectory }?.let { files ->
                         files.listFiles()?.forEach { (context.filesDir / it.name).deleteRecursively() }
