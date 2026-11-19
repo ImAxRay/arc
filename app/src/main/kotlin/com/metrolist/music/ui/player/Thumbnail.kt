@@ -691,6 +691,9 @@ private fun ThumbnailImage(
     modifier: Modifier = Modifier
 ) {
     var loaded by remember(artworkUri) { mutableStateOf(false) }
+    var failed by remember(artworkUri) { mutableStateOf(false) }
+    // the last cover shown here stays up while a new address for this song loads
+    var lastCover by remember { mutableStateOf<coil3.memory.MemoryCache.Key?>(null) }
     val placeholder = MaterialTheme.colorScheme.surfaceVariant
     Box(
         modifier = modifier
@@ -708,17 +711,21 @@ private fun ThumbnailImage(
                 }
             )
     ) {
-        Icon(
-            painter = painterResource(R.drawable.music_note),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.align(Alignment.Center).fillMaxSize(0.3f),
-        )
+        // only for songs with no cover: while one loads, the note would flash for a frame
+        if (artworkUri.isNullOrBlank() || failed) {
+            Icon(
+                painter = painterResource(R.drawable.music_note),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.Center).fillMaxSize(0.3f),
+            )
+        }
         val sharper = remember(artworkUri) { com.metrolist.music.arc.Covers.sharper(artworkUri) }
         var useSharper by remember(artworkUri) { mutableStateOf(sharper != null) }
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(if (useSharper) sharper else artworkUri?.resize(1080, 1080))
+                .placeholderMemoryCacheKey(lastCover)
                 .transformations(com.metrolist.music.arc.LetterboxCrop)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
@@ -726,8 +733,11 @@ private fun ThumbnailImage(
                 .build(),
             contentDescription = null,
             contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
-            onError = { if (useSharper) useSharper = false },
-            onSuccess = { loaded = true },
+            onError = { if (useSharper) useSharper = false else failed = true },
+            onSuccess = {
+                loaded = true
+                lastCover = it.result.memoryCacheKey
+            },
             modifier = Modifier.fillMaxSize()
         )
     }

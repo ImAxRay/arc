@@ -667,6 +667,11 @@ fun ArtistScreen(
                                     item = song as SongItem,
                                     isActive = mediaMetadata?.id == song.id,
                                     isPlaying = isPlaying,
+                                    trailingContent = {
+                                        IconButton(onClick = { menuState.show { YouTubeSongMenu(song = song, onDismiss = menuState::dismiss) } }) {
+                                            Icon(painterResource(R.drawable.more_vert), contentDescription = null)
+                                        }
+                                    },
                                     modifier =
                                         Modifier
                                             .background(if (song.id in selection.ids) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)

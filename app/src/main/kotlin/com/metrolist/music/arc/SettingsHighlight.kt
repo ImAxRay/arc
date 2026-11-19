@@ -1,5 +1,7 @@
 package com.metrolist.music.arc
 
+import androidx.compose.ui.graphics.drawscope.Stroke
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
@@ -67,12 +69,14 @@ fun Modifier.settingsHighlight(): Modifier {
             }
         }
         val settled = root()?.let { findTitle(it, wanted, view.width.toFloat()) } ?: return@LaunchedEffect
-        SettingsHighlight.rect = (settled.clickableAncestor() ?: settled).boundsInRoot
+        // a group's own title has no row to light, so the whole group lights up
+        SettingsHighlight.rect = (settled.clickableAncestor() ?: settled.groupAncestor() ?: settled).boundsInRoot
         try {
-            repeat(2) {
-                SettingsHighlight.pulse.animateTo(1f, tween(260))
-                SettingsHighlight.pulse.animateTo(0f, tween(420))
+            repeat(3) {
+                SettingsHighlight.pulse.animateTo(1f, tween(220))
+                SettingsHighlight.pulse.animateTo(0.25f, tween(380))
             }
+            SettingsHighlight.pulse.animateTo(0f, tween(300))
         } finally {
             SettingsHighlight.rect = null
             SettingsHighlight.pulse.snapTo(0f)
@@ -87,11 +91,19 @@ fun Modifier.settingsHighlight(): Modifier {
             val origin = coordinates?.positionInRoot() ?: return@drawWithContent
             val local = target.translate(-origin)
             if (local.bottom < 0f || local.top > size.height) return@drawWithContent
+            val pulse = SettingsHighlight.pulse.value
             drawRoundRect(
-                color = color.copy(alpha = 0.28f * SettingsHighlight.pulse.value),
+                color = color.copy(alpha = 0.4f * pulse),
                 topLeft = local.topLeft,
                 size = local.size,
                 cornerRadius = CornerRadius(cornerPx),
+            )
+            drawRoundRect(
+                color = color.copy(alpha = pulse),
+                topLeft = local.topLeft,
+                size = local.size,
+                cornerRadius = CornerRadius(cornerPx),
+                style = Stroke(2.dp.toPx()),
             )
         }
 }
@@ -105,6 +117,11 @@ private fun findTitle(node: SemanticsNode, wanted: String, windowWidth: Float): 
     for (child in node.children) findTitle(child, wanted, windowWidth)?.let { return it }
     return null
 }
+
+const val SETTINGS_GROUP_TAG = "settingsGroup"
+
+private fun SemanticsNode.groupAncestor(): SemanticsNode? =
+    generateSequence(this) { it.parent }.firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == SETTINGS_GROUP_TAG }
 
 private fun SemanticsNode.clickableAncestor(): SemanticsNode? =
     generateSequence(this) { it.parent }.firstOrNull { it.config.getOrNull(SemanticsActions.OnClick) != null }

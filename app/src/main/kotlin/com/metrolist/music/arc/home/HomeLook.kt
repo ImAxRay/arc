@@ -162,10 +162,13 @@ fun Modifier.homeTile(
             release()
         }
     }.then(
+        // the glow and the lift are the press feedback; a ripple would fill the square bounds behind round tiles
         if (onLongClick == null) {
-            Modifier.clickable(onClick = onClick)
+            Modifier.clickable(interactionSource = null, indication = null, onClick = onClick)
         } else {
             Modifier.combinedClickable(
+                interactionSource = null,
+                indication = null,
                 onClick = onClick,
                 onLongClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)

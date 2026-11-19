@@ -16,7 +16,12 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +47,7 @@ import androidx.navigation.NavController
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
+import com.metrolist.music.arc.ArcUntitledNoteDismissedKey
 import com.metrolist.music.arc.ArcUntitledOnKey
 import com.metrolist.music.arc.TopAppBar
 import com.metrolist.music.arc.UntitledMusic
@@ -57,6 +63,7 @@ fun UntitledSettings(navController: NavController) {
     val scope = rememberCoroutineScope()
     val signedIn by remember { UntitledMusic.signedIn(context) }.collectAsState(initial = false)
     val (on, onChange) = rememberPreference(ArcUntitledOnKey, true)
+    var noteDismissed by rememberPreference(ArcUntitledNoteDismissedKey, false)
     var signingIn by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -94,6 +101,25 @@ fun UntitledSettings(navController: NavController) {
         Spacer(Modifier.height(4.dp))
         Text(stringResource(R.string.arc_untitled_intro), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(16.dp))
+        // same notice as Discord's
+        AnimatedVisibility(visible = !noteDismissed) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                    Icon(painterResource(R.drawable.warning), contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.arc_untitled_note), style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { noteDismissed = true }, modifier = Modifier.align(Alignment.End)) {
+                            Text(stringResource(R.string.dismiss))
+                        }
+                    }
+                }
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.arc_untitled_switch), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             Switch(checked = on, onCheckedChange = onChange)
@@ -117,8 +143,6 @@ fun UntitledSettings(navController: NavController) {
             Spacer(Modifier.height(12.dp))
             Text(it, style = MaterialTheme.typography.bodyMedium)
         }
-        Spacer(Modifier.height(24.dp))
-        Text(stringResource(R.string.arc_untitled_note), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 
     TopAppBar(

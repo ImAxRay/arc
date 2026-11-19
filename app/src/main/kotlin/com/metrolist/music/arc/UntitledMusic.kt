@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 val ArcUntitledOnKey = booleanPreferencesKey("arcUntitledOn")
+val ArcUntitledNoteDismissedKey = booleanPreferencesKey("arcUntitledNoteDismissed")
 
 /**
  * Untitled (untitled.stream) as a music source (Beta): the user signs in on Untitled's own page, and the projects

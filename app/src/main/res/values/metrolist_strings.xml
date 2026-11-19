@@ -1164,7 +1164,7 @@
     <string name="arc_untitled_sync">Sync now</string>
     <string name="arc_untitled_sign_out">Sign out</string>
     <string name="arc_untitled_synced">%d new songs from Untitled</string>
-    <string name="arc_untitled_note">Untitled has no official way for apps to do this, so Arc uses the same addresses its website does. An Untitled update can stop it working.</string>
+    <string name="arc_untitled_note">Untitled has no official way for apps to do this, so Arc talks to it the way its website does. You sign in on Untitled\'s own page, and the session it leaves stays on this device and goes only to Untitled. An Untitled update can stop this working at any time.</string>
     <string name="arc_no_album">This song has no album page</string>
     <string name="arc_group">Group</string>
     <string name="arc_group_none">No groups</string>

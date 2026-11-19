@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.component
 
+import androidx.compose.ui.semantics.testTag
+
+import androidx.compose.ui.semantics.semantics
+
 import com.metrolist.music.arc.scrollSection
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
@@ -56,6 +60,7 @@ fun Material3SettingsGroup(
         modifier = Modifier
             .fillMaxWidth()
             .settingsHighlight()
+            .semantics { testTag = com.metrolist.music.arc.SETTINGS_GROUP_TAG }
             .scrollSection(title, icon)
     ) {
         // Section title

@@ -44,7 +44,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Settings added in this version: a NEW tag on their rows and a list at the top of Settings saying what each does.
- * A setting stops being new once it's tapped, the list is closed, or two weeks after this version first ran.
+ * A row's tag goes once the row is tapped; the list stays until its cross is pressed. Both go two weeks after this version first ran.
  */
 object NewSettings {
     class Entry(val id: String, val title: Int, val desc: Int, val route: String)
@@ -62,10 +62,12 @@ object NewSettings {
     private const val KEEP_MS = 14L * 24 * 60 * 60 * 1000
     private val SinceKey = stringPreferencesKey("arcNewSince")
     private val SeenKey = stringSetPreferencesKey("arcNewSeen")
+    private val ListClosedKey = stringPreferencesKey("arcNewListClosed")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Ids still new; null until read. */
     val active = MutableStateFlow<Set<String>?>(null)
+    val listOpen = MutableStateFlow(false)
 
     internal fun load(context: Context) {
         if (active.value != null) return
@@ -80,7 +82,9 @@ object NewSettings {
                 }
             }
             val seen = if (since == null) emptySet() else prefs[SeenKey].orEmpty()
-            active.value = if (since != null && now - since > KEEP_MS) emptySet() else entries.map { it.id }.toSet() - seen
+            val expired = since != null && now - since > KEEP_MS
+            listOpen.value = !expired && prefs[ListClosedKey] != "$VERSION"
+            active.value = if (expired) emptySet() else entries.map { it.id }.toSet() - seen
         }
     }
 
@@ -89,6 +93,12 @@ object NewSettings {
         if (ids.none { it in current }) return
         active.value = current - ids.toSet()
         scope.launch { context.dataStore.edit { it[SeenKey] = it[SeenKey].orEmpty() + ids } }
+    }
+
+    fun closeList(context: Context) {
+        listOpen.value = false
+        seen(context, *entries.map { it.id }.toTypedArray())
+        scope.launch { context.dataStore.edit { it[ListClosedKey] = "$VERSION" } }
     }
 }
 
@@ -118,8 +128,8 @@ fun NewTag(modifier: Modifier = Modifier) {
 fun NewSettingsList(navController: NavController) {
     val context = LocalContext.current
     val active = rememberNewSettings()
-    val shown = NewSettings.entries.filter { it.id in active }
-    if (shown.isEmpty()) return
+    val open by NewSettings.listOpen.collectAsState()
+    if (!open) return
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
             stringResource(R.string.arc_new_in, displayVersion(BuildConfig.BASE_VERSION_NAME)),
@@ -128,11 +138,11 @@ fun NewSettingsList(navController: NavController) {
             color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.padding(start = 12.dp).weight(1f),
         )
-        IconButton(onClick = { NewSettings.seen(context, *shown.map { it.id }.toTypedArray()) }) {
+        IconButton(onClick = { NewSettings.closeList(context) }) {
             Icon(painterResource(R.drawable.close), stringResource(R.string.arc_new_hide), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
     }
-    shown.forEach { entry ->
+    NewSettings.entries.forEach { entry ->
         Column(
             modifier =
                 Modifier
@@ -147,8 +157,10 @@ fun NewSettingsList(navController: NavController) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(entry.title), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.width(8.dp))
-                NewTag()
+                if (entry.id in active) {
+                    Spacer(Modifier.width(8.dp))
+                    NewTag()
+                }
             }
             Text(stringResource(entry.desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
